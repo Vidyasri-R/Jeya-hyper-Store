@@ -72,10 +72,13 @@ async function main(): Promise<void> {
       if (!fullText.some((row) => row.id === product.id)) throw new Error('full-text search did not match');
       console.log('✔ full-text search ok');
 
+      // word_similarity (`<%`) scores the query against the best-matching span of the name,
+      // so short queries aren't penalised by long product names. SET LOCAL is pooler-safe.
+      await tx.execute(sql`SET LOCAL pg_trgm.word_similarity_threshold = 0.4`);
       const fuzzy = await tx
         .select({ id: schema.products.id })
         .from(schema.products)
-        .where(sql`${schema.products.name} % 'poni rise'`);
+        .where(sql`'poni rise' <% ${schema.products.name}`);
       if (!fuzzy.some((row) => row.id === product.id)) throw new Error('trigram fuzzy search did not match');
       console.log('✔ fuzzy (typo) search ok');
 
