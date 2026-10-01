@@ -9,6 +9,7 @@ export const CONFIG_KEYS = {
   STORE_INFO: 'store.info',
   MAINTENANCE: 'app.maintenance',
   PAYMENT_METHODS: 'checkout.payment_methods',
+  DELIVERY_RULES: 'delivery.rules',
 } as const;
 
 const CACHE_TTL_MS = 30_000;

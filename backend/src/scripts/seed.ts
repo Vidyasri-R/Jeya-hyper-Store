@@ -8,6 +8,7 @@ import { sql } from 'drizzle-orm';
 import { closeDb, db } from '../db/client';
 import { appConfig, serviceablePincodes } from '../db/schema';
 import { CONFIG_KEYS } from '../modules/app-config/app-config.service';
+import { DEFAULT_DELIVERY_RULES } from '../modules/delivery/delivery.service';
 
 const defaults: (typeof appConfig.$inferInsert)[] = [
   {
@@ -35,6 +36,12 @@ const defaults: (typeof appConfig.$inferInsert)[] = [
     description: 'Payment options shown at checkout. Turn online on once Razorpay is live.',
   },
   {
+    key: CONFIG_KEYS.DELIVERY_RULES,
+    value: DEFAULT_DELIVERY_RULES,
+    isPublic: true,
+    description: 'Free above freeDeliveryAbove; else fee by distance band from the shop. Tiers are placeholders — confirm with the store.',
+  },
+  {
     key: CONFIG_KEYS.STORE_INFO,
     value: { name: 'Jeya Hyper Store', city: 'Tiruchirappalli', supportPhone: null, supportWhatsApp: null },
     isPublic: true,
@@ -43,11 +50,12 @@ const defaults: (typeof appConfig.$inferInsert)[] = [
 ];
 
 /**
+ * Pincode fallback for addresses without a map pin (distance pricing needs lat/lng).
  * PLACEHOLDER delivery areas so checkout works end to end in development.
  * Replace with the store's real pincodes and fees before launch (edit rows in
  * Supabase → serviceable_pincodes; this seed never overwrites existing rows).
  */
-const PLACEHOLDER_FEES = { deliveryFee: '30.00', minOrderAmount: '199.00', freeDeliveryAbove: '499.00' };
+const PLACEHOLDER_FEES = { deliveryFee: '40.00', minOrderAmount: '0.00', freeDeliveryAbove: '999.00' };
 const placeholderPincodes = ['620001', '620002', '620008', '620017', '620018', '620021'].map((pincode) => ({
   pincode,
   areaName: `Tiruchirappalli ${pincode} (placeholder)`,

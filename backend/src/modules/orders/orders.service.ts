@@ -7,7 +7,7 @@ import { addressesRepository } from '../addresses/addresses.repository';
 import { appConfigService, CONFIG_KEYS } from '../app-config/app-config.service';
 import { cartRepository } from '../cart/cart.repository';
 import { priceLine, summarize, toPublicLine, type PricedLine } from '../cart/pricing';
-import { deliveryService, type DeliveryRule } from '../delivery/delivery.service';
+import { deliveryService, type DeliveryQuote, type DeliveryTarget } from '../delivery/delivery.service';
 import { ordersRepository } from './orders.repository';
 import type { PlaceOrderInput } from './orders.schemas';
 
@@ -20,12 +20,12 @@ const CUSTOMER_CANCELLABLE: OrderStatus[] = ['pending_payment', 'placed'];
 type Blocker =
   | { reason: 'cart_empty' }
   | { reason: 'cart_needs_review'; items: { productId: number; name: string; issue: string; suggestedQuantity: string | null }[] }
-  | { reason: 'address_not_serviceable'; pincode: string }
+  | { reason: 'address_not_serviceable'; pincode: string; why: 'out_of_range' | 'pincode_not_served'; distanceKm: number | null; maxDistanceKm: number }
   | { reason: 'below_minimum'; minOrderAmount: string; shortBy: string };
 
 type Evaluation = {
   lines: PricedLine[];
-  rule: DeliveryRule | null;
+  delivery: DeliveryQuote;
   subtotalPaise: number;
   mrpTotalPaise: number;
   deliveryFeePaise: number;
@@ -34,10 +34,10 @@ type Evaluation = {
   blockers: Blocker[];
 };
 
-async function evaluate(executor: Transaction | typeof db, userId: string, pincode: string): Promise<Evaluation> {
-  const [rows, rule] = await Promise.all([
+async function evaluate(executor: Transaction | typeof db, userId: string, target: DeliveryTarget): Promise<Evaluation> {
+  const [rows, delivery] = await Promise.all([
     cartRepository.lines(executor, userId),
-    deliveryService.ruleFor(pincode, executor),
+    deliveryService.quote(target, executor),
   ]);
   const lines = rows.map((row) => priceLine(row.product, toMilli(row.quantity)));
   const summary = summarize(lines);
@@ -54,24 +54,33 @@ async function evaluate(executor: Transaction | typeof db, userId: string, pinco
       }),
     });
   }
-  if (!rule) blockers.push({ reason: 'address_not_serviceable', pincode });
-  else if (lines.length > 0 && summary.subtotalPaise < rule.minOrderPaise) {
+  if (!delivery.serviceable) {
+    blockers.push({
+      reason: 'address_not_serviceable',
+      pincode: target.pincode,
+      why: delivery.reason,
+      distanceKm: delivery.distanceKm,
+      maxDistanceKm: delivery.maxDistanceKm,
+    });
+  } else if (lines.length > 0 && summary.subtotalPaise < delivery.minOrderPaise) {
     blockers.push({
       reason: 'below_minimum',
-      minOrderAmount: fromPaise(rule.minOrderPaise),
-      shortBy: fromPaise(rule.minOrderPaise - summary.subtotalPaise),
+      minOrderAmount: fromPaise(delivery.minOrderPaise),
+      shortBy: fromPaise(delivery.minOrderPaise - summary.subtotalPaise),
     });
   }
 
-  const delivery = rule ? deliveryService.charge(rule, summary.subtotalPaise) : { feePaise: 0, freeDeliveryApplied: false };
+  const charge = delivery.serviceable
+    ? deliveryService.charge(delivery, summary.subtotalPaise)
+    : { feePaise: 0, freeDeliveryApplied: false };
   return {
     lines,
-    rule,
+    delivery,
     subtotalPaise: summary.subtotalPaise,
     mrpTotalPaise: summary.mrpTotalPaise,
-    deliveryFeePaise: delivery.feePaise,
-    freeDeliveryApplied: delivery.freeDeliveryApplied,
-    totalPaise: summary.subtotalPaise + delivery.feePaise,
+    deliveryFeePaise: charge.feePaise,
+    freeDeliveryApplied: charge.freeDeliveryApplied,
+    totalPaise: summary.subtotalPaise + charge.feePaise,
     blockers,
   };
 }
@@ -162,7 +171,7 @@ export const ordersService = {
   async quote(userId: string, addressId: string) {
     const address = await addressesRepository.findForUser(db, userId, addressId);
     if (!address) throw AppError.notFound('Address');
-    const evaluation = await evaluate(db, userId, address.pincode);
+    const evaluation = await evaluate(db, userId, address);
     const methods = await paymentMethods();
     return {
       items: evaluation.lines.map(toPublicLine),
@@ -174,7 +183,14 @@ export const ordersService = {
         freeDeliveryApplied: evaluation.freeDeliveryApplied,
         total: fromPaise(evaluation.totalPaise),
       },
-      delivery: evaluation.rule ? deliveryService.toPublic(evaluation.rule) : null,
+      delivery: deliveryService.toPublic(evaluation.delivery),
+      /** "Add ₹X more for free delivery" nudge; null when already free or not applicable. */
+      freeDeliveryShortBy:
+        evaluation.delivery.serviceable &&
+        evaluation.delivery.freeDeliveryAbovePaise !== null &&
+        evaluation.deliveryFeePaise > 0
+          ? fromPaise(evaluation.delivery.freeDeliveryAbovePaise - evaluation.subtotalPaise)
+          : null,
       paymentMethods: methods,
       canPlaceOrder: evaluation.blockers.length === 0,
       blockers: evaluation.blockers,
@@ -198,7 +214,7 @@ export const ordersService = {
         const address = await addressesRepository.findForUser(tx, userId, input.addressId);
         if (!address) throw AppError.notFound('Address');
 
-        const evaluation = await evaluate(tx, userId, address.pincode);
+        const evaluation = await evaluate(tx, userId, address);
         const [firstBlocker] = evaluation.blockers;
         if (firstBlocker) throw blockerError(firstBlocker);
 

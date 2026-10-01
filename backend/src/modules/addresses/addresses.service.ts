@@ -45,8 +45,8 @@ function toPublic(address: Address, serviceable: boolean): PublicAddress {
 }
 
 async function withServiceability(rows: Address[]): Promise<PublicAddress[]> {
-  const serviced = await deliveryService.servicedPincodes(rows.map((row) => row.pincode));
-  return rows.map((row) => toPublic(row, serviced.has(row.pincode)));
+  const serviceable = await deliveryService.serviceability(rows);
+  return rows.map((row, i) => toPublic(row, serviceable[i] ?? false));
 }
 
 export const addressesService = {

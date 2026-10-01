@@ -6,7 +6,7 @@ Express/TypeScript API, with 30,000 SKUs synced from GoFrugal RetailEasy POS.
 | Path | What |
 |------|------|
 | `backend/` | Express 5 + TypeScript API, Drizzle ORM, Supabase Postgres |
-| `backend/docs/` | API references for the app team (auth, catalogue) |
+| `backend/docs/` | API references for the app team (auth, catalogue, checkout) |
 | `render.yaml` | Render Blueprint (Singapore, Starter) |
 | `.github/workflows/` | CI: typecheck, tests, build, migration drift check |
 
