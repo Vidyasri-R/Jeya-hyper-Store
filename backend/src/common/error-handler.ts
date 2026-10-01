@@ -53,6 +53,9 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
 
   if (res.headersSent) return;
 
+  const retryAfter = (appError.details as { retryAfterSec?: unknown } | undefined)?.retryAfterSec;
+  if (appError.status === 429 && typeof retryAfter === 'number') res.setHeader('Retry-After', String(retryAfter));
+
   res.status(appError.status).json({
     error: {
       code: appError.code,

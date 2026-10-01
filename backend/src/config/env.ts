@@ -46,6 +46,40 @@ const envSchema = z.object({
   ),
   DIRECT_DATABASE_URL: postgresUrl,
   DB_POOL_MAX: z.coerce.number().int().min(1).max(50).default(10),
+
+  // ─── Auth ───
+  JWT_ACCESS_SECRET: z.string().min(32, 'must be at least 32 characters'),
+  ACCESS_TOKEN_TTL_SEC: z.coerce.number().int().min(60).max(86_400).default(900),
+  REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(365).default(60),
+
+  // ─── OTP ───
+  /** Server-side secret mixed into OTP hashes so a DB leak doesn't expose codes. */
+  OTP_PEPPER: z.string().min(32, 'must be at least 32 characters'),
+  /** `console` logs codes (dev only — refused for real numbers in production). WhatsApp comes next. */
+  OTP_PROVIDER: z.enum(['console']).default('console'),
+  OTP_TTL_SEC: z.coerce.number().int().min(60).max(900).default(300),
+  OTP_RESEND_COOLDOWN_SEC: z.coerce.number().int().min(10).max(300).default(30),
+  OTP_MAX_PER_PHONE_PER_HOUR: z.coerce.number().int().min(1).max(20).default(5),
+  OTP_MAX_PER_IP_PER_HOUR: z.coerce.number().int().min(1).max(200).default(20),
+  OTP_MAX_VERIFY_ATTEMPTS: z.coerce.number().int().min(1).max(10).default(5),
+
+  // ─── Store reviewer demo login ───
+  /**
+   * Fallback only — the live switch is the `auth.demo_login_enabled` row in app_config,
+   * so it can be flipped off after approval without a redeploy.
+   */
+  DEMO_LOGIN_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+  DEMO_LOGIN_PHONE: z
+    .string()
+    .regex(/^91[6-9][0-9]{9}$/, 'must be 91 followed by a 10-digit Indian mobile')
+    .default('919999999999'),
+  DEMO_LOGIN_OTP: z
+    .string()
+    .regex(/^[0-9]{6}$/, 'must be 6 digits')
+    .default('123456'),
 });
 
 export type Env = z.infer<typeof envSchema>;

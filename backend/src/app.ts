@@ -8,6 +8,7 @@ import { errorHandler, notFoundHandler } from './common/error-handler';
 import { env } from './config/env';
 import { logger } from './config/logger';
 import { pingDb } from './db/client';
+import { v1Router } from './routes';
 
 export function createApp(): Express {
   const app = express();
@@ -49,6 +50,8 @@ export function createApp(): Express {
       res.status(503).json({ status: 'degraded', db: { ok: false } });
     }
   });
+
+  app.use('/v1', v1Router);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
