@@ -6,7 +6,7 @@ Express/TypeScript API, with 30,000 SKUs synced from GoFrugal RetailEasy POS.
 | Path | What |
 |------|------|
 | `backend/` | Express 5 + TypeScript API, Drizzle ORM, Supabase Postgres |
-| `backend/docs/` | API references for the app team |
+| `backend/docs/` | API references for the app team (auth, catalogue) |
 | `render.yaml` | Render Blueprint (Singapore, Starter) |
 | `.github/workflows/` | CI: typecheck, tests, build, migration drift check |
 
@@ -31,6 +31,7 @@ npm run db:check            # end-to-end DB smoke test
 npm run dev                 # http://localhost:4000/health/ready
 npm run smoke:auth          # reviewer demo-login flow (API must be running)
 npm run storage:check       # Cloudflare R2 upload/public-URL test
+npm run sync:catalog        # POS → DB catalogue sync (add `-- full` for a full resync)
 npm test                    # unit tests
 ```
 

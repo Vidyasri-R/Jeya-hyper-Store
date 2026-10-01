@@ -16,7 +16,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "smoke:auth": "tsx src/scripts/smoke-auth.ts",
-    "storage:check": "tsx src/scripts/storage-check.ts"
+    "storage:check": "tsx src/scripts/storage-check.ts",
+    "sync:catalog": "tsx src/scripts/sync-catalog.ts",
+    "catalog:purge-mock": "tsx src/scripts/purge-mock-catalog.ts"
   },
   "license": "UNLICENSED",
   "description": "Jeya Hyper Store backend API",

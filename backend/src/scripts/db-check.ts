@@ -44,7 +44,12 @@ async function main(): Promise<void> {
   const [trgm] = await sqlClient<{ extversion: string }[]>`
     select extversion from pg_extension where extname = 'pg_trgm'`;
   if (!trgm) throw new Error('pg_trgm extension missing');
-  console.log(`✔ pg_trgm ${trgm.extversion}`);
+
+  // Informational only: pooled backends opened before migration 0003 keep the old
+  // default, which is why search sets the threshold per statement (catalog.repository).
+  const [threshold] = await sqlClient<{ value: string }[]>`
+    select current_setting('pg_trgm.word_similarity_threshold') as value`;
+  console.log(`✔ pg_trgm ${trgm.extversion} (this backend's default threshold: ${threshold?.value})`);
 
   try {
     await db.transaction(async (tx) => {
@@ -82,12 +87,14 @@ async function main(): Promise<void> {
       console.log('✔ full-text search ok');
 
       // word_similarity (`<%`) scores the query against the best-matching span of the name,
-      // so short queries aren't penalised by long product names. SET LOCAL is pooler-safe.
-      await tx.execute(sql`SET LOCAL pg_trgm.word_similarity_threshold = 0.4`);
+      // so short queries aren't penalised by long product names. Same per-statement threshold as search.
       const fuzzy = await tx
         .select({ id: schema.products.id })
         .from(schema.products)
-        .where(sql`'poni rise' <% ${schema.products.name}`);
+        .where(
+          sql`(SELECT set_config('pg_trgm.word_similarity_threshold', '0.4', true)) IS NOT NULL
+              AND 'poni rise' <% ${schema.products.name}`,
+        );
       if (!fuzzy.some((row) => row.id === product.id)) throw new Error('trigram fuzzy search did not match');
       console.log('✔ fuzzy (typo) search ok');
 

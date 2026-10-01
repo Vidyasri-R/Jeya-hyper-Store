@@ -2,11 +2,13 @@ import { createApp } from './app';
 import { env } from './config/env';
 import { logger } from './config/logger';
 import { closeDb } from './db/client';
+import { syncScheduler } from './modules/sync/sync.scheduler';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
 const server = createApp().listen(env.PORT, () => {
   logger.info({ port: env.PORT, env: env.NODE_ENV }, '🚀 Jeya API listening');
+  syncScheduler.start();
 });
 
 // Must exceed Render's load balancer idle timeout to avoid sporadic 502s.
@@ -28,6 +30,7 @@ async function shutdown(signal: string): Promise<void> {
 
   server.close(async (error) => {
     if (error) logger.error({ err: error }, 'error closing HTTP server');
+    await syncScheduler.stop().catch((syncError: unknown) => logger.error({ err: syncError }, 'error stopping sync'));
     await closeDb().catch((dbError: unknown) => logger.error({ err: dbError }, 'error closing DB pool'));
     process.exit(error ? 1 : 0);
   });

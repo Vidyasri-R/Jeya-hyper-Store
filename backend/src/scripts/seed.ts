@@ -30,7 +30,7 @@ const defaults: (typeof appConfig.$inferInsert)[] = [
   },
   {
     key: CONFIG_KEYS.STORE_INFO,
-    value: { name: 'Jeya Hyper Store', city: 'Perambalur', supportPhone: null, supportWhatsApp: null },
+    value: { name: 'Jeya Hyper Store', city: 'Tiruchirappalli', supportPhone: null, supportWhatsApp: null },
     isPublic: true,
     description: 'Store contact details shown in the app.',
   },

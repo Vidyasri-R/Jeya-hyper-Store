@@ -81,6 +81,17 @@ const envSchema = z.object({
     .regex(/^[0-9]{6}$/, 'must be 6 digits')
     .default('123456'),
 
+  // ─── POS / catalogue sync ───
+  /** `mock` = built-in sample catalogue. `gofrugal` is added once API access is granted. */
+  POS_PROVIDER: z.enum(['mock']).default('mock'),
+  /** Run the in-process delta sync scheduler. Off locally unless you want it. */
+  CATALOG_SYNC_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+  CATALOG_SYNC_INTERVAL_MIN: z.coerce.number().int().min(1).max(1440).default(15),
+  CATALOG_SYNC_PAGE_SIZE: z.coerce.number().int().min(10).max(2000).default(500),
+
   // ─── Cloudflare R2 (optional until product images are wired) ───
   R2_ACCOUNT_ID: z.string().regex(/^[a-f0-9]{32}$/, 'must be the 32-char Cloudflare account ID').optional(),
   R2_ACCESS_KEY_ID: z.string().min(16).optional(),
