@@ -32,6 +32,15 @@ async function main(): Promise<void> {
   if (missing.length > 0) throw new Error(`missing tables: ${missing.join(', ')} — run npm run db:migrate`);
   console.log(`✔ all ${expectedTables.length} tables present`);
 
+  // Supabase exposes `public` over PostgREST; every table must have RLS on.
+  const noRls = await sqlClient<{ relname: string }[]>`
+    select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity`;
+  if (noRls.length > 0) {
+    throw new Error(`RLS disabled on: ${noRls.map((row) => row.relname).join(', ')} — add a migration enabling it`);
+  }
+  console.log('✔ row-level security enabled on every table');
+
   const [trgm] = await sqlClient<{ extversion: string }[]>`
     select extversion from pg_extension where extname = 'pg_trgm'`;
   if (!trgm) throw new Error('pg_trgm extension missing');

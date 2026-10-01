@@ -80,12 +80,28 @@ const envSchema = z.object({
     .string()
     .regex(/^[0-9]{6}$/, 'must be 6 digits')
     .default('123456'),
+
+  // ─── Cloudflare R2 (optional until product images are wired) ───
+  R2_ACCOUNT_ID: z.string().regex(/^[a-f0-9]{32}$/, 'must be the 32-char Cloudflare account ID').optional(),
+  R2_ACCESS_KEY_ID: z.string().min(16).optional(),
+  R2_SECRET_ACCESS_KEY: z.string().min(32).optional(),
+  R2_BUCKET: z
+    .string()
+    .regex(/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/, 'invalid bucket name')
+    .default('jeya-product-images'),
+  /** Public base for image URLs, e.g. https://images.jeyahyperstore.com (no trailing slash). */
+  R2_PUBLIC_BASE_URL: z
+    .url()
+    .transform((value) => value.replace(/\/+$/, ''))
+    .optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
 
 function loadEnv(): Env {
-  const parsed = envSchema.safeParse(process.env);
+  // Treat `KEY=` (empty) as unset so optional groups like R2_* can sit blank in .env.
+  const raw = Object.fromEntries(Object.entries(process.env).filter(([, value]) => value !== ''));
+  const parsed = envSchema.safeParse(raw);
   if (!parsed.success) {
     const issues = parsed.error.issues
       .map((issue) => `  • ${issue.path.join('.') || '(root)'}: ${issue.message}`)

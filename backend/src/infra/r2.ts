@@ -1,0 +1,110 @@
+import {
+  DeleteObjectCommand,
+  HeadObjectCommand,
+  NotFound,
+  PutObjectCommand,
+  S3Client,
+  type PutObjectCommandInput,
+} from '@aws-sdk/client-s3';
+import { AppError } from '../common/errors';
+import { env } from '../config/env';
+
+/**
+ * Cloudflare R2 via its S3-compatible API.
+ *
+ * Object keys are content-addressed or versioned by the caller
+ * (e.g. products/<itemCode>/<sha1>.webp) so they can be cached forever —
+ * never overwrite an existing key with different bytes.
+ */
+type R2Config = { accountId: string; accessKeyId: string; secretAccessKey: string; bucket: string; publicBaseUrl: string };
+
+function readConfig(): R2Config | null {
+  const { R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET, R2_PUBLIC_BASE_URL } = env;
+  const values = [R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_PUBLIC_BASE_URL];
+  if (values.every((value) => value === undefined)) return null;
+  if (values.some((value) => value === undefined)) {
+    throw new Error(
+      'Cloudflare R2 is partially configured: set all of R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_PUBLIC_BASE_URL',
+    );
+  }
+  return {
+    accountId: R2_ACCOUNT_ID!,
+    accessKeyId: R2_ACCESS_KEY_ID!,
+    secretAccessKey: R2_SECRET_ACCESS_KEY!,
+    bucket: R2_BUCKET,
+    publicBaseUrl: R2_PUBLIC_BASE_URL!,
+  };
+}
+
+const config = readConfig();
+
+const client = config
+  ? new S3Client({
+      region: 'auto',
+      endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
+      credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey },
+      maxAttempts: 3,
+      // R2 doesn't support the newer default checksum headers on every operation.
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
+    })
+  : null;
+
+function requireClient(): { client: S3Client; config: R2Config } {
+  if (!client || !config) throw new AppError('UPSTREAM_UNAVAILABLE', 'Image storage is not configured');
+  return { client, config };
+}
+
+function assertKey(key: string): void {
+  if (!/^[a-z0-9][a-z0-9/_.-]{0,500}$/i.test(key) || key.includes('..')) {
+    throw new Error(`invalid object key: ${key}`);
+  }
+}
+
+export const r2 = {
+  isConfigured: (): boolean => client !== null,
+
+  publicUrl(key: string): string {
+    assertKey(key);
+    return `${requireClient().config.publicBaseUrl}/${key}`;
+  },
+
+  async put(
+    key: string,
+    body: Buffer,
+    options: { contentType: string; cacheControl?: string; metadata?: Record<string, string> },
+  ): Promise<{ key: string; url: string; etag: string | undefined }> {
+    assertKey(key);
+    const { client: s3, config: cfg } = requireClient();
+    const input: PutObjectCommandInput = {
+      Bucket: cfg.bucket,
+      Key: key,
+      Body: body,
+      ContentType: options.contentType,
+      CacheControl: options.cacheControl ?? 'public, max-age=31536000, immutable',
+      ...(options.metadata ? { Metadata: options.metadata } : {}),
+    };
+    const result = await s3.send(new PutObjectCommand(input));
+    return { key, url: `${cfg.publicBaseUrl}/${key}`, etag: result.ETag };
+  },
+
+  async exists(key: string): Promise<boolean> {
+    assertKey(key);
+    const { client: s3, config: cfg } = requireClient();
+    try {
+      await s3.send(new HeadObjectCommand({ Bucket: cfg.bucket, Key: key }));
+      return true;
+    } catch (error) {
+      if (error instanceof NotFound || (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode === 404) {
+        return false;
+      }
+      throw error;
+    }
+  },
+
+  async remove(key: string): Promise<void> {
+    assertKey(key);
+    const { client: s3, config: cfg } = requireClient();
+    await s3.send(new DeleteObjectCommand({ Bucket: cfg.bucket, Key: key }));
+  },
+};

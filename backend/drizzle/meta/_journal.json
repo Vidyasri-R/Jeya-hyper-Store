@@ -15,6 +15,13 @@
       "when": 1790844541564,
       "tag": "0001_init_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790847639583,
+      "tag": "0002_enable_rls",
+      "breakpoints": true
     }
   ]
 }

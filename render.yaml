@@ -1,0 +1,60 @@
+# Render Blueprint — Dashboard → New → Blueprint → pick this repo.
+# Secrets marked `sync: false` are prompted for on first deploy and never stored in git.
+services:
+  - type: web
+    name: jeya-api
+    runtime: node
+    region: singapore # closest Render region to Supabase ap-south-1 (Mumbai)
+    plan: starter # free plan sleeps after 15 min idle → reviewer sees a 50 s cold start
+    rootDir: backend
+    branch: main
+    autoDeploy: true
+    buildFilter:
+      paths:
+        - backend/**
+    # --include=dev: tsc/types are devDependencies but NODE_ENV=production is set below.
+    buildCommand: npm ci --include=dev && npm run build && npm prune --omit=dev
+    # Runs before traffic switches to the new build; a failed migration aborts the deploy.
+    preDeployCommand: npm run db:migrate:prod && npm run db:seed:prod
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: CORS_ORIGINS
+        value: ""
+      - key: DB_POOL_MAX
+        value: 10
+
+      # Supabase → Connect → Transaction pooler (6543) / Session pooler (5432)
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_DATABASE_URL
+        sync: false
+
+      # Render generates strong random values once and keeps them.
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: OTP_PEPPER
+        generateValue: true
+
+      - key: OTP_PROVIDER
+        value: console
+      - key: DEMO_LOGIN_ENABLED
+        value: "false" # live switch is app_config.auth.demo_login_enabled
+
+      # Cloudflare R2 — optional until product images are wired
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_PUBLIC_BASE_URL
+        sync: false
+      - key: R2_BUCKET
+        value: jeya-product-images
