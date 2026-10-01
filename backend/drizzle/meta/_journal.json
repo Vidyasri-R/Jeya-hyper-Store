@@ -29,6 +29,20 @@
       "when": 1790849401700,
       "tag": "0003_search_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790851519307,
+      "tag": "0004_order_number_seq",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790851852047,
+      "tag": "0005_payment_method_online",
+      "breakpoints": true
     }
   ]
 }

@@ -22,6 +22,7 @@ import {
   jsonb,
   numeric,
   pgEnum,
+  pgSequence,
   pgTable,
   primaryKey,
   smallint,
@@ -79,7 +80,8 @@ export const paymentStatus = pgEnum('payment_status', [
   'refunded',
 ]);
 
-export const paymentMethod = pgEnum('payment_method', ['upi', 'card', 'netbanking', 'wallet', 'cod']);
+/** On orders: 'cod' or 'online' (prepaid). Payment rows record the concrete method (upi/card/…). */
+export const paymentMethod = pgEnum('payment_method', ['upi', 'card', 'netbanking', 'wallet', 'cod', 'online']);
 
 export const paymentProvider = pgEnum('payment_provider', ['razorpay', 'cashfree']);
 
@@ -348,6 +350,9 @@ export const cartItems = pgTable(
 );
 
 /* ───────────────────────────── Orders ───────────────────────────── */
+
+/** Feeds the human-facing order number JHS-<yymmdd>-<seq>; gaps are fine. */
+export const orderNumberSeq = pgSequence('order_number_seq', { startWith: 1001, increment: 1 });
 
 /** Immutable copy of the address at checkout time — addresses get edited/deleted later. */
 export type DeliveryAddressSnapshot = {

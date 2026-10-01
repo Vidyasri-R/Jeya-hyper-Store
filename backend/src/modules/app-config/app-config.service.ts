@@ -8,6 +8,7 @@ export const CONFIG_KEYS = {
   MIN_APP_VERSION: 'app.min_supported_version',
   STORE_INFO: 'store.info',
   MAINTENANCE: 'app.maintenance',
+  PAYMENT_METHODS: 'checkout.payment_methods',
 } as const;
 
 const CACHE_TTL_MS = 30_000;
@@ -51,6 +52,12 @@ export const appConfigService = {
   async getBoolean(key: string, fallback: boolean): Promise<boolean> {
     const value = (await getSnapshot()).values.get(key);
     return typeof value === 'boolean' ? value : fallback;
+  },
+
+  /** Object-valued key merged over a fallback, so a partially-filled row can't drop fields. */
+  async getObject<T extends Record<string, unknown>>(key: string, fallback: T): Promise<T> {
+    const value = (await getSnapshot()).values.get(key);
+    return value && typeof value === 'object' && !Array.isArray(value) ? { ...fallback, ...(value as Partial<T>) } : fallback;
   },
 
   async getPublicConfig(): Promise<Record<string, unknown>> {

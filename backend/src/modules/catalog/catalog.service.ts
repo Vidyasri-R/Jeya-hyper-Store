@@ -1,16 +1,14 @@
 import { decodeCursor, encodeCursor } from '../../common/cursor';
 import { AppError } from '../../common/errors';
+import { displayQty, toPaise } from '../../common/money';
 import { catalogCache } from './catalog.cache';
 import { catalogRepository, sortValue, type ListingSort, type ProductCardRow } from './catalog.repository';
 import type { ProductListQuery } from './catalog.schemas';
+import { purchaseLimits, type StockStatus } from './purchase-rules';
 import { parseSearch } from './search-query';
 
 const TREE_TTL_MS = 5 * 60 * 1000;
 const MAX_SEARCH_OFFSET = 1000;
-/** Shown as "Only a few left" below this many purchasable units. */
-const LOW_STOCK_UNITS = 5;
-/** Cap on qty per line when the product has no explicit max. */
-const DEFAULT_MAX_PER_LINE = 50;
 
 export type CategoryNode = {
   id: number;
@@ -28,7 +26,6 @@ type CategoryIndex = {
   parentOf: Map<number, number | null>;
 };
 
-export type StockStatus = 'in_stock' | 'low_stock' | 'out_of_stock';
 
 export type ProductCard = {
   id: number;
@@ -116,25 +113,10 @@ function pruneEmpty(nodes: CategoryNode[]): CategoryNode[] {
     .map((node) => ({ ...node, children: pruneEmpty(node.children) }));
 }
 
-/** Decimal-safe-enough helpers: inputs are numeric(12,2/3) strings, outputs re-stringified at fixed scale. */
-function toQty(value: number): string {
-  return Math.max(0, value).toFixed(3).replace(/\.?0+$/, '') || '0';
-}
-
 export function toProductCard(row: ProductCardRow): ProductCard {
-  const mrp = Number(row.mrp);
-  const price = Number(row.sellingPrice);
-  const available = Number(row.available);
-  const step = Number(row.qtyStep) || 1;
-  const min = Number(row.minOrderQty) || step;
-  const ruleMax = row.maxOrderQty !== null ? Number(row.maxOrderQty) : row.isLoose ? 10 : DEFAULT_MAX_PER_LINE;
-
-  // Round down to a whole number of steps so the app never offers an unsellable qty.
-  const rawMax = Math.min(available, ruleMax);
-  const steppedMax = rawMax >= min ? Math.floor((rawMax + 1e-9) / step) * step : 0;
-
-  const stockStatus: StockStatus =
-    steppedMax <= 0 ? 'out_of_stock' : available < LOW_STOCK_UNITS * step ? 'low_stock' : 'in_stock';
+  const mrp = toPaise(row.mrp);
+  const price = toPaise(row.sellingPrice);
+  const limits = purchaseLimits(row);
 
   return {
     id: row.id,
@@ -149,10 +131,10 @@ export function toProductCard(row: ProductCardRow): ProductCard {
     unit: row.unit,
     packSize: row.packSize,
     isLoose: row.isLoose,
-    minOrderQty: toQty(min),
-    qtyStep: toQty(step),
-    maxPurchasableQty: toQty(steppedMax),
-    stockStatus,
+    minOrderQty: displayQty(limits.minMilli),
+    qtyStep: displayQty(limits.stepMilli),
+    maxPurchasableQty: displayQty(limits.maxMilli),
+    stockStatus: limits.stockStatus,
     imageUrl: row.imageUrl,
   };
 }

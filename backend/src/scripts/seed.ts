@@ -6,7 +6,7 @@
  */
 import { sql } from 'drizzle-orm';
 import { closeDb, db } from '../db/client';
-import { appConfig } from '../db/schema';
+import { appConfig, serviceablePincodes } from '../db/schema';
 import { CONFIG_KEYS } from '../modules/app-config/app-config.service';
 
 const defaults: (typeof appConfig.$inferInsert)[] = [
@@ -29,6 +29,12 @@ const defaults: (typeof appConfig.$inferInsert)[] = [
     description: 'Show a maintenance banner and block checkout.',
   },
   {
+    key: CONFIG_KEYS.PAYMENT_METHODS,
+    value: { cod: true, online: false },
+    isPublic: true,
+    description: 'Payment options shown at checkout. Turn online on once Razorpay is live.',
+  },
+  {
     key: CONFIG_KEYS.STORE_INFO,
     value: { name: 'Jeya Hyper Store', city: 'Tiruchirappalli', supportPhone: null, supportWhatsApp: null },
     isPublic: true,
@@ -36,7 +42,26 @@ const defaults: (typeof appConfig.$inferInsert)[] = [
   },
 ];
 
+/**
+ * PLACEHOLDER delivery areas so checkout works end to end in development.
+ * Replace with the store's real pincodes and fees before launch (edit rows in
+ * Supabase → serviceable_pincodes; this seed never overwrites existing rows).
+ */
+const PLACEHOLDER_FEES = { deliveryFee: '30.00', minOrderAmount: '199.00', freeDeliveryAbove: '499.00' };
+const placeholderPincodes = ['620001', '620002', '620008', '620017', '620018', '620021'].map((pincode) => ({
+  pincode,
+  areaName: `Tiruchirappalli ${pincode} (placeholder)`,
+  ...PLACEHOLDER_FEES,
+}));
+
 async function main(): Promise<void> {
+  const pincodes = await db
+    .insert(serviceablePincodes)
+    .values(placeholderPincodes)
+    .onConflictDoNothing({ target: serviceablePincodes.pincode })
+    .returning({ pincode: serviceablePincodes.pincode });
+  console.log(`✔ seeded ${pincodes.length} new delivery pincode(s)${pincodes.length ? ` (placeholders: ${pincodes.map((row) => row.pincode).join(', ')})` : ''}`);
+
   const inserted = await db
     .insert(appConfig)
     .values(defaults)
