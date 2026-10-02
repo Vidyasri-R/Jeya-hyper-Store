@@ -75,26 +75,20 @@ class AuthController extends Notifier<AuthState> {
     await _restore();
   }
 
-  void signedIn(AppUser user) {
-    _set(SignedIn(user));
-    ref.invalidate(cartProvider);
-    ref.invalidate(addressesProvider);
-  }
+  // Cart and addresses watch isSignedInProvider, so they refetch on their own when the
+  // session changes — invalidating them from here would be a circular dependency.
+  void signedIn(AppUser user) => _set(SignedIn(user));
 
   void userUpdated(AppUser user) => _set(SignedIn(user));
 
   Future<void> logout() async {
     await ref.read(repositoryProvider).logout();
     _set(const SignedOut());
-    ref.invalidate(cartProvider);
-    ref.invalidate(addressesProvider);
   }
 
   Future<void> deleteAccount() async {
     await ref.read(repositoryProvider).deleteAccount();
     _set(const SignedOut());
-    ref.invalidate(cartProvider);
-    ref.invalidate(addressesProvider);
   }
 
   Future<void> sessionExpired() async => _set(const SignedOut());

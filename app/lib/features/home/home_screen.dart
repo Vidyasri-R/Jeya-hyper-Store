@@ -78,11 +78,11 @@ class HomeScreen extends ConsumerWidget {
               error: (e, _) => [SliverToBoxAdapter(child: ErrorRetry(error: e, onRetry: () => ref.invalidate(_homeProductsProvider)))],
             ),
             const SliverToBoxAdapter(child: _StorePromise()),
-            const SliverToBoxAdapter(child: SizedBox(height: 90)),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
       ),
-      bottomSheet: const CartBar(),
+      bottomNavigationBar: const CartBar(),
     );
   }
 }
@@ -172,7 +172,8 @@ class _HeroCarouselState extends State<_HeroCarousel> {
       children: [
         const SizedBox(height: 14),
         SizedBox(
-          height: 156,
+          // Sized for 2-line titles at large accessibility font sizes (no overflow on small phones).
+          height: 176,
           child: PageView.builder(
             controller: _controller,
             itemCount: _banners.length,

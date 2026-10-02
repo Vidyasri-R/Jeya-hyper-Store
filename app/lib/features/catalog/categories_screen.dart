@@ -162,7 +162,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
           );
         },
       ),
-      bottomSheet: const CartBar(),
+      bottomNavigationBar: const CartBar(),
     );
   }
 }
