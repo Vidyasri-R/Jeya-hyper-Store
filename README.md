@@ -5,6 +5,7 @@ Express/TypeScript API, with 30,000 SKUs synced from GoFrugal RetailEasy POS.
 
 | Path | What |
 |------|------|
+| `app/` | Flutter app (Android + iOS) — Riverpod, go_router, Razorpay |
 | `backend/` | Express 5 + TypeScript API, Drizzle ORM, Supabase Postgres |
 | `backend/docs/` | API references for the app team (auth, catalogue, checkout, payments) |
 | `render.yaml` | Render Blueprint (Singapore, Starter) |
@@ -36,6 +37,17 @@ npm test                    # unit tests
 ```
 
 Requires Node 22 (`.nvmrc`).
+
+## App quick start
+
+```bash
+cd app
+flutter pub get
+flutter run                                                   # talks to https://jeya-api.onrender.com/v1
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:4000/v1  # Android emulator → local API
+```
+
+Package / bundle id: `com.jeyahyperstore.app`. Reviewer login: 9999999999 / OTP 123456.
 
 ## Schema changes
 

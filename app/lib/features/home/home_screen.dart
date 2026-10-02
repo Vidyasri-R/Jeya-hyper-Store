@@ -1,0 +1,319 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+
+import '../../core/theme.dart';
+import '../../data/models.dart';
+import '../../state/providers.dart';
+import '../../widgets/common.dart';
+import '../../widgets/product_card.dart';
+import 'home_header.dart';
+
+final _homeProductsProvider = FutureProvider<List<Product>>(
+  (ref) async => (await ref.watch(repositoryProvider).products(sort: 'popular', inStock: true, limit: 40)).items,
+);
+
+class HomeScreen extends ConsumerWidget {
+  const HomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final categories = ref.watch(categoriesProvider);
+    final products = ref.watch(_homeProductsProvider);
+
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      body: RefreshIndicator(
+        color: AppColors.green700,
+        onRefresh: () async {
+          ref.invalidate(categoriesProvider);
+          ref.invalidate(_homeProductsProvider);
+          await ref.read(_homeProductsProvider.future);
+        },
+        child: CustomScrollView(
+          slivers: [
+            const SliverToBoxAdapter(child: HomeHeader()),
+            SliverToBoxAdapter(
+              child: categories.when(
+                data: (list) => _QuickCategories(roots: list),
+                loading: () => const _QuickCategoriesSkeleton(),
+                error: (e, _) => ErrorRetry(error: e, onRetry: () => ref.invalidate(categoriesProvider)),
+              ),
+            ),
+            const SliverToBoxAdapter(child: _HeroCarousel()),
+            ...products.when(
+              data: (items) {
+                final deals = items.where((p) => p.hasDiscount).toList()..sort((a, b) => b.discountPercent.compareTo(a.discountPercent));
+                return [
+                  if (deals.isNotEmpty) ...[
+                    SliverToBoxAdapter(child: SectionHeader(title: "Today's Offers", subtitle: 'Best savings in store today', onSeeAll: () => context.go('/categories'))),
+                    SliverToBoxAdapter(child: _ProductRail(products: deals.take(12).toList())),
+                  ],
+                  SliverToBoxAdapter(
+                    child: categories.maybeWhen(
+                      data: (list) => _ShopByCategory(roots: list),
+                      orElse: () => const SizedBox.shrink(),
+                    ),
+                  ),
+                  SliverToBoxAdapter(child: SectionHeader(title: 'Popular in your store', subtitle: 'What Trichy is buying', onSeeAll: () => context.go('/categories'))),
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    sliver: SliverGrid(
+                      gridDelegate: productGridDelegate(context),
+                      delegate: SliverChildBuilderDelegate((_, i) => ProductCard(product: items[i]), childCount: items.length.clamp(0, 20)),
+                    ),
+                  ),
+                ];
+              },
+              loading: () => [
+                SliverPadding(
+                  padding: const EdgeInsets.all(16),
+                  sliver: SliverGrid(
+                    gridDelegate: productGridDelegate(context),
+                    delegate: SliverChildBuilderDelegate((_, _) => const ShimmerBox(), childCount: 4),
+                  ),
+                ),
+              ],
+              error: (e, _) => [SliverToBoxAdapter(child: ErrorRetry(error: e, onRetry: () => ref.invalidate(_homeProductsProvider)))],
+            ),
+            const SliverToBoxAdapter(child: _StorePromise()),
+            const SliverToBoxAdapter(child: SizedBox(height: 90)),
+          ],
+        ),
+      ),
+      bottomSheet: const CartBar(),
+    );
+  }
+}
+
+class _QuickCategories extends StatelessWidget {
+  const _QuickCategories({required this.roots});
+  final List<Category> roots;
+
+  @override
+  Widget build(BuildContext context) {
+    final top = roots.take(5).toList();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 16, 10, 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final c in top)
+            Expanded(child: CategoryTile(name: c.name, imageUrl: c.imageUrl, size: 56, onTap: () => context.go('/categories?c=${c.slug}'))),
+          Expanded(
+            child: InkWell(
+              onTap: () => context.go('/categories'),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              child: Column(children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(color: AppColors.green50, borderRadius: BorderRadius.circular(AppRadius.lg)),
+                  child: const Icon(Icons.apps_rounded, color: AppColors.green700, size: 28),
+                ),
+                const SizedBox(height: 6),
+                Text('View All', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppColors.ink, fontWeight: FontWeight.w600)),
+              ]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickCategoriesSkeleton extends StatelessWidget {
+  const _QuickCategoriesSkeleton();
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: List.generate(6, (_) => const ShimmerBox(width: 52, height: 52))),
+      );
+}
+
+class _HeroBanner {
+  const _HeroBanner(this.tag, this.title, this.subtitle, this.highlight, this.cta, this.icon, this.colors, this.route);
+  final String tag, title, subtitle, highlight, cta;
+  final IconData icon;
+  final List<Color> colors;
+  final String route;
+}
+
+const _banners = [
+  _HeroBanner('FRESH DEALS', 'Freshness\nat your doorstep', 'Farm fresh fruits & vegetables', 'Picked daily in Trichy', 'Shop Now', Icons.eco_rounded,
+      [Color(0xFFE3F4E6), Color(0xFFC9EBD0)], '/categories'),
+  _HeroBanner('FREE DELIVERY', 'Free delivery\non ₹999+', 'Same-day delivery from your store', 'No minimum order', 'Start Shopping', Icons.delivery_dining_rounded,
+      [Color(0xFFFFF1D6), Color(0xFFFFE2A8)], '/categories'),
+  _HeroBanner('PAY YOUR WAY', 'UPI, cards\nor cash on delivery', 'Safe & secure payments', '100% secure checkout', 'Explore', Icons.verified_user_rounded,
+      [Color(0xFFE5ECFA), Color(0xFFCCD9F5)], '/categories'),
+];
+
+class _HeroCarousel extends StatefulWidget {
+  const _HeroCarousel();
+  @override
+  State<_HeroCarousel> createState() => _HeroCarouselState();
+}
+
+class _HeroCarouselState extends State<_HeroCarousel> {
+  final _controller = PageController(viewportFraction: 0.92);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Column(
+      children: [
+        const SizedBox(height: 14),
+        SizedBox(
+          height: 156,
+          child: PageView.builder(
+            controller: _controller,
+            itemCount: _banners.length,
+            itemBuilder: (context, i) {
+              final b = _banners[i];
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: InkWell(
+                  onTap: () => context.go(b.route),
+                  borderRadius: BorderRadius.circular(AppRadius.xl),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(AppRadius.xl),
+                      gradient: LinearGradient(colors: b.colors, begin: Alignment.topLeft, end: Alignment.bottomRight),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Stack(children: [
+                      Positioned(
+                        right: -18,
+                        bottom: -22,
+                        child: Icon(b.icon, size: 170, color: AppColors.green800.withValues(alpha: 0.10)),
+                      ),
+                      Positioned(right: 14, top: 14, child: Image.asset('assets/brand/logo_mark.png', height: 44)),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(color: AppColors.green700, borderRadius: BorderRadius.circular(20)),
+                              child: Text(b.tag, style: text.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w800, letterSpacing: 0.6)),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(b.title, style: text.titleLarge?.copyWith(height: 1.1, color: AppColors.green900, fontWeight: FontWeight.w800)),
+                            const SizedBox(height: 4),
+                            Text(b.subtitle, style: text.bodySmall?.copyWith(color: AppColors.ink)),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                              decoration: BoxDecoration(color: AppColors.green800, borderRadius: BorderRadius.circular(20)),
+                              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                Text(b.cta, style: text.labelLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
+                              ]),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ]),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 10),
+        SmoothPageIndicator(
+          controller: _controller,
+          count: _banners.length,
+          effect: const ExpandingDotsEffect(dotHeight: 6, dotWidth: 6, activeDotColor: AppColors.green700, dotColor: AppColors.line),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProductRail extends StatelessWidget {
+  const _ProductRail({required this.products});
+  final List<Product> products;
+
+  @override
+  Widget build(BuildContext context) {
+    final cardWidth = (MediaQuery.sizeOf(context).width - 48) / 2.6;
+    return SizedBox(
+      height: cardWidth + 132,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        scrollDirection: Axis.horizontal,
+        itemCount: products.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 10),
+        itemBuilder: (_, i) => ProductCard(product: products[i], width: cardWidth),
+      ),
+    );
+  }
+}
+
+class _ShopByCategory extends StatelessWidget {
+  const _ShopByCategory({required this.roots});
+  final List<Category> roots;
+
+  @override
+  Widget build(BuildContext context) {
+    // Leaf categories read best here ("Atta, Rice & Dal", "Masalas") — fall back to roots.
+    final leaves = [for (final r in roots) ...(r.children.isEmpty ? [r] : r.children)];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(title: 'Shop by Category', onSeeAll: () => context.go('/categories')),
+        SizedBox(
+          height: 104,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            scrollDirection: Axis.horizontal,
+            itemCount: leaves.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 4),
+            itemBuilder: (_, i) => CategoryTile(
+              name: leaves[i].name,
+              imageUrl: leaves[i].imageUrl,
+              onTap: () => context.go('/categories?c=${leaves[i].slug}'),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StorePromise extends StatelessWidget {
+  const _StorePromise();
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    Widget item(IconData icon, String title, String sub) => Expanded(
+          child: Column(children: [
+            Icon(icon, color: AppColors.green700),
+            const SizedBox(height: 6),
+            Text(title, style: text.labelMedium?.copyWith(fontWeight: FontWeight.w700), textAlign: TextAlign.center),
+            Text(sub, style: text.labelSmall, textAlign: TextAlign.center),
+          ]),
+        );
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      decoration: BoxDecoration(color: AppColors.green50, borderRadius: BorderRadius.circular(AppRadius.lg)),
+      child: Row(children: [
+        item(Icons.local_shipping_outlined, 'Same-day delivery', 'Across Trichy'),
+        item(Icons.verified_outlined, 'Quality checked', 'Every order'),
+        item(Icons.storefront_outlined, 'Your local store', 'Trusted for years'),
+      ]),
+    );
+  }
+}
