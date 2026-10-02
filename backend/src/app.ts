@@ -8,6 +8,7 @@ import { errorHandler, notFoundHandler } from './common/error-handler';
 import { env } from './config/env';
 import { logger } from './config/logger';
 import { pingDb } from './db/client';
+import { razorpayWebhookHandler } from './modules/payments/payments.routes';
 import { v1Router } from './routes';
 
 export function createApp(): Express {
@@ -32,6 +33,8 @@ export function createApp(): Express {
   app.use(helmet());
   app.use(cors({ origin: env.CORS_ORIGINS.length > 0 ? env.CORS_ORIGINS : false }));
   app.use(compression());
+  // Raw body for signature verification — must be registered before express.json().
+  app.post('/v1/webhooks/razorpay', ...razorpayWebhookHandler);
   app.use(express.json({ limit: '100kb' }));
 
   /** Liveness — process is up. Render health check points here. */

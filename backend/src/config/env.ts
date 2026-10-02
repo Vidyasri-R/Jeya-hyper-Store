@@ -92,6 +92,12 @@ const envSchema = z.object({
   CATALOG_SYNC_INTERVAL_MIN: z.coerce.number().int().min(1).max(1440).default(15),
   CATALOG_SYNC_PAGE_SIZE: z.coerce.number().int().min(10).max(2000).default(500),
 
+  // ─── Razorpay (online payments disabled when keys are missing) ───
+  RAZORPAY_KEY_ID: z.string().regex(/^rzp_(test|live)_[A-Za-z0-9]+$/, 'must look like rzp_test_… or rzp_live_…').optional(),
+  RAZORPAY_KEY_SECRET: z.string().min(16).optional(),
+  /** Set in Razorpay Dashboard → Webhooks; needed once the API has a public URL. */
+  RAZORPAY_WEBHOOK_SECRET: z.string().min(8).optional(),
+
   // ─── Cloudflare R2 (optional until product images are wired) ───
   R2_ACCOUNT_ID: z.string().regex(/^[a-f0-9]{32}$/, 'must be the 32-char Cloudflare account ID').optional(),
   R2_ACCESS_KEY_ID: z.string().min(16).optional(),

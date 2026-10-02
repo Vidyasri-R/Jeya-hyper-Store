@@ -1,4 +1,5 @@
 import { logger } from '../../config/logger';
+import { paymentsService } from '../payments/payments.service';
 import { ordersService } from './orders.service';
 
 const SWEEP_EVERY_MS = 60_000;
@@ -11,6 +12,9 @@ async function tick(): Promise<void> {
   if (running) return;
   running = (async () => {
     try {
+      // First ask Razorpay about holds that are about to expire, so a paid order whose
+      // webhook got lost is marked paid instead of being expired.
+      await paymentsService.reconcile().catch((error: unknown) => logger.error({ err: error }, 'payment reconcile failed'));
       // Drain in batches so a backlog (e.g. after downtime) clears in one tick.
       for (let batch = 0; batch < MAX_BATCHES_PER_TICK; batch++) {
         if ((await ordersService.expireUnpaid()) === 0) break;

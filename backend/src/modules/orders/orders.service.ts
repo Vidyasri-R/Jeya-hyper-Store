@@ -8,6 +8,7 @@ import { appConfigService, CONFIG_KEYS } from '../app-config/app-config.service'
 import { cartRepository } from '../cart/cart.repository';
 import { priceLine, summarize, toPublicLine, type PricedLine } from '../cart/pricing';
 import { deliveryService, type DeliveryQuote, type DeliveryTarget } from '../delivery/delivery.service';
+import { paymentsService } from '../payments/payments.service';
 import { ordersRepository } from './orders.repository';
 import type { PlaceOrderInput } from './orders.schemas';
 
@@ -86,7 +87,9 @@ async function evaluate(executor: Transaction | typeof db, userId: string, targe
 }
 
 async function paymentMethods() {
-  return appConfigService.getObject(CONFIG_KEYS.PAYMENT_METHODS, { cod: true, online: false });
+  const configured = await appConfigService.getObject(CONFIG_KEYS.PAYMENT_METHODS, { cod: true, online: false });
+  // Online is only offered when Razorpay keys are present, whatever the config says.
+  return { cod: configured.cod, online: configured.online && paymentsService.available() };
 }
 
 function orderNumber(seq: number, at: Date): string {
@@ -122,7 +125,7 @@ function toPublicOrder(order: Order, itemCount?: number) {
     deliveryAddress: order.deliveryAddress,
     customerNote: order.customerNote,
     reservationExpiresAt: status === 'pending_payment' ? order.reservationExpiresAt : null,
-    canCancel: CUSTOMER_CANCELLABLE.includes(status) && order.paymentStatus !== 'paid',
+    canCancel: CUSTOMER_CANCELLABLE.includes(status),
     placedAt: order.placedAt,
     deliveredAt: order.deliveredAt,
     cancelledAt: order.cancelledAt,
@@ -342,12 +345,6 @@ export const ordersService = {
           status: current.orderStatus,
         });
       }
-      if (current.paymentStatus === 'paid') {
-        // Refund flow lands with Razorpay (Step 4b); until then a paid order is cancelled by the store.
-        throw new AppError('CONFLICT', 'This order is paid. Please contact the store to cancel and get a refund.', {
-          reason: 'paid_needs_refund',
-        });
-      }
       await ordersRepository.releaseForOrders(tx, [orderId]);
       const updated = await ordersRepository.updateOrder(tx, orderId, {
         orderStatus: 'cancelled',
@@ -363,6 +360,8 @@ export const ordersService = {
       return updated!;
     });
     logger.info({ orderId, userId }, 'order cancelled by customer');
+    // Paid online → full refund (idempotent; retried by the reconciler if Razorpay is unreachable).
+    if (order.paymentStatus === 'paid') await paymentsService.refundOrder(orderId, reason ?? 'Cancelled by customer');
     return toPublicOrder(order);
   },
 
