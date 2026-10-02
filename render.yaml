@@ -20,15 +20,13 @@ services:
     healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
-        value: 22
+        value: "22"
       - key: NODE_ENV
         value: production
       - key: LOG_LEVEL
         value: info
-      - key: CORS_ORIGINS
-        value: ""
       - key: DB_POOL_MAX
-        value: 10
+        value: "10"
 
       # Supabase → Connect → Transaction pooler (6543) / Session pooler (5432)
       - key: DATABASE_URL
@@ -53,7 +51,7 @@ services:
       - key: CATALOG_SYNC_ENABLED
         value: "true"
       - key: CATALOG_SYNC_INTERVAL_MIN
-        value: 15
+        value: "15"
 
       # Cloudflare R2 — optional until product images are wired
       - key: R2_ACCOUNT_ID
