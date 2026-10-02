@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { AppError } from '../../common/errors';
 import { fromPaise, toPaise } from '../../common/money';
+import { env } from '../../config/env';
 import { logger } from '../../config/logger';
 import { db, type Transaction } from '../../db/client';
 import { orderItems, orders, users, type Order, type PaymentMethod } from '../../db/schema';
@@ -175,7 +176,9 @@ export const paymentsService = {
       currency: 'INR',
       name: 'Jeya Hyper Store',
       description: `Order ${order.orderNumber}`,
-      prefill: { contact: phone.startsWith('91') ? `+${phone}` : phone, name },
+      // Razorpay rejects the reviewer demo number (all nines) as invalid; prefill its documented
+      // sample number instead so store reviewers aren't stuck on the contact step (test mode only).
+      prefill: { contact: phone === env.DEMO_LOGIN_PHONE ? '+919000090000' : phone.startsWith('91') ? `+${phone}` : phone, name },
       expiresAt: order.reservationExpiresAt,
     };
   },
