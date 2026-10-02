@@ -1,7 +1,7 @@
 # GoFrugal RetailEasy e-commerce API — what we know
 
 Status (2026-10-02): add-on **514 E-commerce API Integration** activated on **trial until 2026-10-26**
-(client must buy before the 1 Nov launch). API key (X-Auth-Token) **not yet issued**.
+(client must buy before the 1 Nov launch). API key (X-Auth-Token) can be read in WebReporter → API users (see below).
 
 ## Where it runs
 
@@ -24,7 +24,7 @@ Render cannot reach `localhost` → expose via **Cloudflare Tunnel** from that P
 | GET | `/salesOrders` | List sales orders (reconciliation) |
 | GET | `/salesOrders/{id}` | One sales order (status / bill) |
 
-**No documented** categories endpoint, pagination, or modified-since filter.
+(The KB lists only these; the full docs below add categories, stock, price, paging and timestamp filters.)
 
 ### Item fields
 
@@ -59,6 +59,28 @@ Response: `{ "result": { "status": "Success" | "error", "id": 1, "message"?: "�
 
 **Idempotency plan:** send our order sequence as `onlineReferenceNo`; after a timeout, `GET /salesOrders`
 and match on it before retrying, so a slow POS never gets a duplicate bill.
+
+## From the official docs — help.connect.gofrugal.com/eCommerceAPI (RPOS7 = RetailEasy)
+
+**Getting the X-Auth-Token (self-service):** RetailEasy → *Tools → Add on → GoFrugal SmartReports*
+(opens WebReporter) → top-right ▼ → **API users** → open a user → copy X-Auth-Token (create a user if none).
+403 causes: wrong token, expired licence, or API users wiped by a POS migration.
+Licence: *Help → About → Add-on licence → E-commerce API Integration → Try and Buy → Sync* (trial = 30 days).
+
+**Query language** (all GET endpoints): `q=field==value`, `q=a>=1,b==2` (AND), `%7c` (= `|`, OR),
+`page=N`, `limit=N` (default 50; up to 10000), `fields=a,b`, `selectAll=true` (include items not marked
+"applicable online"). Send `Accept-Encoding: gzip` for big pages. Responses carry `count`,
+`total_records`, `current_page`, `per_page`, `total_pages`.
+
+**Incremental sync (officially documented):** store `itemTimeStamp` (from the `stock[]` rows) per item;
+next run `GET /items?q=itemTimeStamp>={maxTs}&limit=…&selectAll=true`. Timestamps are an incrementing
+number, not a date → our watermark must become numeric.
+
+RPOS7 endpoints we'll use: `/items` (v1; **`/api/v2/items` for bulk & repack/loose items**), `/categories`
+(Cat1…Cat10 hierarchies, each with `categoryValues` {categoryValueId, categoryValueName, parentId,
+appliesOnline, sortOrder, syncTs}), `/stock` (itemReferenceCode, outletId, stock, bufferStock, timestamp),
+`/price` (mrp, salePrice, taxPercentage, timestamp), `/salesOrders` (POST/GET; update & cancel exist),
+`/taxes`, `/matrixitems`, `/eCustomers` (POST).
 
 ## Open questions for GoFrugal (human support)
 
