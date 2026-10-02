@@ -182,7 +182,7 @@ class _CartLineTile extends ConsumerWidget {
         ),
         const SizedBox(width: 8),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          SizedBox(width: 108, child: AddToCartControl(product: p, height: 34)),
+          SizedBox(width: 116, child: AddToCartControl(product: p, height: 34)),
           const SizedBox(height: 8),
           Text(formatRupees(line.lineTotal), style: text.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
         ]),

@@ -103,7 +103,9 @@ class _Body extends ConsumerWidget {
       ref.invalidate(ordersListProvider);
     } on ApiException catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     }
   }
@@ -234,8 +236,8 @@ class _Body extends ConsumerWidget {
               ),
               const Divider(height: 18),
               _Row(
-                order.paymentStatus == 'paid'
-                    ? 'Total paid'
+                order.paymentStatus == 'paid' || order.status == 'delivered'
+                    ? (order.isCod ? 'Paid on delivery' : 'Total paid')
                     : (order.isCod ? 'To pay on delivery' : 'Total'),
                 formatRupees(order.totalAmount),
                 bold: true,

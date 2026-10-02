@@ -50,7 +50,9 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
     final auth = ref.read(authProvider);
     if (auth is SignedIn) {
       _name.text = auth.user.name ?? '';
-      _phone.text = auth.user.phone.length == 12 ? auth.user.phone.substring(2) : auth.user.phone;
+      _phone.text = auth.user.phone.length == 12
+          ? auth.user.phone.substring(2)
+          : auth.user.phone;
     }
     final list = ref.read(addressesProvider).valueOrNull ?? const [];
     if (widget.addressId != null) {
@@ -66,11 +68,15 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
         _city.text = a.city;
         _pincode.text = a.pincode;
         _isDefault = a.isDefault;
-        if (a.latitude != null && a.longitude != null) _pin = LatLng(a.latitude!, a.longitude!);
+        if (a.latitude != null && a.longitude != null) {
+          _pin = LatLng(a.latitude!, a.longitude!);
+        }
       }
     } else {
       _isDefault = list.isEmpty;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _useCurrentLocation(silent: true));
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _useCurrentLocation(silent: true),
+      );
     }
     _scheduleEstimate();
   }
@@ -78,7 +84,15 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
   @override
   void dispose() {
     _debounce?.cancel();
-    for (final c in [_name, _phone, _line1, _line2, _landmark, _city, _pincode]) {
+    for (final c in [
+      _name,
+      _phone,
+      _line1,
+      _line2,
+      _landmark,
+      _city,
+      _pincode,
+    ]) {
       c.dispose();
     }
     super.dispose();
@@ -88,7 +102,9 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 450), () async {
       try {
-        final e = await ref.read(repositoryProvider).deliveryEstimate(_pin.latitude, _pin.longitude);
+        final e = await ref
+            .read(repositoryProvider)
+            .deliveryEstimate(_pin.latitude, _pin.longitude);
         if (mounted) setState(() => _estimate = e);
       } catch (_) {
         // Estimate is advisory; checkout re-validates.
@@ -99,17 +115,33 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
   Future<void> _useCurrentLocation({bool silent = false}) async {
     setState(() => _locating = true);
     try {
-      if (!await Geolocator.isLocationServiceEnabled()) throw 'Turn on location services to use your current location';
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        throw 'Turn on location services to use your current location';
+      }
       var perm = await Geolocator.checkPermission();
-      if (perm == LocationPermission.denied) perm = await Geolocator.requestPermission();
-      if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) throw 'Location permission denied';
-      final pos = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 12)));
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+      }
+      if (perm == LocationPermission.denied ||
+          perm == LocationPermission.deniedForever) {
+        throw 'Location permission denied';
+      }
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 12),
+        ),
+      );
       final here = LatLng(pos.latitude, pos.longitude);
       setState(() => _pin = here);
       _map.move(here, 17);
       _scheduleEstimate();
     } catch (e) {
-      if (!silent && mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      if (!silent && mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
     } finally {
       if (mounted) setState(() => _locating = false);
     }
@@ -134,12 +166,19 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
       final repo = ref.read(repositoryProvider);
       final saved = _existing == null
           ? await repo.createAddress({...body, 'isDefault': _isDefault})
-          : await repo.updateAddress(_existing!.id, {...body, if (_isDefault && !_existing!.isDefault) 'isDefault': true});
+          : await repo.updateAddress(_existing!.id, {
+              ...body,
+              if (_isDefault && !_existing!.isDefault) 'isDefault': true,
+            });
       ref.invalidate(addressesProvider);
       ref.read(selectedAddressIdProvider.notifier).state = saved.id;
       if (mounted) context.pop();
     } on ApiException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -152,105 +191,188 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
     final serviceable = e?['serviceable'] == true;
 
     return Scaffold(
-      appBar: AppBar(title: Text(_existing == null ? 'Add Address' : 'Edit Address')),
+      appBar: AppBar(
+        title: Text(_existing == null ? 'Add Address' : 'Edit Address'),
+      ),
       body: Form(
         key: _form,
-        child: ListView(
-          padding: const EdgeInsets.only(bottom: 24),
+        // Map is a fixed header, NOT inside the scroll view: inside a ListView, vertical
+        // drags on the map scroll the page instead of moving the pin.
+        child: Column(
           children: [
-            SizedBox(
-              height: 260,
-              child: Stack(children: [
-                FlutterMap(
-                  mapController: _map,
-                  options: MapOptions(
-                    initialCenter: _pin,
-                    initialZoom: 16,
-                    interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
-                    onPositionChanged: (camera, hasGesture) {
-                      if (!hasGesture) return;
-                      _pin = camera.center;
-                      _scheduleEstimate();
-                    },
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              // Shrink while typing so the focused field stays visible above the keyboard.
+              height: MediaQuery.viewInsetsOf(context).bottom > 0 ? 140 : 260,
+              child: Stack(
+                children: [
+                  FlutterMap(
+                    mapController: _map,
+                    options: MapOptions(
+                      initialCenter: _pin,
+                      initialZoom: 16,
+                      interactionOptions: const InteractionOptions(
+                        flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                      ),
+                      onPositionChanged: (camera, hasGesture) {
+                        if (!hasGesture) return;
+                        _pin = camera.center;
+                        _scheduleEstimate();
+                      },
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.jeyahyperstore.app',
+                      ),
+                      const RichAttributionWidget(
+                        attributions: [
+                          TextSourceAttribution('OpenStreetMap contributors'),
+                        ],
+                      ),
+                    ],
                   ),
-                  children: [
-                    TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'com.jeyahyperstore.app'),
-                    const RichAttributionWidget(attributions: [TextSourceAttribution('OpenStreetMap contributors')]),
-                  ],
-                ),
-                const IgnorePointer(child: Center(child: Padding(padding: EdgeInsets.only(bottom: 36), child: Icon(Icons.location_on_rounded, size: 44, color: AppColors.green700)))),
-                Positioned(
-                  right: 12,
-                  bottom: 12,
-                  child: FilledButton.icon(
-                    onPressed: _locating ? null : () => _useCurrentLocation(),
-                    style: FilledButton.styleFrom(minimumSize: const Size(0, 40), backgroundColor: Colors.white, foregroundColor: AppColors.green700, elevation: 2),
-                    icon: _locating
-                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Icon(Icons.my_location_rounded, size: 18),
-                    label: const Text('Use my location'),
+                  const IgnorePointer(
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.only(bottom: 36),
+                        child: Icon(
+                          Icons.location_on_rounded,
+                          size: 44,
+                          color: AppColors.green700,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ]),
+                  Positioned(
+                    right: 12,
+                    bottom: 12,
+                    child: FilledButton.icon(
+                      onPressed: _locating ? null : () => _useCurrentLocation(),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(0, 40),
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppColors.green700,
+                        elevation: 2,
+                      ),
+                      icon: _locating
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.my_location_rounded, size: 18),
+                      label: const Text('Use my location'),
+                    ),
+                  ),
+                ],
+              ),
             ),
             Container(
               margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: e == null ? AppColors.bg : (serviceable ? AppColors.green50 : AppColors.offerRedSoft), borderRadius: BorderRadius.circular(AppRadius.md)),
-              child: Row(children: [
-                Icon(serviceable ? Icons.local_shipping_outlined : Icons.info_outline_rounded, color: serviceable ? AppColors.green700 : AppColors.offerRed),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    e == null
-                        ? 'Move the map to place the pin at your door'
-                        : serviceable
-                            ? '${e['distanceKm']} km from store · Delivery ${toPaise(e['deliveryFee'] as String) == 0 ? 'FREE' : formatRupees(e['deliveryFee'] as String)} (free above ${formatRupees(e['freeDeliveryAbove'] as String? ?? '999')})'
-                            : "Sorry, we don't deliver here yet (${e['distanceKm']} km away, we deliver within ${e['maxDistanceKm']} km)",
-                    style: text.labelLarge,
+              decoration: BoxDecoration(
+                color: e == null
+                    ? AppColors.bg
+                    : (serviceable
+                          ? AppColors.green50
+                          : AppColors.offerRedSoft),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    serviceable
+                        ? Icons.local_shipping_outlined
+                        : Icons.info_outline_rounded,
+                    color: serviceable
+                        ? AppColors.green700
+                        : AppColors.offerRed,
                   ),
-                ),
-              ]),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Save as', style: text.titleSmall),
-                const SizedBox(height: 6),
-                Wrap(spacing: 8, children: [
-                  for (final l in const ['Home', 'Work', 'Other'])
-                    ChoiceChip(label: Text(l), selected: _label == l, onSelected: (_) => setState(() => _label = l)),
-                ]),
-                const SizedBox(height: 14),
-                _field(_line1, 'House / Flat no., Street', required: true),
-                _field(_line2, 'Area / Locality'),
-                _field(_landmark, 'Landmark (optional)'),
-                Row(children: [
-                  Expanded(child: _field(_city, 'City', required: true)),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: _field(_pincode, 'Pincode',
-                        keyboard: TextInputType.number,
-                        formatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
-                        validator: (v) => RegExp(r'^[1-9]\d{5}$').hasMatch(v ?? '') ? null : 'Enter 6-digit pincode'),
+                    child: Text(
+                      e == null
+                          ? 'Move the map to place the pin at your door'
+                          : serviceable
+                          ? '${e['distanceKm']} km from store · Delivery ${toPaise(e['deliveryFee'] as String) == 0 ? 'FREE' : formatRupees(e['deliveryFee'] as String)} (free above ${formatRupees(e['freeDeliveryAbove'] as String? ?? '999')})'
+                          : "Sorry, we don't deliver here yet (${e['distanceKm']} km away, we deliver within ${e['maxDistanceKm']} km)",
+                      style: text.labelLarge,
+                    ),
                   ),
-                ]),
-                const SizedBox(height: 4),
-                Text('Contact for delivery', style: text.titleSmall),
-                const SizedBox(height: 8),
-                _field(_name, 'Recipient name', required: true),
-                _field(_phone, 'Mobile number',
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                children: [
+                  Text('Save as', style: text.titleSmall),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      for (final l in const ['Home', 'Work', 'Other'])
+                        ChoiceChip(
+                          label: Text(l),
+                          selected: _label == l,
+                          onSelected: (_) => setState(() => _label = l),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  _field(_line1, 'House / Flat no., Street', required: true),
+                  _field(_line2, 'Area / Locality'),
+                  _field(_landmark, 'Landmark (optional)'),
+                  Row(
+                    children: [
+                      Expanded(child: _field(_city, 'City', required: true)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _field(
+                          _pincode,
+                          'Pincode',
+                          keyboard: TextInputType.number,
+                          formatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(6),
+                          ],
+                          validator: (v) =>
+                              RegExp(r'^[1-9]\d{5}$').hasMatch(v ?? '')
+                              ? null
+                              : 'Enter 6-digit pincode',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text('Contact for delivery', style: text.titleSmall),
+                  const SizedBox(height: 8),
+                  _field(_name, 'Recipient name', required: true),
+                  _field(
+                    _phone,
+                    'Mobile number',
                     keyboard: TextInputType.phone,
-                    formatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)],
-                    validator: (v) => RegExp(r'^[6-9]\d{9}$').hasMatch(v ?? '') ? null : 'Enter a valid 10-digit mobile'),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: _isDefault,
-                  activeThumbColor: AppColors.green700,
-                  onChanged: _existing?.isDefault == true ? null : (v) => setState(() => _isDefault = v),
-                  title: const Text('Make this my default address'),
-                ),
-              ]),
+                    formatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(10),
+                    ],
+                    validator: (v) => RegExp(r'^[6-9]\d{9}$').hasMatch(v ?? '')
+                        ? null
+                        : 'Enter a valid 10-digit mobile',
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: _isDefault,
+                    activeThumbColor: AppColors.green700,
+                    onChanged: _existing?.isDefault == true
+                        ? null
+                        : (v) => setState(() => _isDefault = v),
+                    title: const Text('Make this my default address'),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -261,7 +383,14 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
           child: FilledButton(
             onPressed: _saving ? null : _save,
             child: _saving
-                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.4,
+                      color: Colors.white,
+                    ),
+                  )
                 : const Text('Save Address'),
           ),
         ),
@@ -269,17 +398,28 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
     );
   }
 
-  Widget _field(TextEditingController c, String label,
-          {bool required = false, TextInputType? keyboard, List<TextInputFormatter>? formatters, String? Function(String?)? validator}) =>
-      Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: TextFormField(
-          controller: c,
-          keyboardType: keyboard,
-          inputFormatters: formatters,
-          textCapitalization: keyboard == null ? TextCapitalization.words : TextCapitalization.none,
-          decoration: InputDecoration(labelText: label),
-          validator: validator ?? (required ? (v) => (v == null || v.trim().isEmpty) ? 'Required' : null : null),
-        ),
-      );
+  Widget _field(
+    TextEditingController c,
+    String label, {
+    bool required = false,
+    TextInputType? keyboard,
+    List<TextInputFormatter>? formatters,
+    String? Function(String?)? validator,
+  }) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: TextFormField(
+      controller: c,
+      keyboardType: keyboard,
+      inputFormatters: formatters,
+      textCapitalization: keyboard == null
+          ? TextCapitalization.words
+          : TextCapitalization.none,
+      decoration: InputDecoration(labelText: label),
+      validator:
+          validator ??
+          (required
+              ? (v) => (v == null || v.trim().isEmpty) ? 'Required' : null
+              : null),
+    ),
+  );
 }

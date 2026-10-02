@@ -89,11 +89,18 @@ class AddToCartControl extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           _StepButton(icon: Icons.remove, onTap: () => _change(context, ref, next), size: height),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            child: Text(
-              formatQty(qty, product.unit),
-              style: (big ? text.titleMedium : text.labelLarge)?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+          // Flexible + scaleDown: "0.75 kg" must never overflow a narrow stepper (cart lines are ~110 px).
+          Flexible(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  formatQty(qty, product.unit),
+                  maxLines: 1,
+                  style: (big ? text.titleMedium : text.labelLarge)?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+                ),
+              ),
             ),
           ),
           _StepButton(
@@ -124,7 +131,7 @@ class _StepButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadius.sm),
         child: SizedBox(
-          width: size,
+          width: size * 0.9,
           height: size,
           child: Icon(icon, color: Colors.white.withValues(alpha: dim ? 0.45 : 1), size: size * 0.5),
         ),
