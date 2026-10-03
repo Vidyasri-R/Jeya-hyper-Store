@@ -106,11 +106,27 @@ abstract final class Palettes {
     accent: Color(0xFFFFD1DC),
   );
 
+  /// Tamil New Year (Puthandu): peacock-teal Kanchipuram silk with temple gold.
+  static const puthandu = BrandPalette(
+    id: 'puthandu',
+    b900: Color(0xFF06363E),
+    b800: Color(0xFF0A4D58),
+    b700: Color(0xFF0E6B78),
+    b600: Color(0xFF138494),
+    b500: Color(0xFF1A9DAF),
+    b100: Color(0xFFD3EEF1),
+    b50: Color(0xFFEBF7F8),
+    tint: Color(0xFFF5FBFB),
+    header: [Color(0xFF07404A), Color(0xFF0F7482)],
+    accent: Color(0xFFFFD54F),
+  );
+
   static BrandPalette byId(String? id) => switch (id) {
     'diwali' => diwali,
     'pongal' => pongal,
     'christmas' => christmas,
     'valentine' => valentine,
+    'puthandu' => puthandu,
     _ => standard,
   };
 }

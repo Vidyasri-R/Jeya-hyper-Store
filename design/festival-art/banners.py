@@ -142,7 +142,17 @@ def banner_sweets():
 
 
 # ── Banner 2: Pooja essentials — brass kuthu vilakku (dark) ──
-def kuthuvilakku(s, cx, base_y, height):
+KUTHU_SPOUTS = [(-0.31, 0.0), (-0.17, 0.03), (0.17, 0.03), (0.31, 0.0), (0, 0.045)]
+
+
+def kuthuvilakku_wicks(cx, base_y, height):
+    """Where the five flames of kuthuvilakku(…, with_flames=False) burn: (x, y of the flame base)."""
+    Hh = height
+    bowl_y = base_y - Hh * 0.66
+    return [(cx + Hh * dx + (Hh * 0.05 if dx > 0 else -Hh * 0.05 if dx < 0 else 0), bowl_y + Hh * dy - Hh * 0.035) for dx, dy in KUTHU_SPOUTS]
+
+
+def kuthuvilakku(s, cx, base_y, height, with_flames=True):
     Hh = height
     gold = s.lin([(0, '#7A4E00'), (0.18, '#C98A12'), (0.42, '#FFE7A0'), (0.6, '#F2C14E'), (0.85, '#B07A10'), (1, '#6B4300')], x1=0, y1=0, x2=1, y2=0)
     def disc(y, rx, ry, thick):
@@ -168,7 +178,7 @@ def kuthuvilakku(s, cx, base_y, height):
     out.append(f'<path d="M {f(cx - Hh * 0.3)},{f(bowl_y)} Q {f(cx)},{f(bowl_y + Hh * 0.14)} {f(cx + Hh * 0.3)},{f(bowl_y)} Z" fill="{gold}"/>')
     out.append(f'<ellipse cx="{f(cx)}" cy="{f(bowl_y)}" rx="{f(Hh * 0.3)}" ry="{f(Hh * 0.045)}" fill="{gold}"/>')
     out.append(f'<ellipse cx="{f(cx)}" cy="{f(bowl_y)}" rx="{f(Hh * 0.25)}" ry="{f(Hh * 0.032)}" fill="#6B3A00"/>')
-    spouts = [(-0.31, 0.0), (-0.17, 0.03), (0.17, 0.03), (0.31, 0.0), (0, 0.045)]
+    spouts = KUTHU_SPOUTS
     flames_ = []
     for dx, dy in spouts:
         sx, sy = cx + Hh * dx, bowl_y + Hh * dy
@@ -181,7 +191,8 @@ def kuthuvilakku(s, cx, base_y, height):
     out.append(f'<path d="M {f(cx - Hh * 0.07)},{f(ty + Hh * 0.04)} Q {f(cx - Hh * 0.07)},{f(ty - Hh * 0.04)} {f(cx)},{f(ty - Hh * 0.05)} Q {f(cx + Hh * 0.03)},{f(ty - Hh * 0.14)} {f(cx + Hh * 0.075)},{f(ty - Hh * 0.13)} '
                f'L {f(cx + Hh * 0.1)},{f(ty - Hh * 0.115)} L {f(cx + Hh * 0.07)},{f(ty - Hh * 0.105)} Q {f(cx + Hh * 0.035)},{f(ty - Hh * 0.1)} {f(cx + Hh * 0.05)},{f(ty - Hh * 0.03)} '
                f'Q {f(cx + Hh * 0.08)},{f(ty + Hh * 0.04)} {f(cx - Hh * 0.07)},{f(ty + Hh * 0.04)} Z" fill="{gold}" stroke="#6B4300" stroke-width="1"/>')
-    out.append(''.join(flames_))
+    if with_flames:
+        out.append(''.join(flames_))
     return ''.join(out)
 
 

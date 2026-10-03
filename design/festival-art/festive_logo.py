@@ -1,6 +1,7 @@
 """Festival app icons: the everyday Jeya icon, untouched, with the festival's thoranam hung across
 its top — mango leaves and marigolds (Deepavali), aavaram poo (Pongal), a pine garland with
-baubles (Christmas & New Year), roses with little hearts (Valentine's Day).
+baubles (Christmas & New Year), roses with little hearts (Valentine's Day), a mango-leaf
+fringe with malli, kanakambaram and konrai bunches (Tamil New Year).
 
 Writes app/branding/app_icon/<festival>/ (Android launcher mipmaps + iOS AppIcon), next to the
 everyday set in app/branding/app_icon/standard/. Switch the app between them with
@@ -21,6 +22,7 @@ from header_art import bell
 from pongal_art import aavaram, poolai
 from christmas_art import bauble, bow, pine_branch, warm_light
 from valentine_art import heart, rose, rose_leaf
+from puthandu_art import kanakambaram, konrai_cluster, malli
 
 APP = '../../app'
 ANDROID_RES = f'{APP}/android/app/src/main/res'
@@ -92,6 +94,17 @@ def garland(festival):
             if i % 3 == 1:
                 front.append(f'<line x1="{f(x)}" y1="{f(y + 12)}" x2="{f(x)}" y2="{f(y + 34)}" stroke="#F8BBD0" stroke-width="1.6"/>')
                 front.append(heart(s, x, y + 42, 18, shadow=False))
+    elif festival == 'puthandu':
+        for i in range(11):
+            x, y, ang = _rope(0.05 + i * 0.09)
+            back.append(mango_leaf(s, x, y + 5, rnd.uniform(40, 46), 18, angle=ang * 0.6 + rnd.uniform(-6, 6), tone=i))
+        mid.append(_rope_path())
+        for i in range(13):
+            x, y, ang = _rope(0.05 + i * 0.075)
+            front.append(kanakambaram(s, x, y, 11, rot=ang + 90) if i % 4 in (1, 2) else malli(s, x, y, 10, rot=rnd.uniform(0, 60)))
+        for t in (0.22, 0.78):
+            x, y, _ = _rope(t)
+            front.append(konrai_cluster(s, x, y + 6, 46, scale=0.95))
     else:
         raise ValueError(festival)
     s.add(''.join(back) + ''.join(mid) + ''.join(front))
@@ -154,7 +167,7 @@ def icon_sets(festival):
     print(festival, 'icon set written')
 
 
-FESTIVALS = ('diwali', 'pongal', 'christmas', 'valentine')
+FESTIVALS = ('diwali', 'pongal', 'christmas', 'valentine', 'puthandu')
 
 if __name__ == '__main__':
     for festival in FESTIVALS:

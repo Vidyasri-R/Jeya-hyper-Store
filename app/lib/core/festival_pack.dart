@@ -239,11 +239,57 @@ abstract final class FestivalPacks {
     ],
   );
 
+  /// Tamil New Year (Puthandu): peacock-teal silk, a mango-leaf thoranam with konrai bunches, the
+  /// kuthuvilakku beside the kani tray, a lotus rising behind the splash logo.
+  static const puthandu = FestivalPack(
+    id: 'puthandu',
+    dir: 'assets/themes/puthandu',
+    greeting: 'Happy Tamil New Year',
+    question: 'Puthandu essentials, delivered',
+    heroAspect: 480 / 300,
+    flames: [
+      (0.0313, 0.4133, 0.1143),
+      (0.1002, 0.4369, 0.1143),
+      (0.3165, 0.4369, 0.1143),
+      (0.3853, 0.4133, 0.1143),
+      (0.2083, 0.4487, 0.1143),
+    ],
+    halo: 'lotus',
+    banners: [
+      FestivalBanner(
+        image: 'assets/themes/puthandu/banner_fruits.webp',
+        tag: 'PUTHANDU SPECIAL',
+        title: 'Mangoes &\nmukkani',
+        subtitle: 'Mango, jackfruit & banana',
+        cta: 'Shop fruits',
+        route: '/search?q=mango',
+      ),
+      FestivalBanner(
+        image: 'assets/themes/puthandu/banner_feast.webp',
+        tag: 'NEW YEAR FEAST',
+        title: 'Feast\nessentials',
+        subtitle: 'For payasam, vadai & sambar',
+        cta: 'Shop now',
+        route: '/search?q=dal',
+        dark: true,
+      ),
+      FestivalBanner(
+        image: 'assets/themes/puthandu/banner_pooja.webp',
+        tag: 'KANI & POOJA',
+        title: 'Pooja &\nkani needs',
+        subtitle: 'Camphor, agarbatti & more',
+        cta: 'Explore',
+        route: '/search?q=agarbatti',
+      ),
+    ],
+  );
+
   static FestivalPack? byId(String? id) => switch (id) {
     'diwali' => diwali,
     'pongal' => pongal,
     'christmas' => christmas,
     'valentine' => valentine,
+    'puthandu' => puthandu,
     _ => null,
   };
 }

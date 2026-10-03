@@ -38,6 +38,13 @@ void main() {
       expect(t?.pack?.greetingOn(DateTime(2027, 2, 14)), 'Happy Valentine’s Day');
     });
 
+    test('Tamil New Year has its own look', () {
+      final t = FestivalTheme.activeFrom(theme(preset: 'puthandu'), now);
+      expect(t?.palette, same(Palettes.puthandu));
+      expect(t?.pack?.greetingOn(DateTime(2027, 4, 14)), 'Happy Tamil New Year');
+      expect(t?.pack?.haloImage, 'assets/themes/puthandu/lotus.webp');
+    });
+
     test('Pongal has its own look', () {
       final t = FestivalTheme.activeFrom(theme(preset: 'pongal'), now);
       expect(t?.palette, same(Palettes.pongal));

@@ -26,6 +26,11 @@ python3 valentine_art.py   # Valentine's Day: rose night, rose garland, chocolat
 python3 valentine_more.py  # chocolates / flowers & gifts / sweets banners, heart tile, icon, petals
 node render.mjs --dir out/valentine
 cp out/valentine/webp/*.webp ../../app/assets/themes/valentine/   # plus flame.webp from diwali
+
+python3 puthandu_art.py    # Tamil New Year: peacock-teal silk, mango-leaf thoranam with konrai, kuthuvilakku + kani tray hero, lotus
+python3 puthandu_more.py   # mangoes / banana-leaf feast / pooja & kani banners, mango-butta tile, mango icon, flower petals
+node render.mjs --dir out/puthandu
+cp out/puthandu/webp/*.webp ../../app/assets/themes/puthandu/   # has its own flame.webp (glow kept inside the image)
 ```
 
 How the app uses them: `app/lib/core/festival_pack.dart` (asset names, banner copy, flame
