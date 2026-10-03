@@ -4,27 +4,61 @@ from svgkit import *
 OUT = 'out'
 import os; os.makedirs(OUT, exist_ok=True)
 
-# ── Thoranam (mango-leaf + marigold garland), tiles horizontally: 1170 × 132 px (390 × 44 dp @3x) ──
+# ── Thoranam: mango-leaf and marigold garland hanging in three natural swags, 1170 × 132 px
+#    (390 × 44 dp @3x). Nothing hangs below y = 128 px, so it never reaches the store name.
+SWAGS = [(-40, 392, 50), (392, 774, 40), (774, 1210, 47)]   # (from x, to x, sag) — each a little different
+ANCHOR_Y = 6
+
+
+def _rope_point(x0, x1, sag, t):
+    """Point and tangent angle (degrees) on a swag drawn as a quadratic curve."""
+    cx, cy = (x0 + x1) / 2, ANCHOR_Y + 2 * sag
+    x = (1 - t) ** 2 * x0 + 2 * (1 - t) * t * cx + t * t * x1
+    y = (1 - t) ** 2 * ANCHOR_Y + 2 * (1 - t) * t * cy + t * t * ANCHOR_Y
+    dx = 2 * (1 - t) * (cx - x0) + 2 * t * (x1 - cx)
+    dy = 2 * (1 - t) * (cy - ANCHOR_Y) + 2 * t * (ANCHOR_Y - cy)
+    return x, y, math.degrees(math.atan2(dy, dx))
+
+
 def thoranam():
-    s = SVG(1170, 132, seed=11)
-    y0 = 12
-    slots = 18
-    gap = 1170 / slots
-    leaves, flowers = [], []
-    for i in range(slots):
-        x = gap * (i + 0.5)
-        if i % 2 == 0:
-            leaves.append(mango_leaf(s, x, y0, 104, 36, angle=(7 if (i // 2) % 2 else -7), tone=i // 2))
-        else:
-            kind = 'orange' if (i // 2) % 2 == 0 else 'yellow'
-            if (i // 2) % 3 == 1:
-                flowers.append(f'<line x1="{f(x)}" y1="{f(y0)}" x2="{f(x)}" y2="{f(y0 + 74)}" stroke="#7B5E57" stroke-width="2"/>')
-                flowers.append(marigold(s, x, y0 + 62, 15, 'deep'))
-                flowers.append(bell(s, x, y0 + 80, 14))
-            flowers.append(marigold(s, x, y0 + 16, 21, kind))
-    rope = (f'<line x1="0" y1="{y0}" x2="1170" y2="{y0}" stroke="#4E342E" stroke-width="4.2"/>'
-            f'<line x1="0" y1="{y0 - 0.6}" x2="1170" y2="{y0 - 0.6}" stroke="#A1887F" stroke-width="1.6" stroke-dasharray="5 4"/>')
-    s.add(''.join(leaves) + rope + ''.join(flowers))
+    """Dense marigold strings in three swags, mango leaves hanging below, tied clusters with bells."""
+    s = SVG(1170, 132, seed=29)
+    rnd = s.rnd
+    leaves, ropes, flowers, knots = [], [], [], []
+    for k, (x0, x1, sag) in enumerate(SWAGS):
+        cx, cy = (x0 + x1) / 2, ANCHOR_Y + 2 * sag
+        d = f'M {f(x0)},{ANCHOR_Y} Q {f(cx)},{f(cy)} {f(x1)},{ANCHOR_Y}'
+        ropes.append(f'<path d="{d}" stroke="#4E342E" stroke-width="4" fill="none" stroke-linecap="round"/>')
+        n = int(abs(x1 - x0) / 26.5)
+        for i in range(n):
+            t = (i + 0.5) / n + rnd.uniform(-0.12, 0.12) / n
+            if t < 0.035 or t > 0.965:
+                continue
+            x, y, ang = _rope_point(x0, x1, sag, t)
+            # orange and yellow alternate like a real string, with the odd deep-orange bloom
+            kind = 'deep' if rnd.random() < 0.12 else ('orange' if i % 2 else 'yellow')
+            flowers.append(marigold(s, x + rnd.uniform(-1.5, 1.5), y + rnd.uniform(-1, 2), rnd.uniform(13.5, 16.8), kind))
+            if i % 3 == 1:
+                depth = y - ANCHOR_Y
+                length_ = rnd.uniform(62, 74) - depth * 0.28           # shorter where the string hangs lowest
+                tilt = ang + rnd.uniform(-10, 10)
+                if rnd.random() < 0.25:                               # now and then a pair fans out
+                    leaves.append(mango_leaf(s, x - 5, y + 6, length_ * 0.9, 23, angle=tilt - 16, tone=i + 1))
+                    leaves.append(mango_leaf(s, x + 5, y + 6, length_, 25, angle=tilt + 14, tone=i))
+                else:
+                    leaves.append(mango_leaf(s, x, y + 6, length_, rnd.uniform(23, 27), angle=tilt, tone=i + k))
+    # tied clusters where the swags meet: big marigolds, two leaves and a small bell
+    for ax, strand, big in [(392, 74, 'deep'), (774, 66, 'orange')]:
+        knots.append(mango_leaf(s, ax - 8, ANCHOR_Y + 16, 66, 25, angle=22, tone=2))
+        knots.append(mango_leaf(s, ax + 8, ANCHOR_Y + 16, 62, 24, angle=-24, tone=1))
+        knots.append(f'<line x1="{ax}" y1="{ANCHOR_Y + 22}" x2="{ax}" y2="{ANCHOR_Y + strand}" stroke="#6D4C41" stroke-width="2"/>')
+        knots.append(marigold(s, ax, ANCHOR_Y + strand - 30, 10.5, 'yellow'))
+        knots.append(marigold(s, ax, ANCHOR_Y + strand - 13, 11.5, 'deep'))
+        knots.append(bell(s, ax, ANCHOR_Y + strand - 2, 17))
+        knots.append(marigold(s, ax - 17, ANCHOR_Y + 10, 18, 'yellow'))
+        knots.append(marigold(s, ax + 17, ANCHOR_Y + 10, 18, 'orange'))
+        knots.append(marigold(s, ax, ANCHOR_Y + 20, 21, big))
+    s.add(''.join(leaves) + ''.join(ropes) + ''.join(flowers) + ''.join(knots))
     s.save(f'{OUT}/thoranam.svg')
 
 
@@ -98,7 +132,25 @@ def header_bg():
     s.save(f'{OUT}/header_bg.svg')
 
 
+# ── Splash background (whole screen, 390 × 844 dp @3x): rangoli glow behind the logo ──
+def splash_bg():
+    W_, H_ = 1170, 2532
+    s = SVG(W_, H_, seed=37)
+    s.add(f'<rect width="{W_}" height="{H_}" fill="{s.lin([(0, "#330616"), (0.4, "#5A0E22"), (0.78, "#7A1626"), (1, "#8C1D1E")])}"/>')
+    s.add(f'<rect width="{W_}" height="{H_}" fill="{s.rad([(0, "#FFB300", 0.30), (0.5, "#E65100", 0.10), (1, "#E65100", 0)], cx=585, cy=1130, r=760, units="userSpaceOnUse")}"/>')
+    s.add(f'<rect width="{W_}" height="{H_}" fill="{s.rad([(0, "#FF8F00", 0.34), (1, "#FF8F00", 0)], cx=585, cy=2330, r=640, units="userSpaceOnUse")}"/>')
+    s.add(mandala(s, 585, 1130, 600, opacity=0.15, stroke=2.6))
+    s.add(mandala(s, 585, 1130, 300, opacity=0.10, stroke=2.0))
+    rnd = s.rnd
+    for _ in range(26):
+        s.add(bokeh(s, rnd.uniform(0, W_), rnd.uniform(160, H_ - 120), rnd.uniform(18, 70), rnd.choice(['#FFB74D', '#FFD54F', '#FF8A65']), rnd.uniform(0.10, 0.26)))
+    for _ in range(40):
+        s.add(sparkle(s, rnd.uniform(20, W_ - 20), rnd.uniform(180, H_ - 160), rnd.uniform(4, 13), opacity=rnd.uniform(0.3, 0.9)))
+    s.save(f'{OUT}/splash_bg.svg')
+
+
 thoranam()
+splash_bg()
 wicks = diyas_base()
 flame_asset()
 header_bg()

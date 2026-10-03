@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ launch splash: the app icon on white, like the in-app splash that follows. -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+        <item name="android:windowSplashScreenBackground">@android:color/white</item>
+    </style>
+    <!-- Chosen by the app for the next launch while a festival theme is on (Android 13+, see MainActivity). -->
+    <style name="FestiveSplashTheme" parent="LaunchTheme">
+        <item name="android:windowSplashScreenBackground">#FF5E0F22</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/white</item>
+    </style>
+</resources>

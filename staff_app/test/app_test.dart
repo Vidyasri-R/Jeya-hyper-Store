@@ -235,7 +235,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('From: now'), findsOneWidget);
     expect(find.text('Live now (until you switch back to Normal).'), findsOneWidget);
-    await tester.enterText(find.widgetWithText(TextField, 'Message on the home screen (optional)'), '  Happy Deepavali! ');
+    await tester.enterText(find.widgetWithText(TextField, 'Line under the greeting (optional)'), '  Happy Deepavali! ');
     await tester.ensureVisible(find.text('Save theme'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save theme'));

@@ -19,23 +19,11 @@ class FestivalTheme {
 
   bool get isDiwali => preset == 'diwali';
 
-  /// Greeting strip on Home.
-  String get headline => (greeting != null && greeting!.trim().isNotEmpty) ? greeting!.trim() : _defaultGreeting;
-
-  String get _defaultGreeting => switch (preset) {
-    'diwali' => 'Happy Deepavali from Jeya Hyper Store!',
-    _ => '',
-  };
-
-  String get subline => switch (preset) {
-    'diwali' => 'Sweets, savouries, gifts & pooja essentials',
-    _ => '',
-  };
-
-  String get emoji => switch (preset) {
-    'diwali' => '🪔',
-    _ => '',
-  };
+  /// The store's own line under the Home greeting (Admin → Festival theme), or null for the default.
+  String? get message {
+    final m = greeting?.trim();
+    return m == null || m.isEmpty ? null : m;
+  }
 
   /// The theme in effect at [now], or null for the everyday look.
   static FestivalTheme? activeFrom(Object? raw, DateTime now) {

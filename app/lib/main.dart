@@ -2,15 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/festival_cache.dart';
 import 'core/festival_pack.dart';
 import 'core/theme.dart';
 import 'state/providers.dart';
 import 'router.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-  runApp(const ProviderScope(child: JeyaApp()));
+  // Read while Android's launch splash is still up, so the first frame already has the festival look.
+  final savedTheme = await FestivalCache.read();
+  runApp(ProviderScope(overrides: [savedThemeProvider.overrideWithValue(savedTheme)], child: const JeyaApp()));
 }
 
 class JeyaApp extends ConsumerStatefulWidget {
@@ -27,6 +30,11 @@ class _JeyaAppState extends ConsumerState<JeyaApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Remember the store's festival setting for the next launch, and pick Android's launch splash.
+    ref.listenManual(publicConfigProvider, (_, next) {
+      if (next.hasValue) FestivalCache.write(next.value!['app.theme']);
+    });
+    ref.listenManual<bool>(festivalProvider.select((f) => f?.pack != null), (_, festive) => FestivalCache.launchSplash(festive: festive), fireImmediately: true);
   }
 
   @override

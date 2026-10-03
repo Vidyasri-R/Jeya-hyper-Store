@@ -39,12 +39,6 @@ class HomeScreen extends ConsumerWidget {
         child: CustomScrollView(
           slivers: [
             const SliverToBoxAdapter(child: HomeHeader()),
-            if (festival != null)
-              SliverToBoxAdapter(
-                child: festival.pack != null
-                    ? FestiveRibbon(pack: festival.pack!, text: festival.greeting?.trim().isNotEmpty == true ? festival.greeting!.trim() : festival.subline)
-                    : _FestiveStrip(text: festival.greeting?.trim().isNotEmpty == true ? festival.greeting!.trim() : festival.subline, emoji: festival.emoji),
-              ),
             if (paused != null)
               SliverToBoxAdapter(
                 child: Container(
@@ -354,33 +348,3 @@ class _StorePromise extends ConsumerWidget {
     );
   }
 }
-
-/// Festival greeting under the header (Admin → Store settings → App theme).
-class _FestiveStrip extends StatelessWidget {
-  const _FestiveStrip({required this.text, required this.emoji});
-  final String text;
-  final String emoji;
-
-  @override
-  Widget build(BuildContext context) {
-    if (text.isEmpty) return const SizedBox.shrink();
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [AppColors.brand800, AppColors.brand600]),
-        borderRadius: BorderRadius.circular(AppRadius.md),
-      ),
-      child: Row(children: [
-        if (emoji.isNotEmpty) ...[Text(emoji, style: const TextStyle(fontSize: 22)), const SizedBox(width: 10)],
-        Expanded(
-          child: Text(
-            text,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppColors.festiveAccent, fontWeight: FontWeight.w700),
-          ),
-        ),
-      ]),
-    );
-  }
-}
-

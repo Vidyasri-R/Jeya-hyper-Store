@@ -23,20 +23,14 @@ class FestivalPack {
   String _art(String name) => '$dir/$name.webp';
 
   String get headerBackground => _art('header_bg');
+  String get splashBackground => _art('splash_bg');
   String get thoranam => _art('thoranam');
   String get diyas => _art('diyas_base');
   String get flame => _art('flame');
   String get sectionIcon => _art('diya_icon');
 
-  /// Greeting ribbon, drawn as a nine-slice (corners keep their shape at any width).
-  ImageProvider get ribbon => ExactAssetImage(_art('strip'), scale: 3);
-  static const ribbonSlice = Rect.fromLTRB(50, 10, 320, 40);
-
   /// Seamless gold-sparkle tile laid over festive buttons.
   ImageProvider get buttonTexture => ExactAssetImage(_art('btn_tile'), scale: 3);
-
-  /// Strip along the top of the bottom bar (tiles horizontally).
-  ImageProvider get navBorder => ExactAssetImage(_art('nav_border'), scale: 3);
 
   /// Sprites for the once-per-visit petal shower.
   List<String> get petals => [_art('petal_orange'), _art('petal_yellow'), _art('petal_red'), _art('marigold_small')];

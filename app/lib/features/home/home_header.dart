@@ -23,7 +23,8 @@ class HomeHeader extends ConsumerWidget {
     final auth = ref.watch(authProvider);
     final address = ref.watch(selectedAddressProvider);
     final firstName = auth is SignedIn ? auth.user.name?.split(' ').first : null;
-    final pack = ref.watch(festivalProvider)?.pack;
+    final festival = ref.watch(festivalProvider);
+    final pack = festival?.pack;
     final topInset = MediaQuery.paddingOf(context).top;
 
     return Container(
@@ -54,7 +55,7 @@ class HomeHeader extends ConsumerWidget {
             bottom: false,
             child: Padding(
               // Festive: room under the thoranam so it never crosses the store name.
-              padding: EdgeInsets.fromLTRB(16, pack == null ? 10 : 42, 16, 18),
+              padding: EdgeInsets.fromLTRB(16, pack == null ? 10 : 44, 16, 18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -140,7 +141,10 @@ class HomeHeader extends ConsumerWidget {
                           ),
                         ),
                         Text(
-                          pack?.question ?? 'What are you looking for today?',
+                          // The store's own festival message (Admin → Festival theme) when it set one.
+                          pack == null ? 'What are you looking for today?' : (festival!.message ?? pack.question),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: text.bodyMedium?.copyWith(
                             color: pack != null ? AppColors.festiveAccent : Colors.white.withValues(alpha: 0.92),
                             fontWeight: pack != null ? FontWeight.w600 : null,

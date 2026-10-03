@@ -566,7 +566,7 @@ class _ThemeCardState extends State<_ThemeCard> {
     final live = status.startsWith('Live');
     return _Card(
       title: 'Festival theme',
-      subtitle: 'Dresses up the customer app for festivals — colours, home banners and a greeting. Switches on and off by itself on your dates.',
+      subtitle: 'Dresses up the customer app for festivals — artwork, banners, festive buttons and a greeting. Switches on and off by itself on your dates.',
       children: [
         Wrap(
           spacing: 10,
@@ -633,8 +633,8 @@ class _ThemeCardState extends State<_ThemeCard> {
           const SizedBox(height: 6),
           TextField(
             controller: _greeting,
-            maxLength: 120,
-            decoration: const InputDecoration(labelText: 'Message on the home screen (optional)', hintText: 'e.g. Happy Diwali! Festive offers on sweets'),
+            maxLength: 60,
+            decoration: const InputDecoration(labelText: 'Line under the greeting (optional)', hintText: 'e.g. Festive offers on sweets & gifts'),
           ),
         ],
         Row(

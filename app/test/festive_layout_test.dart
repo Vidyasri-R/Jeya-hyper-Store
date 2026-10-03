@@ -6,8 +6,16 @@ import 'package:jeya_hyper_store/core/festival_pack.dart';
 import 'package:jeya_hyper_store/core/theme.dart';
 import 'package:jeya_hyper_store/data/models.dart';
 import 'package:jeya_hyper_store/features/home/home_header.dart';
+import 'package:jeya_hyper_store/features/shell/splash_screen.dart';
 import 'package:jeya_hyper_store/state/providers.dart';
 import 'package:jeya_hyper_store/widgets/festive_decor.dart';
+
+class _Starting extends AuthController {
+  _Starting(this.state0);
+  final AuthState state0;
+  @override
+  AuthState build() => state0;
+}
 
 class _SignedInAs extends AuthController {
   _SignedInAs(this.name);
@@ -76,10 +84,38 @@ void main() {
     }
   });
 
-  testWidgets('greeting ribbon takes the longest admin message', (tester) async {
-    await pumpAt(tester, FestiveRibbon(pack: FestivalPacks.diwali, text: 'Happy Deepavali! ' * 7));
+  testWidgets("the store's festival message replaces the line under the greeting", (tester) async {
+    await pumpAt(
+      tester,
+      const SingleChildScrollView(child: HomeHeader()),
+      overrides: [
+        festivalProvider.overrideWithValue(FestivalTheme(preset: 'diwali', greeting: 'Festive offers on sweets, dry fruits and pooja needs — order by 6 PM! ' * 2)),
+        authProvider.overrideWith(() => _SignedInAs('Jai')),
+        selectedAddressProvider.overrideWithValue(null),
+      ],
+    );
+    expect(find.text('Festive essentials, delivered'), findsNothing);
+    expect(find.textContaining('Festive offers on sweets'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  for (final offline in [false, true]) {
+    testWidgets('festive splash fits a small phone${offline ? ' (offline)' : ''}', (tester) async {
+      await pumpAt(
+        tester,
+        const SplashScreen(),
+        size: const Size(320, 568),
+        overrides: [
+          festivalProvider.overrideWithValue(const FestivalTheme(preset: 'diwali')),
+          authProvider.overrideWith(() => _Starting(offline ? const AuthOffline() : const AuthUnknown())),
+        ],
+      );
+      expect(find.text('Happy Deepavali'), findsOneWidget);
+      expect(find.byType(DiyaCluster), offline ? findsNothing : findsOneWidget);
+      expect(find.text('Try again'), offline ? findsOneWidget : findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('petal shower plays once and gets out of the way', (tester) async {
     await pumpAt(tester, const SizedBox.expand(child: PetalShower(pack: FestivalPacks.diwali)), size: const Size(390, 800), textScale: 1);

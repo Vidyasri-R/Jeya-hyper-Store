@@ -26,9 +26,10 @@ void main() {
       expect(FestivalTheme.activeFrom(theme(until: '2026-11-04T00:00:00.000Z'), now), isNull);
     });
 
-    test('custom greeting wins, blank falls back to the default', () {
-      expect(FestivalTheme.activeFrom(theme(greeting: '  Deepavali offers are here  '), now)?.headline, 'Deepavali offers are here');
-      expect(FestivalTheme.activeFrom(theme(greeting: '   '), now)?.headline, 'Happy Deepavali from Jeya Hyper Store!');
+    test("the store's own message is trimmed; blank means the default line", () {
+      expect(FestivalTheme.activeFrom(theme(greeting: '  Deepavali offers are here  '), now)?.message, 'Deepavali offers are here');
+      expect(FestivalTheme.activeFrom(theme(greeting: '   '), now)?.message, isNull);
+      expect(FestivalTheme.activeFrom(theme(), now)?.message, isNull);
     });
   });
 }

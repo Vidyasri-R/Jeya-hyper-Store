@@ -8,16 +8,22 @@ import '../core/theme.dart';
 
 bool _still(BuildContext context) => MediaQuery.maybeDisableAnimationsOf(context) ?? false;
 
-/// Mango-leaf and marigold thoranam hung across the top of a header (repeats on wide screens).
+/// Mango-leaf and marigold thoranam draped across the top of a header: spans the width on
+/// phones (tied at both edges), repeats on tablets.
 class Thoranam extends StatelessWidget {
   const Thoranam({super.key, required this.pack, this.height = 44});
   final FestivalPack pack;
   final double height;
 
   @override
-  Widget build(BuildContext context) => IgnorePointer(
-    child: Image.asset(pack.thoranam, height: height, fit: BoxFit.fitHeight, repeat: ImageRepeat.repeatX, alignment: Alignment.topLeft),
-  );
+  Widget build(BuildContext context) {
+    final phone = MediaQuery.sizeOf(context).width < 520;
+    return IgnorePointer(
+      child: phone
+          ? Image.asset(pack.thoranam, height: height, width: double.infinity, fit: BoxFit.fill)
+          : Image.asset(pack.thoranam, height: height, fit: BoxFit.fitHeight, repeat: ImageRepeat.repeatX, alignment: Alignment.topLeft),
+    );
+  }
 }
 
 /// Three agal vilakku on a rangoli; the flames flicker.
@@ -285,69 +291,6 @@ class _Petal {
     final left = x * area.width + math.sin(local * swayFreq * math.pi * 2 + phase) * sway;
     final fade = local < 0.08 ? local / 0.08 : (local > 0.8 ? (1 - local) / 0.2 : 1.0);
     return (left, fall, phase + local * spin, fade.clamp(0.0, 1.0));
-  }
-}
-
-/// Maroon-and-gold greeting ribbon with a diya; the gold text catches a slow shimmer.
-class FestiveRibbon extends StatefulWidget {
-  const FestiveRibbon({super.key, required this.pack, required this.text});
-  final FestivalPack pack;
-  final String text;
-
-  @override
-  State<FestiveRibbon> createState() => _FestiveRibbonState();
-}
-
-class _FestiveRibbonState extends State<FestiveRibbon> with SingleTickerProviderStateMixin {
-  late final _shine = AnimationController(vsync: this, duration: const Duration(milliseconds: 4200));
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_still(context)) {
-      _shine.stop();
-    } else if (!_shine.isAnimating) {
-      _shine.repeat();
-    }
-  }
-
-  @override
-  void dispose() {
-    _shine.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.titleSmall?.copyWith(color: AppColors.festiveAccent, fontWeight: FontWeight.w700, height: 1.25);
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      constraints: const BoxConstraints(minHeight: 50),
-      padding: const EdgeInsets.fromLTRB(56, 10, 36, 12),
-      alignment: Alignment.centerLeft,
-      decoration: BoxDecoration(
-        image: DecorationImage(image: widget.pack.ribbon, centerSlice: FestivalPack.ribbonSlice, fit: BoxFit.fill),
-      ),
-      child: AnimatedBuilder(
-        animation: _shine,
-        builder: (context, child) {
-          // A bright band sweeps across in the first 40% of each cycle, then rests.
-          final p = (_shine.value / 0.4).clamp(0.0, 1.0);
-          final x = -1.6 + p * 3.2;
-          return ShaderMask(
-            blendMode: BlendMode.srcATop,
-            shaderCallback: (rect) => LinearGradient(
-              begin: Alignment(x - 0.5, -0.3),
-              end: Alignment(x + 0.5, 0.3),
-              colors: [Colors.transparent, Colors.white.withValues(alpha: 0.85), Colors.transparent],
-              stops: const [0.3, 0.5, 0.7],
-            ).createShader(rect),
-            child: child,
-          );
-        },
-        child: Text(widget.text, style: style),
-      ),
-    );
   }
 }
 

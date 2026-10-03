@@ -113,11 +113,17 @@ final _themeClockProvider = StreamProvider<DateTime>((ref) => Stream.periodic(co
 /// Build-time preview of a festival look (screenshots, trying a new preset): `--dart-define=PREVIEW_THEME=diwali`.
 const _previewTheme = String.fromEnvironment('PREVIEW_THEME');
 
+/// The festival setting remembered from the last run (read in main, see FestivalCache), used until
+/// the server answers — so the splash is already festive and the look survives being offline.
+final savedThemeProvider = Provider<Object?>((ref) => null);
+
 /// The festival theme in effect now (Admin → Store settings → App theme), or null for the everyday look.
 final festivalProvider = Provider<FestivalTheme?>((ref) {
   if (_previewTheme.isNotEmpty) return FestivalTheme(preset: _previewTheme);
   ref.watch(_themeClockProvider);
-  return FestivalTheme.activeFrom(ref.watch(publicConfigProvider).valueOrNull?['app.theme'], DateTime.now());
+  final config = ref.watch(publicConfigProvider);
+  final raw = config.hasValue ? config.value!['app.theme'] : ref.watch(savedThemeProvider);
+  return FestivalTheme.activeFrom(raw, DateTime.now());
 });
 
 /// How fast the store delivers — Admin → Store settings → Deliver within (delivery.rules.deliveryDays).
