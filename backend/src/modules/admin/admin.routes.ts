@@ -5,6 +5,7 @@ import { AppError } from '../../common/errors';
 import { requireAdmin, requireStaff, staffOf } from '../../common/staff-auth.middleware';
 import { parseBody, parseParams, parseQuery } from '../../common/validate';
 import { optionalPhone, username } from '../staff/staff.schemas';
+import { backupService } from '../backup/backup.service';
 import { catalogSyncService } from '../sync/catalog-sync.service';
 import { usageService } from '../usage/usage.service';
 import { adminDashboardService } from './admin-dashboard.service';
@@ -145,6 +146,20 @@ adminRouter.post('/alerts/:id/ack', async (req, res) => {
   const { id } = parseParams(z.object({ id: z.coerce.number().int().positive() }), req);
   if (!(await usageService.acknowledge(id, staffOf(req).staffId))) throw AppError.notFound('Alert');
   res.status(204).end();
+});
+
+/* ── database backups (private R2 bucket) ── */
+
+adminRouter.get('/backups', async (_req, res) => {
+  const status = await backupService.status();
+  const sets = status.configured ? await backupService.listSets().catch(() => []) : [];
+  res.json({ ...status, sets: sets.slice(0, 20) });
+});
+
+/** Back up now (e.g. right after fixing the R2 key). Full on the first run of a month. */
+adminRouter.post('/backups/run', async (_req, res) => {
+  const result = await backupService.run('auto');
+  res.status(result.status === 'skipped' ? 409 : 200).json({ result, status: await backupService.status() });
 });
 
 /* ── POS catalogue sync ── */

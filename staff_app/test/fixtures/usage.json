@@ -13,7 +13,7 @@
   {
    "id": "render",
    "name": "Render (API server)",
-   "plan": "Starter instance on Hobby workspace — $7/month",
+   "plan": "Starter instance on Hobby workspace \u2014 $7/month",
    "costSoFarUsd": 7,
    "costProjectedUsd": 7,
    "costInr": 616,
@@ -44,13 +44,13 @@
     }
    ],
    "notes": [
-    "Build minutes: 500/month included (each deploy ≈ 3 min) — check Render → Billing."
+    "Build minutes: 500/month included (each deploy \u2248 3 min) \u2014 check Render \u2192 Billing."
    ]
   },
   {
    "id": "supabase",
    "name": "Supabase (database)",
-   "plan": "Free — $0",
+   "plan": "Free \u2014 $0",
    "costSoFarUsd": 0,
    "costProjectedUsd": 0,
    "costInr": 0,
@@ -87,7 +87,7 @@
   {
    "id": "r2",
    "name": "Cloudflare R2 (product images)",
-   "plan": "Free tier — $0 up to the limits",
+   "plan": "Free tier \u2014 $0 up to the limits",
    "costSoFarUsd": 0,
    "costProjectedUsd": 0,
    "costInr": 0,
@@ -142,7 +142,7 @@
    "costInr": 0,
    "metrics": [],
    "notes": [
-    "1 online payment(s) this month, ₹1177.00 collected, fees ₹0.00 (incl. GST ₹0.00). 1 payment(s) without fee data."
+    "1 online payment(s) this month, \u20b91177.00 collected, fees \u20b90.00 (incl. GST \u20b90.00). 1 payment(s) without fee data."
    ]
   }
  ],
@@ -150,6 +150,10 @@
   "catalogSync": {
    "level": "ok",
    "message": "Catalog sync is healthy."
+  },
+  "backups": {
+   "level": "warning",
+   "message": "Backup failing: AccessDenied: Access Denied"
   }
  },
  "largestTables": [
@@ -195,5 +199,13 @@
    "dbEgressBytes": 563623,
    "requests": 157
   }
- ]
+ ],
+ "backups": {
+  "configured": true,
+  "lastSuccessAt": null,
+  "lastRunAt": null,
+  "consecutiveFailures": 1,
+  "lastError": "AccessDenied: Access Denied",
+  "last": null
+ }
 }

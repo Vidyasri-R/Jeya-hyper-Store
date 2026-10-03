@@ -112,6 +112,12 @@ const envSchema = z.object({
     .transform((value) => value.replace(/\/+$/, ''))
     .optional(),
 
+  /** Private bucket for nightly database backups (Supabase Free has none). Unset = backups off. */
+  R2_BACKUP_BUCKET: z
+    .string()
+    .regex(/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/, 'invalid bucket name')
+    .optional(),
+
   // ─── Usage & billing monitor (all optional) ───
   /** Cloudflare API token with "Account Analytics: Read" → exact R2 storage + Class A/B counts. */
   CLOUDFLARE_API_TOKEN: z.string().min(20).optional(),

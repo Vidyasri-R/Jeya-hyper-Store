@@ -128,4 +128,7 @@ class StaffRepository {
   Future<Map<String, dynamic>> refreshUsage() => _api.post('/admin/usage/refresh');
 
   Future<void> acknowledgeAlert(int id) => _api.post('/admin/alerts/$id/ack');
+
+  /// Runs a database backup now; returns the server's backup status afterwards.
+  Future<Map<String, dynamic>> runBackup() async => Map<String, dynamic>.from((await _api.post('/admin/backups/run'))['status'] as Map);
 }

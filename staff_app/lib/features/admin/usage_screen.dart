@@ -149,6 +149,16 @@ class _UsageScreenState extends ConsumerState<UsageScreen> {
           ),
         ],
         const SizedBox(height: 18),
+        _BackupCard(
+          status: Map<String, dynamic>.from((r['backups'] as Map?) ?? const {}),
+          health: Map<String, dynamic>.from((r['health'] as Map?)?['backups'] as Map? ?? const {}),
+          onBackUp: () async {
+            final status = await guard(context, () => ref.read(repositoryProvider).runBackup());
+            if (status != null && context.mounted) showSnack(context, 'Backup saved');
+            await _load();
+          },
+        ),
+        const SizedBox(height: 12),
         for (final s in services) ...[_ServiceCard(service: s), const SizedBox(height: 12)],
         if (tables.isNotEmpty)
           SectionCard(
@@ -328,6 +338,72 @@ class _MetricRow extends StatelessWidget {
               padding: const EdgeInsets.only(top: 2),
               child: Text(metric['note'] as String, style: text.labelSmall),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Nightly database backup (Supabase Free keeps none): when it last ran, its size, and a manual run.
+class _BackupCard extends StatefulWidget {
+  const _BackupCard({required this.status, required this.health, required this.onBackUp});
+  final Map<String, dynamic> status;
+  final Map<String, dynamic> health;
+  final Future<void> Function() onBackUp;
+
+  @override
+  State<_BackupCard> createState() => _BackupCardState();
+}
+
+class _BackupCardState extends State<_BackupCard> {
+  bool _busy = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final level = widget.health['level'] as String? ?? 'ok';
+    final (fg, bg) = levelColors(level == 'ok' ? null : level);
+    final last = widget.status['last'] as Map?;
+    final lastAt = widget.status['lastSuccessAt'] as String?;
+    final configured = widget.status['configured'] == true;
+    return SectionCard(
+      color: level == 'ok' ? null : bg,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(level == 'ok' ? Icons.cloud_done_outlined : Icons.cloud_off_outlined, color: level == 'ok' ? AppColors.green700 : fg),
+              const SizedBox(width: 8),
+              Expanded(child: Text('Database backup', style: text.titleMedium)),
+              if (configured)
+                TextButton.icon(
+                  onPressed: _busy
+                      ? null
+                      : () async {
+                          setState(() => _busy = true);
+                          await widget.onBackUp();
+                          if (mounted) setState(() => _busy = false);
+                        },
+                  icon: _busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.backup_outlined),
+                  label: const Text('Back up now'),
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            lastAt != null
+                ? 'Last backup ${ago(DateTime.parse(lastAt).toLocal())}${last != null ? ' · ${last['kind']} · ${formatBytes(last['bytes'] as num)}' : ''}'
+                : 'No backup yet',
+            style: text.bodyMedium,
+          ),
+          if ((widget.health['message'] as String?)?.isNotEmpty == true)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(widget.health['message'] as String, style: text.bodySmall?.copyWith(color: level == 'ok' ? null : fg)),
+            ),
+          const SizedBox(height: 4),
+          Text('Every night at 2 AM to a private Cloudflare R2 bucket; kept 100 days.', style: text.labelSmall),
         ],
       ),
     );

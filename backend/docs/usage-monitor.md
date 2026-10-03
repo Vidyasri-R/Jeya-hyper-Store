@@ -16,8 +16,8 @@ before anything costs extra or gets restricted.
 | Cloudflare R2 | Free | 10 GB storage, 1M Class A, 10M Class B ops / month | $0.015/GB, $4.50/M, $0.36/M |
 | Razorpay | per transaction | fees reported from each captured payment | — |
 
-Supabase Free also has **no automatic backups** and pauses projects after a week without
-activity (the hourly monitor query keeps it awake).
+Supabase Free also has **no automatic backups** (we run our own — see *Backups* below) and
+pauses projects after a week without activity (the hourly monitor query keeps it awake).
 
 Limits and prices live in app_config `usage.limits` (Admin → Settings) so they can be updated
 without a deploy if a provider changes pricing.
@@ -83,3 +83,37 @@ and usage rows older than 400 days. Orders, payments, refunds and customers are 
   `largestTables`, `notifications.email`.
 - `POST /v1/admin/usage/refresh` — re-measure now and re-check alerts.
 - `GET /v1/admin/alerts`, `POST /v1/admin/alerts/:id/ack`.
+
+## Backups (Supabase Free has none)
+
+Every night at **2 AM IST** the server exports the business data to the private R2 bucket
+**`jeya-backups`** (no public access; the app's R2 key `jeya-api-backend` may use it):
+
+- **Monthly full** (first run of each month): staff accounts, customers, addresses, store
+  settings, delivery areas, categories, products, orders + lines + status history, payments,
+  refunds.
+- **Daily incremental**: only rows changed since the previous run (10-minute overlap), so a
+  backup costs a few KB of Supabase egress, not the whole database.
+- Files: `db/<YYYY-MM>/<full|incremental>-<YYYYMMDD-HHMMSS>/<table>.ndjson.gz` + `manifest.json`
+  (row counts and SHA-256 per file; a set without a manifest never finished and is ignored).
+- R2 deletes sets after **100 days** (bucket lifecycle rule) → about three months of history,
+  well inside the free 10 GB.
+- Not backed up on purpose: sessions, OTPs, carts, webhook logs, usage rows (short-lived or
+  rebuilt). Product photos already live in R2.
+
+Commands (from `backend/`, with the production `.env`):
+
+```bash
+npm run backup:run                 # back up now (also: Admin → Usage & bills → Back up now)
+npm run backup:run -- --full
+npm run backup:verify              # restore the latest chain into a scratch schema, compare, drop it
+```
+
+`backup:verify` proves the backups restore without touching live tables — run it after schema
+changes. A real disaster restore = run the migrations on a new database, then
+`backupService.restore(chain, 'public', <client for that database>)`.
+
+Alerts: a warning when backups aren't configured or the last success is older than 36 h (or a
+run failed), critical after 72 h. Status and a "Back up now" button are on the Usage & bills
+screen; API: `GET /v1/admin/backups`, `POST /v1/admin/backups/run`.
+

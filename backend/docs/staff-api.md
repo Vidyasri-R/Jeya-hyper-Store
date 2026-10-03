@@ -116,6 +116,15 @@ onlineSales, delivered, cancelled, customers }, previous: { orders, sales }, dai
 ### Usage & bills — see `usage-monitor.md`
 - `GET /admin/usage`, `POST /admin/usage/refresh`, `GET /admin/alerts`, `POST /admin/alerts/:id/ack`
 
+### Backups — see `usage-monitor.md`
+- `GET /admin/backups` → `{ configured, lastSuccessAt, lastError, last, sets[] }`
+- `POST /admin/backups/run` → runs a backup now (full on the first run of a month)
+
+### Web app
+The same app runs at **https://jeya-staff.pages.dev** (Cloudflare Pages, free; the API allows
+that origin via `CORS_ORIGINS`). Redeploy after changes:
+`cd staff_app && flutter build web --release && npx wrangler@4 pages deploy build/web --project-name jeya-staff --branch main`.
+
 ### POS sync
 - `POST /admin/sync/catalog` `{ mode: 'delta' | 'full' }`, `GET /admin/sync/status`
 

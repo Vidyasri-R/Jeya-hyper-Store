@@ -188,6 +188,8 @@ void main() {
   testWidgets('usage & bills shows the month bill and every service', (tester) async {
     await pumpApp(tester, FakeRepo(orderAt('placed')), at: '/more/usage');
     expect(find.text('Expected hosting bill'), findsOneWidget);
+    expect(find.text('Database backup'), findsOneWidget);
+    expect(find.text('Backup failing: AccessDenied: Access Denied'), findsOneWidget);
     expect(find.textContaining('Render (API server)'), findsOneWidget);
     await tester.scrollUntilVisible(find.textContaining('Razorpay (payment fees)'), 300);
     expect(find.textContaining('Cloudflare R2'), findsOneWidget);

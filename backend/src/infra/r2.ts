@@ -1,5 +1,6 @@
 import {
   DeleteObjectCommand,
+  GetObjectCommand,
   HeadObjectCommand,
   ListObjectsV2Command,
   NotFound,
@@ -63,7 +64,43 @@ function assertKey(key: string): void {
   }
 }
 
+/** Raw object operations on any bucket the R2 token can reach (backups use a private one). */
+function bucketOps(bucket: string) {
+  return {
+    async put(key: string, body: Buffer, options: { contentType: string; metadata?: Record<string, string> }) {
+      assertKey(key);
+      await requireClient().client.send(
+        new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: options.contentType, ...(options.metadata ? { Metadata: options.metadata } : {}) }),
+      );
+      traffic.countR2({ uploadBytes: body.length, classAOps: 1 });
+    },
+
+    async get(key: string): Promise<Buffer> {
+      assertKey(key);
+      const result = await requireClient().client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+      return Buffer.from(await result.Body!.transformToByteArray());
+    },
+
+    async list(prefix: string): Promise<{ key: string; size: number; lastModified: Date | null }[]> {
+      const objects: { key: string; size: number; lastModified: Date | null }[] = [];
+      let token: string | undefined;
+      do {
+        const page = await requireClient().client.send(new ListObjectsV2Command({ Bucket: bucket, Prefix: prefix, ContinuationToken: token }));
+        traffic.countR2({ classAOps: 1 });
+        for (const object of page.Contents ?? []) {
+          if (object.Key) objects.push({ key: object.Key, size: object.Size ?? 0, lastModified: object.LastModified ?? null });
+        }
+        token = page.IsTruncated ? page.NextContinuationToken : undefined;
+      } while (token);
+      return objects;
+    },
+  };
+}
+
 export const r2 = {
+  /** e.g. r2.bucket(env.R2_BACKUP_BUCKET).put(...) */
+  bucket: bucketOps,
+
   isConfigured: (): boolean => client !== null,
 
   publicUrl(key: string): string {

@@ -3,6 +3,7 @@ import { logger } from '../../config/logger';
 import { db } from '../../db/client';
 import type { AdminAlert, AlertLevel } from '../../db/schema';
 import { fetchR2Usage, type R2Usage } from '../../integrations/cloudflare/analytics';
+import { backupService } from '../backup/backup.service';
 import { r2 } from '../../infra/r2';
 import { traffic } from '../../infra/traffic';
 import { notifier } from './notifier';
@@ -152,13 +153,14 @@ export const usageService = {
     const limits = await usageLimits();
     // Fold not-yet-flushed traffic in, so the screen is current to the second.
     await usageService.flushTraffic().catch((error: unknown) => logger.warn({ err: error }, 'usage flush before report failed'));
-    const [rows, sizes, fees, syncRows, openAlerts, tables] = await Promise.all([
+    const [rows, sizes, fees, syncRows, openAlerts, tables, backups] = await Promise.all([
       usageRepository.range(db, month.firstDay, month.lastDay),
       usageRepository.latestSizes(db),
       usageRepository.razorpayFees(db, month.start),
       usageRepository.syncHealth(db),
       usageRepository.openAlerts(db),
       usageRepository.largestTables(db, 6),
+      backupService.status(),
     ]);
 
     const sum = (pick: (row: (typeof rows)[number]) => number) => rows.reduce((total, row) => total + Number(pick(row)), 0);
@@ -262,6 +264,19 @@ export const usageService = {
       },
     };
 
+    const backupAgeHours = backups.lastSuccessAt ? (now.getTime() - backups.lastSuccessAt.getTime()) / 3_600_000 : null;
+    const backupHealth: { level: Level; message: string } = !backups.configured
+      ? { level: 'warning', message: 'Database backups are not set up (R2_BACKUP_BUCKET). Supabase Free keeps no backups of its own.' }
+      : backups.consecutiveFailures >= 1 && (backupAgeHours === null || backupAgeHours > 30)
+        ? { level: backups.consecutiveFailures >= 3 || (backupAgeHours ?? 99) > 72 ? 'critical' : 'warning', message: `Backup failing: ${(backups.lastError ?? 'unknown error').slice(0, 200)}` }
+        : backupAgeHours === null
+          ? { level: 'ok', message: 'First backup runs at 2 AM IST.' }
+          : backupAgeHours > 72
+            ? { level: 'critical', message: `Last successful backup was ${Math.round(backupAgeHours)} hours ago.` }
+            : backupAgeHours > 36
+              ? { level: 'warning', message: `Last successful backup was ${Math.round(backupAgeHours)} hours ago.` }
+              : { level: 'ok', message: 'Backups are up to date.' };
+
     const estimateUsd = services.filter((service) => service.id !== 'razorpay').reduce((total, service) => total + service.costProjectedUsd, 0);
     return {
       month: month.label,
@@ -276,7 +291,8 @@ export const usageService = {
         paymentFeesInr: Math.round(feeInr),
       },
       services,
-      health,
+      health: { ...health, backups: backupHealth },
+      backups,
       largestTables: tables,
       alerts: openAlerts.map(toPublicAlert),
       notifications: notifier.channels(),
@@ -305,6 +321,7 @@ export const usageService = {
       }
     }
     checks.push({ metric: 'health.catalog_sync', level: report.health.catalogSync.level, title: 'Catalog sync is failing', message: report.health.catalogSync.message, data: null });
+    checks.push({ metric: 'health.backups', level: report.health.backups.level, title: 'Database backups need attention', message: report.health.backups.message, data: null });
 
     const open = new Map((await usageRepository.openAlerts(db)).map((alert) => [alert.metric, alert]));
     const toNotify: { title: string; message: string; level: AlertLevel; id: number }[] = [];

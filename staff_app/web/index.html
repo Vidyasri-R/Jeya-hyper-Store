@@ -19,20 +19,32 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Jeya Staff — orders and back office for Jeya Hyper Store">
+  <!-- Internal tool: keep the login page out of search engines. -->
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#14612F">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="jeya_staff">
+  <meta name="apple-mobile-web-app-title" content="Jeya Staff">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>jeya_staff</title>
+  <title>Jeya Staff</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #F4FAF5; }
+    #boot { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #5E6B63; }
+    #boot img { width: 84px; height: 84px; }
+    #boot .spin { width: 26px; height: 26px; border: 3px solid #DDF1E2; border-top-color: #1B7A3E; border-radius: 50%; animation: s 0.9s linear infinite; }
+    @keyframes s { to { transform: rotate(360deg); } }
+  </style>
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <div id="boot"><img src="icons/Icon-192.png" alt=""><div class="spin"></div><div>Loading Jeya Staff…</div></div>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader

@@ -21,7 +21,9 @@
     "catalog:purge-mock": "tsx src/scripts/purge-mock-catalog.ts",
     "staff:create-admin": "tsx src/scripts/create-admin.ts",
     "staff:create-admin:prod": "node dist/scripts/create-admin.js",
-    "smoke:staff": "tsx src/scripts/smoke-staff.ts"
+    "smoke:staff": "tsx src/scripts/smoke-staff.ts",
+    "backup:run": "tsx src/scripts/backup-run.ts",
+    "backup:verify": "tsx src/scripts/backup-verify.ts"
   },
   "license": "UNLICENSED",
   "description": "Jeya Hyper Store backend API",

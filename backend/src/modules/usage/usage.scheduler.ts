@@ -1,5 +1,6 @@
 import { logger } from '../../config/logger';
 import { db } from '../../db/client';
+import { backupService } from '../backup/backup.service';
 import { syncStateRepository } from '../sync/sync-state.repository';
 import { runHousekeeping } from './housekeeping';
 import { istDay, usageService } from './usage.service';
@@ -11,6 +12,7 @@ const FIRST_RUN_DELAY_MS = 2 * 60 * 1000;
 
 /** Daily jobs at fixed IST hours; the DB lease + last-success day make them run once per day. */
 const DAILY_JOBS = [
+  { key: 'job_backup', istHour: 2, run: async () => void (await backupService.run('auto')) },
   { key: 'job_housekeeping', istHour: 3, run: async () => void (await runHousekeeping()) },
   { key: 'job_usage_digest', istHour: 9, run: async () => void (await usageService.sendDigest()) },
 ] as const;
@@ -29,6 +31,8 @@ async function runDaily(now: Date): Promise<void> {
     if (istHour(now) < job.istHour) continue;
     const state = await syncStateRepository.get(db, job.key);
     if (state?.lastSuccessAt && istDay(state.lastSuccessAt) === istDay(now)) continue;
+    // After a failure, retry hourly rather than on every 5-minute tick.
+    if (state?.status === 'failed' && state.lastRunFinishedAt && now.getTime() - state.lastRunFinishedAt.getTime() < HOUR_MS) continue;
     if (!(await syncStateRepository.acquireLease(db, job.key))) continue;
     try {
       await job.run();

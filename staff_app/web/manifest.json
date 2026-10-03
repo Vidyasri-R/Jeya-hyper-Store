@@ -1,12 +1,12 @@
 {
-    "name": "jeya_staff",
-    "short_name": "jeya_staff",
+    "name": "Jeya Staff",
+    "short_name": "Jeya Staff",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "Jeya Staff — orders and back office for Jeya Hyper Store",
-    "orientation": "portrait-primary",
+    "background_color": "#F4FAF5",
+    "theme_color": "#14612F",
+    "description": "Jeya Staff \u2014 orders and back office for Jeya Hyper Store",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {
