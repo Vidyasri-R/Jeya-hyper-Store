@@ -10,6 +10,10 @@
         <item name="android:windowSplashScreenBackground">#FF5E0F22</item>
         <item name="android:windowSplashScreenIconBackgroundColor">@android:color/white</item>
     </style>
+    <style name="ChristmasSplashTheme" parent="LaunchTheme">
+        <item name="android:windowSplashScreenBackground">#FF0E1F45</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/white</item>
+    </style>
     <style name="PongalSplashTheme" parent="LaunchTheme">
         <item name="android:windowSplashScreenBackground">#FF6B3510</item>
         <item name="android:windowSplashScreenIconBackgroundColor">@android:color/white</item>

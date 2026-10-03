@@ -16,6 +16,11 @@ python3 pongal_art.py      # Pongal: header, thoranam (aavaram poo), pongal pot 
 python3 pongal_more.py     # Pongal banners, kolam button tile, section icon, petals
 node render.mjs --dir out/pongal
 cp out/pongal/webp/*.webp ../../app/assets/themes/pongal/   # plus flame.webp from diwali
+
+python3 christmas_art.py   # Christmas & New Year: night sky, pine garland, tree hero, splash, star lantern
+python3 christmas_more.py  # treats / New Year party / baking banners, snowflake tile, tree icon, sprites
+node render.mjs --dir out/christmas
+cp out/christmas/webp/*.webp ../../app/assets/themes/christmas/   # plus flame.webp from diwali
 ```
 
 How the app uses them: `app/lib/core/festival_pack.dart` (asset names, banner copy, flame

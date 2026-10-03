@@ -76,9 +76,25 @@ abstract final class Palettes {
     accent: Color(0xFFFFD54F),
   );
 
+  /// Christmas & New Year: Christmas red and gold under a starry navy night.
+  static const christmas = BrandPalette(
+    id: 'christmas',
+    b900: Color(0xFF5C1010),
+    b800: Color(0xFF8E1C1C),
+    b700: Color(0xFFC62828),
+    b600: Color(0xFFD84343),
+    b500: Color(0xFFE53935),
+    b100: Color(0xFFFDE2E2),
+    b50: Color(0xFFFFF2F2),
+    tint: Color(0xFFFFFAFA),
+    header: [Color(0xFF0E1F45), Color(0xFF1D3A7A)],
+    accent: Color(0xFFFFD54F),
+  );
+
   static BrandPalette byId(String? id) => switch (id) {
     'diwali' => diwali,
     'pongal' => pongal,
+    'christmas' => christmas,
     _ => standard,
   };
 }

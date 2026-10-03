@@ -12,6 +12,7 @@ class FestivalPack {
     required this.flames,
     required this.banners,
     this.halo,
+    this.greetingsFrom = const [],
   });
 
   final String id;
@@ -32,8 +33,23 @@ class FestivalPack {
   /// Illustrated banners that lead the Home carousel.
   final List<FestivalBanner> banners;
 
-  /// Optional art rising behind the splash logo card (the Pongal sun).
+  /// Optional art rising behind the splash logo card (the Pongal sun, the Christmas star).
   final String? halo;
+
+  /// The greeting changing through the season: (month, day it starts, text) in date order. Dates
+  /// before the first rule take the last one (a season that crosses New Year).
+  final List<(int, int, String)> greetingsFrom;
+
+  /// "Merry Christmas" until 25 Dec, "Happy New Year" after; [greeting] for single-day festivals.
+  String greetingOn(DateTime day) {
+    if (greetingsFrom.isEmpty) return greeting;
+    final today = day.month * 100 + day.day;
+    String? pick;
+    for (final (month, from, text) in greetingsFrom) {
+      if (month * 100 + from <= today) pick = text;
+    }
+    return pick ?? greetingsFrom.last.$3;
+  }
 
   String _art(String name) => '$dir/$name.webp';
 
@@ -146,9 +162,49 @@ abstract final class FestivalPacks {
     ],
   );
 
+  /// Christmas & New Year: starry night, New Year fireworks, a pine garland and a decorated tree.
+  static const christmas = FestivalPack(
+    id: 'christmas',
+    dir: 'assets/themes/christmas',
+    greeting: 'Merry Christmas',
+    greetingsFrom: [(7, 1, 'Merry Christmas'), (12, 26, 'Happy New Year')],
+    question: 'Treats for the season, delivered',
+    heroAspect: 480 / 300,
+    flames: [(0.1667, 0.62, 0.0833), (0.2708, 0.6933, 0.0708)],
+    halo: 'star',
+    banners: [
+      FestivalBanner(
+        image: 'assets/themes/christmas/banner_treats.webp',
+        tag: 'CHRISTMAS TREATS',
+        title: 'Cakes, cookies\n& sweets',
+        subtitle: 'For the season of sharing',
+        cta: 'Shop treats',
+        route: '/search?q=cookies',
+      ),
+      FestivalBanner(
+        image: 'assets/themes/christmas/banner_party.webp',
+        tag: 'NEW YEAR PARTY',
+        title: 'Snacks &\ncold drinks',
+        subtitle: 'Chips, juices & more',
+        cta: 'Party time',
+        route: '/search?q=chips',
+        dark: true,
+      ),
+      FestivalBanner(
+        image: 'assets/themes/christmas/banner_baking.webp',
+        tag: 'BAKE AT HOME',
+        title: 'Baking\nessentials',
+        subtitle: 'Maida, butter, sugar & eggs',
+        cta: 'Shop now',
+        route: '/search?q=maida',
+      ),
+    ],
+  );
+
   static FestivalPack? byId(String? id) => switch (id) {
     'diwali' => diwali,
     'pongal' => pongal,
+    'christmas' => christmas,
     _ => null,
   };
 }

@@ -109,7 +109,7 @@ class _FestiveSplash extends StatelessWidget {
                         ),
                         const SizedBox(height: 26),
                         Text(
-                          pack.greeting,
+                          pack.greetingOn(DateTime.now()),
                           textAlign: TextAlign.center,
                           style: text.headlineSmall?.copyWith(
                             color: gold,

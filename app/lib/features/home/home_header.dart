@@ -130,7 +130,7 @@ class HomeHeader extends ConsumerWidget {
                           alignment: Alignment.centerLeft,
                           child: Text(
                             pack != null
-                                ? (firstName != null ? '${pack.greeting}, $firstName!' : '${pack.greeting}!')
+                                ? (firstName != null ? '${pack.greetingOn(DateTime.now())}, $firstName!' : '${pack.greetingOn(DateTime.now())}!')
                                 : (firstName != null ? '${_greeting().replaceAll('!', '')}, $firstName!' : _greeting()),
                             maxLines: 1,
                             style: text.headlineSmall?.copyWith(

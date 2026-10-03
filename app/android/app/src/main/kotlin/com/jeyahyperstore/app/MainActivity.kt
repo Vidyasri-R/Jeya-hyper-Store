@@ -19,6 +19,7 @@ class MainActivity : FlutterActivity() {
                 val theme = when (call.argument<String>("preset")) {
                     "diwali" -> R.style.DiwaliSplashTheme
                     "pongal" -> R.style.PongalSplashTheme
+                    "christmas" -> R.style.ChristmasSplashTheme
                     else -> Resources.ID_NULL
                 }
                 splashScreen.setSplashScreenTheme(theme)

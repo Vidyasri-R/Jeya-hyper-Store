@@ -44,7 +44,7 @@ Future<void> pumpAt(WidgetTester tester, Widget child, {Size size = const Size(3
 }
 
 void main() {
-  for (final pack in [FestivalPacks.diwali, FestivalPacks.pongal]) {
+  for (final pack in [FestivalPacks.diwali, FestivalPacks.pongal, FestivalPacks.christmas]) {
     group(pack.id, () => _festiveLayout(pack));
   }
 }
@@ -69,7 +69,7 @@ void _festiveLayout(FestivalPack pack) {
         selectedAddressProvider.overrideWithValue(null),
       ],
     );
-    expect(find.textContaining('${pack.greeting}, Jayaprakash!'), findsOneWidget);
+    expect(find.textContaining('${pack.greetingOn(DateTime.now())}, Jayaprakash!'), findsOneWidget);
     expect(find.text(pack.question), findsOneWidget);
     expect(find.byType(Thoranam), findsOneWidget);
     expect(find.byType(FestiveHero), findsOneWidget);
@@ -116,7 +116,7 @@ void _festiveLayout(FestivalPack pack) {
           authProvider.overrideWith(() => _Starting(offline ? const AuthOffline() : const AuthUnknown())),
         ],
       );
-      expect(find.text(pack.greeting), findsOneWidget);
+      expect(find.text(pack.greetingOn(DateTime.now())), findsOneWidget);
       expect(find.byType(FestiveHero), offline ? findsNothing : findsOneWidget);
       expect(find.text('Try again'), offline ? findsOneWidget : findsNothing);
       expect(tester.takeException(), isNull);

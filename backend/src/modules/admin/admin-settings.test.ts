@@ -33,7 +33,7 @@ describe('festival theme setting (app.theme)', () => {
   });
 
   it('offers every festival the customer app has art for', async () => {
-    for (const preset of ['standard', 'diwali', 'pongal']) {
+    for (const preset of ['standard', 'diwali', 'pongal', 'christmas']) {
       await expect(adminSettingsService.set('app.theme', { preset, startsAt: null, endsAt: null, greeting: null })).resolves.toMatchObject({ preset });
     }
   });

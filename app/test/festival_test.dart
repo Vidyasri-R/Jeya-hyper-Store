@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jeya_hyper_store/core/festival.dart';
+import 'package:jeya_hyper_store/core/festival_pack.dart';
 import 'package:jeya_hyper_store/core/theme.dart';
 
 void main() {
@@ -19,6 +20,16 @@ void main() {
       expect(FestivalTheme.activeFrom(theme(), now)?.palette, same(Palettes.diwali));
       final t = FestivalTheme.activeFrom(theme(from: '2026-10-31T18:30:00.000Z', until: '2026-11-10T18:29:59.000Z'), now);
       expect(t?.pack?.id, 'diwali');
+    });
+
+    test('Christmas greets with the season: Christmas first, then the New Year', () {
+      final pack = FestivalPacks.christmas;
+      expect(pack.greetingOn(DateTime(2026, 12, 20)), 'Merry Christmas');
+      expect(pack.greetingOn(DateTime(2026, 12, 25)), 'Merry Christmas');
+      expect(pack.greetingOn(DateTime(2026, 12, 26)), 'Happy New Year');
+      expect(pack.greetingOn(DateTime(2027, 1, 2)), 'Happy New Year');
+      expect(pack.greetingOn(DateTime(2026, 10, 3)), 'Merry Christmas'); // switched on early
+      expect(FestivalPacks.pongal.greetingOn(DateTime(2027, 1, 14)), 'Happy Pongal');
     });
 
     test('Pongal has its own look', () {

@@ -2,6 +2,7 @@
 # Swap the home-screen app icon (Android launcher + iOS) for the next build:
 #   tool/app_icon.sh diwali     # Deepavali icon (feather eyes lit like diyas)
 #   tool/app_icon.sh pongal     # Pongal icon (feather eyes turmeric-and-sun yellow)
+#   tool/app_icon.sh christmas  # Christmas & New Year icon (feather eyes holly-berry red)
 #   tool/app_icon.sh standard   # everyday icon
 # Phones get the new icon with the next app update (Android only changes an icon in place
 # through an update; swapping it from inside the app removes it from many home screens).
@@ -11,7 +12,7 @@ cd "$(dirname "$0")/.."
 name="${1:-}"
 src="branding/app_icon/$name"
 if [ -z "$name" ] || [ ! -d "$src" ]; then
-  echo "usage: tool/app_icon.sh standard|diwali|pongal" >&2
+  echo "usage: tool/app_icon.sh standard|diwali|pongal|christmas" >&2
   exit 1
 fi
 for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
