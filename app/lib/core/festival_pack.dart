@@ -29,10 +29,6 @@ class FestivalPack {
   String get flame => _art('flame');
   String get sectionIcon => _art('diya_icon');
 
-  /// The store logo with the peacock's feather eyes lit like diyas.
-  String get logoMark => _art('logo_mark');
-  String get logoFull => _art('logo_full');
-
   /// Seamless gold-sparkle tile laid over festive buttons.
   ImageProvider get buttonTexture => ExactAssetImage(_art('btn_tile'), scale: 3);
 
@@ -104,10 +100,4 @@ abstract final class FestivalPacks {
 /// The festival art in effect, set together with `AppColors.palette` (null on everyday days).
 abstract final class Festive {
   static FestivalPack? pack;
-}
-
-/// The store logo for the current look (a festival lights up the peacock's feather eyes).
-abstract final class BrandLogo {
-  static String get mark => Festive.pack?.logoMark ?? 'assets/brand/logo_mark.png';
-  static String get full => Festive.pack?.logoFull ?? 'assets/brand/logo_full.png';
 }

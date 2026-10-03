@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/festival_pack.dart';
 import '../../core/theme.dart';
 import '../../data/models.dart';
 import '../../state/providers.dart';
@@ -63,7 +62,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
       appBar: AppBar(
         titleSpacing: 12,
         title: Row(children: [
-          Image.asset(BrandLogo.mark, height: 30),
+          Image.asset('assets/brand/logo_mark.png', height: 30),
           const SizedBox(width: 8),
           Text('Categories', style: text.titleLarge),
         ]),

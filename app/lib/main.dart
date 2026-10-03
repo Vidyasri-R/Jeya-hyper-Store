@@ -1,8 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'core/festival_cache.dart';
+import 'core/config_cache.dart';
 import 'core/festival_pack.dart';
 import 'core/theme.dart';
 import 'state/providers.dart';
@@ -11,9 +13,9 @@ import 'router.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-  // Read while Android's launch splash is still up, so the first frame already has the festival look.
-  final savedTheme = await FestivalCache.read();
-  runApp(ProviderScope(overrides: [savedThemeProvider.overrideWithValue(savedTheme)], child: const JeyaApp()));
+  // Read while Android's launch splash is still up, so the first frame already has the store's settings.
+  final savedConfig = await ConfigCache.read();
+  runApp(ProviderScope(overrides: [savedConfigProvider.overrideWithValue(savedConfig)], child: const JeyaApp()));
 }
 
 class JeyaApp extends ConsumerStatefulWidget {
@@ -25,30 +27,47 @@ class JeyaApp extends ConsumerStatefulWidget {
 
 class _JeyaAppState extends ConsumerState<JeyaApp> with WidgetsBindingObserver {
   DateTime _configFetchedAt = DateTime.now();
+  Timer? _configTimer;
+
+  void _refreshConfig() {
+    _configFetchedAt = DateTime.now();
+    ref.invalidate(publicConfigProvider);
+  }
+
+  /// Store settings (delivery charges, minimum order, pause, festival theme…) reach an open app
+  /// within five minutes; coming back to the app picks them up straight away.
+  void _startConfigTimer() {
+    _configTimer?.cancel();
+    _configTimer = Timer.periodic(const Duration(minutes: 5), (_) => _refreshConfig());
+  }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Remember the store's festival setting for the next launch, and pick Android's launch splash.
+    _startConfigTimer();
+    // Remember the store's settings for the next launch, and pick Android's launch splash.
     ref.listenManual(publicConfigProvider, (_, next) {
-      if (next.hasValue) FestivalCache.write(next.value!['app.theme']);
+      if (next.hasValue) ConfigCache.write(next.value!);
     });
-    ref.listenManual<bool>(festivalProvider.select((f) => f?.pack != null), (_, festive) => FestivalCache.launchSplash(festive: festive), fireImmediately: true);
+    ref.listenManual<bool>(festivalProvider.select((f) => f?.pack != null), (_, festive) => ConfigCache.launchSplash(festive: festive), fireImmediately: true);
   }
 
   @override
   void dispose() {
+    _configTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
-  /// Back in the app after a while: pick up settings the store changed (festival theme, pause…).
+  /// Back in the app: pick up settings the store changed (delivery charges, pause, festival theme…).
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && DateTime.now().difference(_configFetchedAt) > const Duration(minutes: 10)) {
-      _configFetchedAt = DateTime.now();
-      ref.invalidate(publicConfigProvider);
+    if (state == AppLifecycleState.resumed) {
+      if (DateTime.now().difference(_configFetchedAt) > const Duration(minutes: 1)) _refreshConfig();
+      _startConfigTimer();
+    } else if (state == AppLifecycleState.paused) {
+      _configTimer?.cancel();
     }
   }
 

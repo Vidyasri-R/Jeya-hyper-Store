@@ -209,7 +209,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   Widget _body(BuildContext context, Address address, Quote q) {
     final text = Theme.of(context).textTheme;
-    _method ??= q.onlineAvailable ? 'online' : 'cod';
+    // The store can switch a payment option off (Admin → Payment options) while checkout is open.
+    if (_method == null || (_method == 'online' && !q.onlineAvailable) || (_method == 'cod' && !q.codAvailable)) {
+      _method = q.onlineAvailable ? 'online' : 'cod';
+    }
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [

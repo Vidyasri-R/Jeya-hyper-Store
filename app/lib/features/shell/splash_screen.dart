@@ -76,7 +76,7 @@ class _FestiveSplash extends StatelessWidget {
                         border: Border.all(color: gold, width: 2),
                         boxShadow: [BoxShadow(color: gold.withValues(alpha: 0.45), blurRadius: 36, spreadRadius: 4)],
                       ),
-                      child: Image.asset(BrandLogo.full, width: 180),
+                      child: Image.asset('assets/brand/logo_full.png', width: 180),
                     ),
                     const SizedBox(height: 26),
                     Text(

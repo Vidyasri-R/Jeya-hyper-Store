@@ -45,7 +45,7 @@ class ProfileScreen extends ConsumerWidget {
       return Scaffold(
         appBar: AppBar(title: const Text('Profile')),
         body: ListView(padding: const EdgeInsets.all(24), children: [
-          Image.asset(BrandLogo.full, height: 140),
+          Image.asset('assets/brand/logo_full.png', height: 140),
           const SizedBox(height: 20),
           Text('Login to see your orders, saved addresses and more.', textAlign: TextAlign.center, style: text.bodyMedium),
           const SizedBox(height: 16),
@@ -105,7 +105,7 @@ class ProfileScreen extends ConsumerWidget {
                 gradient: LinearGradient(colors: [AppColors.brandBlueSoft, AppColors.brand50]),
               ),
               child: Row(children: [
-                Image.asset(BrandLogo.mark, height: 40),
+                Image.asset('assets/brand/logo_mark.png', height: 40),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

@@ -113,17 +113,18 @@ final _themeClockProvider = StreamProvider<DateTime>((ref) => Stream.periodic(co
 /// Build-time preview of a festival look (screenshots, trying a new preset): `--dart-define=PREVIEW_THEME=diwali`.
 const _previewTheme = String.fromEnvironment('PREVIEW_THEME');
 
-/// The festival setting remembered from the last run (read in main, see FestivalCache), used until
-/// the server answers — so the splash is already festive and the look survives being offline.
-final savedThemeProvider = Provider<Object?>((ref) => null);
+/// The store's public settings remembered from the last run (read in main, see ConfigCache), used
+/// until the server answers — so the splash is already festive and prices/rules survive offline.
+final savedConfigProvider = Provider<Map<String, dynamic>?>((ref) => null);
+
+/// Live settings when loaded, else the remembered ones.
+Map<String, dynamic>? _settings(Ref ref) => ref.watch(publicConfigProvider).valueOrNull ?? ref.watch(savedConfigProvider);
 
 /// The festival theme in effect now (Admin → Store settings → App theme), or null for the everyday look.
 final festivalProvider = Provider<FestivalTheme?>((ref) {
   if (_previewTheme.isNotEmpty) return FestivalTheme(preset: _previewTheme);
   ref.watch(_themeClockProvider);
-  final config = ref.watch(publicConfigProvider);
-  final raw = config.hasValue ? config.value!['app.theme'] : ref.watch(savedThemeProvider);
-  return FestivalTheme.activeFrom(raw, DateTime.now());
+  return FestivalTheme.activeFrom(_settings(ref)?['app.theme'], DateTime.now());
 });
 
 /// How fast the store delivers — Admin → Store settings → Deliver within (delivery.rules.deliveryDays).
@@ -142,9 +143,42 @@ class DeliverySpeed {
 }
 
 final deliverySpeedProvider = Provider<DeliverySpeed>((ref) {
-  final rules = ref.watch(publicConfigProvider).valueOrNull?['delivery.rules'];
+  final rules = _settings(ref)?['delivery.rules'];
   return DeliverySpeed(rules is Map && rules['deliveryDays'] is num ? (rules['deliveryDays'] as num).toInt() : 1);
 });
+
+/// Delivery and payment rules from Admin → Store settings. The server applies them to every cart
+/// quote and order; the app uses them for banners, cart tips and help text.
+class StoreRules {
+  const StoreRules({this.freeAbovePaise = 99900, this.minOrderPaise = 0, this.lowestFeePaise, this.cod = true, this.online = true});
+
+  /// Orders at or above this are delivered free (0 = always free); null when delivery is never free.
+  final int? freeAbovePaise;
+  final int minOrderPaise;
+
+  /// Cheapest distance band.
+  final int? lowestFeePaise;
+  final bool cod;
+  final bool online;
+
+  factory StoreRules.from(Map<String, dynamic>? settings) {
+    if (settings == null) return const StoreRules();
+    final rules = settings['delivery.rules'];
+    final pay = settings['checkout.payment_methods'];
+    int? paise(Object? v) => v is String ? toPaise(v) : null;
+    final tiers = rules is Map && rules['tiers'] is List ? rules['tiers'] as List : const [];
+    final fees = [for (final t in tiers) if (t is Map && paise(t['fee']) != null) paise(t['fee'])!]..sort();
+    return StoreRules(
+      freeAbovePaise: rules is Map ? paise(rules['freeDeliveryAbove']) : 99900,
+      minOrderPaise: rules is Map ? paise(rules['minOrderAmount']) ?? 0 : 0,
+      lowestFeePaise: fees.isEmpty ? null : fees.first,
+      cod: pay is Map ? pay['cod'] != false : true,
+      online: pay is Map ? pay['online'] == true : true,
+    );
+  }
+}
+
+final storeRulesProvider = Provider<StoreRules>((ref) => StoreRules.from(_settings(ref)));
 
 /// Admin → Store settings → Pause orders. Null when orders are open.
 final storePausedMessageProvider = FutureProvider<String?>((ref) async {

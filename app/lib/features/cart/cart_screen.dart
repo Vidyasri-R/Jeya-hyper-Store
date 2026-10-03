@@ -11,14 +11,6 @@ import '../../widgets/add_to_cart.dart';
 import '../../widgets/common.dart';
 import '../../widgets/product_image.dart';
 
-/// Free-delivery threshold from public remote config (₹999 today).
-final freeDeliveryAboveProvider = FutureProvider<int?>((ref) async {
-  final config = await ref.watch(repositoryProvider).publicConfig();
-  final rules = config['delivery.rules'] as Map<String, dynamic>?;
-  final v = rules?['freeDeliveryAbove'];
-  return v is String ? toPaise(v) : null;
-});
-
 /// Delivery quote for the cart screen when an address is already chosen.
 final cartQuoteProvider = FutureProvider.autoDispose<Quote?>((ref) async {
   final address = ref.watch(selectedAddressProvider);
@@ -87,6 +79,7 @@ class CartScreen extends ConsumerWidget {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
                   children: [
+                    const _PausedNotice(),
                     if (c.hasIssues) _IssuesBanner(),
                     _Card(child: Column(children: [
                       for (var i = 0; i < c.lines.length; i++) ...[
@@ -94,6 +87,7 @@ class CartScreen extends ConsumerWidget {
                         _CartLineTile(line: c.lines[i]),
                       ],
                     ])),
+                    _MinimumOrderHint(subtotal: toPaise(c.subtotal)),
                     const SizedBox(height: 12),
                     _FreeDeliveryProgress(subtotal: toPaise(c.subtotal)),
                     const SizedBox(height: 12),
@@ -197,7 +191,9 @@ class _FreeDeliveryProgress extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final threshold = ref.watch(freeDeliveryAboveProvider).valueOrNull;
+    // The quote is the server's live answer for this cart; the store's rules fill in before it arrives.
+    final quoted = ref.watch(cartQuoteProvider).valueOrNull?.freeDeliveryAbove;
+    final threshold = quoted != null ? toPaise(quoted) : ref.watch(storeRulesProvider).freeAbovePaise;
     if (threshold == null || threshold <= 0) return const SizedBox.shrink();
     final text = Theme.of(context).textTheme;
     final done = subtotal >= threshold;
@@ -230,6 +226,54 @@ class _FreeDeliveryProgress extends ConsumerWidget {
       ]),
     );
   }
+}
+
+/// Admin → Store settings → Minimum order: say so in the cart, not only at checkout.
+class _MinimumOrderHint extends ConsumerWidget {
+  const _MinimumOrderHint({required this.subtotal});
+  final int subtotal;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final minimum = ref.watch(storeRulesProvider).minOrderPaise;
+    if (minimum <= 0 || subtotal >= minimum) return const SizedBox.shrink();
+    return _Notice(
+      icon: Icons.shopping_basket_outlined,
+      text: 'Minimum order is ${formatPaise(minimum)} — add ${formatPaise(minimum - subtotal)} more to place your order.',
+      top: 12,
+    );
+  }
+}
+
+/// Admin → Pause orders: the store's message, before anyone heads to checkout.
+class _PausedNotice extends ConsumerWidget {
+  const _PausedNotice();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final message = ref.watch(storePausedMessageProvider).valueOrNull;
+    if (message == null) return const SizedBox.shrink();
+    return _Notice(icon: Icons.storefront_outlined, text: message, bottom: 12);
+  }
+}
+
+class _Notice extends StatelessWidget {
+  const _Notice({required this.icon, required this.text, this.top = 0, this.bottom = 0});
+  final IconData icon;
+  final String text;
+  final double top, bottom;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        margin: EdgeInsets.only(top: top, bottom: bottom),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: AppColors.amberSoft, borderRadius: BorderRadius.circular(AppRadius.md)),
+        child: Row(children: [
+          Icon(icon, color: const Color(0xFF8A5A00)),
+          const SizedBox(width: 10),
+          Expanded(child: Text(text, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: const Color(0xFF8A5A00), fontWeight: FontWeight.w600))),
+        ]),
+      );
 }
 
 class _BillSummary extends ConsumerWidget {

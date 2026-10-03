@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 import '../../core/festival_pack.dart';
+import '../../core/money.dart';
 import '../../core/theme.dart';
 import '../../data/models.dart';
 import '../../state/providers.dart';
@@ -159,15 +160,36 @@ class _HeroBanner {
   final String route;
 }
 
-const _banners = [
-  _HeroBanner('FRESH DEALS', 'Freshness\nat your doorstep', 'Farm fresh fruits & vegetables', 'Picked daily in Trichy', 'Shop Now', Icons.eco_rounded,
-      [Color(0xFFE3F4E6), Color(0xFFC9EBD0)], '/categories'),
-  // {speed} → the store's delivery promise (Admin → Store settings), e.g. "Next-day delivery".
-  _HeroBanner('FREE DELIVERY', 'Free delivery\non ₹999+', '{speed} from your store', 'No minimum order', 'Start Shopping', Icons.delivery_dining_rounded,
-      [Color(0xFFFFF1D6), Color(0xFFFFE2A8)], '/categories'),
-  _HeroBanner('PAY YOUR WAY', 'UPI, cards\nor cash on delivery', 'Safe & secure payments', '100% secure checkout', 'Explore', Icons.verified_user_rounded,
-      [Color(0xFFE5ECFA), Color(0xFFCCD9F5)], '/categories'),
-];
+/// Everyday banners; the delivery and payment ones follow Admin → Store settings.
+List<_HeroBanner> _everydayBanners(StoreRules rules) {
+  final free = rules.freeAbovePaise;
+  final minimum = rules.minOrderPaise > 0 ? ' · min. order ${formatPaise(rules.minOrderPaise)}' : '';
+  return [
+    const _HeroBanner('FRESH DEALS', 'Freshness\nat your doorstep', 'Farm fresh fruits & vegetables', 'Picked daily in Trichy', 'Shop Now', Icons.eco_rounded,
+        [Color(0xFFE3F4E6), Color(0xFFC9EBD0)], '/categories'),
+    // {speed} → the store's delivery promise, e.g. "Next-day delivery".
+    _HeroBanner(
+      free == null ? 'HOME DELIVERY' : 'FREE DELIVERY',
+      free == null ? 'Delivered\nto your door' : (free == 0 ? 'Free delivery\non every order' : 'Free delivery\non ${formatPaise(free)}+'),
+      '{speed} from your store$minimum',
+      '',
+      'Start Shopping',
+      Icons.delivery_dining_rounded,
+      const [Color(0xFFFFF1D6), Color(0xFFFFE2A8)],
+      '/categories',
+    ),
+    _HeroBanner(
+      'PAY YOUR WAY',
+      rules.cod && rules.online ? 'UPI, cards\nor cash on delivery' : (rules.online ? 'UPI, cards\n& netbanking' : 'Cash on\ndelivery'),
+      rules.online ? 'Safe & secure payments' : 'Pay when your order arrives',
+      '',
+      'Explore',
+      Icons.verified_user_rounded,
+      const [Color(0xFFE5ECFA), Color(0xFFCCD9F5)],
+      '/categories',
+    ),
+  ];
+}
 
 class _HeroCarousel extends ConsumerStatefulWidget {
   const _HeroCarousel();
@@ -188,7 +210,7 @@ class _HeroCarouselState extends ConsumerState<_HeroCarousel> {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final festive = ref.watch(festivalProvider)?.pack?.banners ?? const <FestivalBanner>[];
-    final banners = _banners;
+    final banners = _everydayBanners(ref.watch(storeRulesProvider));
     return Column(
       children: [
         const SizedBox(height: 14),
@@ -221,7 +243,7 @@ class _HeroCarouselState extends ConsumerState<_HeroCarousel> {
                         bottom: -22,
                         child: Icon(b.icon, size: 170, color: AppColors.brand800.withValues(alpha: 0.10)),
                       ),
-                      Positioned(right: 14, top: 14, child: Image.asset(BrandLogo.mark, height: 44)),
+                      Positioned(right: 14, top: 14, child: Image.asset('assets/brand/logo_mark.png', height: 44)),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
                         child: Column(
