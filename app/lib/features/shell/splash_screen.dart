@@ -5,7 +5,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/festival_pack.dart';
 import '../../core/theme.dart';
 import '../../state/providers.dart';
+import '../../widgets/brand_intro.dart';
 import '../../widgets/festive_decor.dart';
+
+/// True once the logo intro has played (or was skipped); the router leaves the splash only after it.
+final splashIntroDone = ValueNotifier<bool>(false);
+
+final _intro = GlobalKey<BrandIntroState>();
+
+void _introFinished() => splashIntroDone.value = true;
+
+/// Tapping the splash skips the intro.
+Widget _skippable(Widget child) => GestureDetector(behavior: HitTestBehavior.opaque, onTap: () => _intro.currentState?.skip(), child: child);
+
+/// Shown once the logo is complete, while the app is still starting.
+Widget _afterIntro(Widget child) => ValueListenableBuilder<bool>(
+  valueListenable: splashIntroDone,
+  builder: (_, done, _) => AnimatedOpacity(opacity: done ? 1 : 0, duration: const Duration(milliseconds: 300), child: child),
+);
 
 class SplashScreen extends ConsumerWidget {
   const SplashScreen({super.key});
@@ -18,12 +35,12 @@ class SplashScreen extends ConsumerWidget {
     final text = Theme.of(context).textTheme;
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
+      body: _skippable(SafeArea(
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Image.asset('assets/brand/logo_full.png', width: 220),
+              BrandIntro(key: _intro, width: 236, onDone: _introFinished),
               const SizedBox(height: 28),
               if (offline) ...[
                 const Icon(Icons.wifi_off_rounded, color: AppColors.inkFaint, size: 32),
@@ -34,11 +51,11 @@ class SplashScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 FilledButton(clipBehavior: Clip.antiAlias, onPressed: () => ref.read(authProvider.notifier).retry(), child: const Text('Try again')),
               ] else
-                SizedBox(width: 26, height: 26, child: CircularProgressIndicator(strokeWidth: 2.6, color: AppColors.brand700)),
+                _afterIntro(SizedBox(width: 26, height: 26, child: CircularProgressIndicator(strokeWidth: 2.6, color: AppColors.brand700))),
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 }
@@ -58,7 +75,7 @@ class _FestiveSplash extends StatelessWidget {
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
         backgroundColor: AppColors.brand900,
-        body: DecoratedBox(
+        body: _skippable(DecoratedBox(
           decoration: BoxDecoration(
             image: DecorationImage(image: AssetImage(pack.splashBackground), fit: BoxFit.cover),
           ),
@@ -103,7 +120,7 @@ class _FestiveSplash extends StatelessWidget {
                                 border: Border.all(color: gold, width: 2),
                                 boxShadow: [BoxShadow(color: gold.withValues(alpha: 0.45), blurRadius: 36, spreadRadius: 4)],
                               ),
-                              child: Image.asset('assets/brand/logo_full.png', width: 180),
+                              child: BrandIntro(key: _intro, width: 180, onDone: _introFinished),
                             ),
                           ],
                         ),
@@ -135,7 +152,7 @@ class _FestiveSplash extends StatelessWidget {
                         ] else ...[
                           FestiveHero(pack: pack, width: 168),
                           const SizedBox(height: 18),
-                          SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.2, color: gold)),
+                          _afterIntro(SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.2, color: gold))),
                         ],
                       ],
                     ),
@@ -144,7 +161,7 @@ class _FestiveSplash extends StatelessWidget {
               ),
             ],
           ),
-        ),
+        )),
       ),
     );
   }

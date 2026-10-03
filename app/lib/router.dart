@@ -30,12 +30,12 @@ final routerProvider = Provider<GoRouter>((ref) {
   final auth = ref.read(authProvider.notifier);
   return GoRouter(
     initialLocation: '/splash',
-    refreshListenable: auth.refresh,
+    refreshListenable: Listenable.merge([auth.refresh, splashIntroDone]),
     redirect: (context, state) {
       final s = ref.read(authProvider);
       final loc = state.matchedLocation;
       if (s is AuthUnknown || s is AuthOffline) return loc == '/splash' ? null : '/splash';
-      if (loc == '/splash') return '/home';
+      if (loc == '/splash') return splashIntroDone.value ? '/home' : null; // let the logo intro finish
       final signedIn = s is SignedIn;
       if (!signedIn && _protected.any(loc.startsWith)) return '/login?from=${Uri.encodeComponent(state.uri.toString())}';
       if (signedIn && (loc == '/login' || loc == '/otp')) return state.uri.queryParameters['from'] ?? '/home';
