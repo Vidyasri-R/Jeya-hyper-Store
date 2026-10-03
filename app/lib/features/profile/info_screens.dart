@@ -52,7 +52,7 @@ class HelpScreen extends ConsumerWidget {
           'When will my order arrive?',
           '${ref.watch(deliverySpeedProvider).headline} across Trichy — checkout shows the expected date. You can follow each step in Orders.',
         ),
-        const _Faq('How do refunds work?', 'If you cancel a paid order before we start packing, the full amount is refunded to your original payment method in 3–5 working days.'),
+        const _Faq('How do refunds work?', 'If you cancel a paid order before we start packing, the full amount goes back to your original payment method. Refunds start the same day; banks usually credit them within 5–7 working days.'),
         _Faq('Is delivery free?', _deliveryAnswer(ref.watch(storeRulesProvider))),
         if (ref.watch(storeRulesProvider).minOrderPaise > 0)
           _Faq('Is there a minimum order?', 'Yes — orders need to be at least ${formatPaise(ref.watch(storeRulesProvider).minOrderPaise)}.'),

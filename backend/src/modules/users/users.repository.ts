@@ -42,6 +42,8 @@ export const usersRepository = {
    * Soft-delete + PII scrub. The phone number stays on the (now inactive) row
    * because past orders/GST invoices must remain attributable for tax-record
    * retention; the partial unique index lets the same number sign up afresh.
+   * Saved addresses are erased outright: each order keeps its own delivery-address
+   * snapshot (orders.addressId becomes null).
    */
   async softDeleteAndScrub(db: DbExecutor, userId: string) {
     await db
@@ -49,10 +51,7 @@ export const usersRepository = {
       .set({ deletedAt: sql`now()`, name: null, email: null, fcmToken: null })
       .where(and(eq(users.id, userId), isNull(users.deletedAt)));
 
-    await db
-      .update(addresses)
-      .set({ deletedAt: sql`now()`, isDefault: false })
-      .where(and(eq(addresses.userId, userId), isNull(addresses.deletedAt)));
+    await db.delete(addresses).where(eq(addresses.userId, userId));
 
     await db.delete(cartItems).where(eq(cartItems.userId, userId));
   },

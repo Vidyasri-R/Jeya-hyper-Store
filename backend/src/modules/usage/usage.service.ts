@@ -153,7 +153,13 @@ export const usageService = {
       }
     }
     if (!r2.isConfigured()) return;
+    // The free 10 GB covers every bucket on the account: product images and the backups.
     const stats = await r2.storageStats();
+    if (env.R2_BACKUP_BUCKET) {
+      const backups = await r2.bucket(env.R2_BACKUP_BUCKET).list('');
+      stats.bytes += backups.reduce((sum, object) => sum + object.size, 0);
+      stats.objects += backups.length;
+    }
     await usageRepository.setSizes(db, istDay(), { r2StorageBytes: stats.bytes, r2ObjectCount: stats.objects });
   },
 

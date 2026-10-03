@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { adminSettingsService } from './admin-settings.service';
 
 // The settings service only needs the config store; keep it in memory (no database).
+// vi.mock is hoisted above the imports, so the service picks up this fake.
 const stored = vi.hoisted(() => new Map<string, { value: unknown; isPublic: boolean }>());
 vi.mock('../app-config/app-config.service', async (original) => {
   const actual = await original<typeof import('../app-config/app-config.service')>();
@@ -14,8 +16,6 @@ vi.mock('../app-config/app-config.service', async (original) => {
     },
   };
 });
-
-const { adminSettingsService } = await import('./admin-settings.service');
 
 describe('festival theme setting (app.theme)', () => {
   beforeEach(() => stored.clear());
