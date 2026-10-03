@@ -34,15 +34,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       final at = state.matchedLocation;
       return switch (session) {
         SessionLoading() => at == '/splash' ? null : '/splash',
+        SessionUnreachable() => at == '/offline' ? null : '/offline',
         SignedOut() => at == '/login' ? null : '/login',
         SignedIn(:final staff) when staff.mustChangePassword => at == '/welcome' ? null : '/welcome',
         SignedIn(:final staff) when !staff.isAdmin && _adminOnly.any(at.startsWith) => '/orders',
-        SignedIn() when at == '/splash' || at == '/login' || at == '/welcome' => '/orders',
+        SignedIn() when at == '/splash' || at == '/login' || at == '/welcome' || at == '/offline' => '/orders',
         _ => null,
       };
     },
     routes: [
       GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
+      GoRoute(path: '/offline', builder: (_, _) => const UnreachableScreen()),
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
       GoRoute(path: '/welcome', builder: (_, _) => const ChangePasswordScreen(forced: true)),
       GoRoute(

@@ -113,3 +113,39 @@ class SplashScreen extends StatelessWidget {
     ),
   );
 }
+
+/// Launch couldn't reach the server (network blip / server restart). The session is kept.
+class UnreachableScreen extends ConsumerWidget {
+  const UnreachableScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final text = Theme.of(context).textTheme;
+    return Scaffold(
+      backgroundColor: AppColors.mint,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset('assets/brand/logo_mark.png', height: 72),
+              const SizedBox(height: 20),
+              Text("Can't reach Jeya Hyper Store", style: text.titleLarge, textAlign: TextAlign.center),
+              const SizedBox(height: 8),
+              Text('You are still signed in. Check the internet and try again.', style: text.bodyMedium, textAlign: TextAlign.center),
+              const SizedBox(height: 22),
+              FilledButton.icon(
+                onPressed: () => ref.read(sessionProvider.notifier).retry(),
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Try again'),
+              ),
+              const SizedBox(height: 8),
+              TextButton(onPressed: () => ref.read(sessionProvider.notifier).logout(), child: const Text('Sign out')),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

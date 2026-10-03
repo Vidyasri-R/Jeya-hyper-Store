@@ -42,7 +42,12 @@ class ApiException implements Exception {
       return ApiException(
         status: error.response?.statusCode ?? 0,
         code: offline ? 'NETWORK' : 'ERROR',
-        message: offline ? 'No internet connection. Please check your network and try again.' : 'Something went wrong. Please try again.',
+        message: switch (error.type) {
+          DioExceptionType.connectionError => "Can't reach Jeya Hyper Store right now. Check your internet and try again.",
+          DioExceptionType.connectionTimeout || DioExceptionType.receiveTimeout || DioExceptionType.sendTimeout =>
+            'The store is taking too long to respond. Please try again.',
+          _ => 'Something went wrong. Please try again.',
+        },
       );
     }
     return ApiException(status: 0, code: 'ERROR', message: 'Something went wrong. Please try again.');
@@ -134,8 +139,23 @@ class ApiClient {
     }
   }
 
+  /// Reads are safe to repeat: retry twice on a network blip or a "busy" answer (502/503/504)
+  /// before showing an error — covers server restarts and flaky mobile data.
+  Future<Map<String, dynamic>> _withRetry(Future<Map<String, dynamic>> Function() call) async {
+    const delays = [Duration(milliseconds: 700), Duration(seconds: 2)];
+    for (var attempt = 0; ; attempt++) {
+      try {
+        return await call();
+      } on ApiException catch (e) {
+        final transient = e.isNetwork || e.status == 502 || e.status == 503 || e.status == 504;
+        if (!transient || attempt >= delays.length) rethrow;
+        await Future<void>.delayed(delays[attempt]);
+      }
+    }
+  }
+
   Future<Map<String, dynamic>> get(String path, {Map<String, dynamic>? query, bool auth = true}) =>
-      _send(() => _dio.get(path, queryParameters: query, options: Options(extra: {'auth': auth})));
+      _withRetry(() => _send(() => _dio.get(path, queryParameters: query, options: Options(extra: {'auth': auth}))));
 
   Future<Map<String, dynamic>> post(String path, {Object? body, bool auth = true}) =>
       _send(() => _dio.post(path, data: body ?? const <String, dynamic>{}, options: Options(extra: {'auth': auth})));

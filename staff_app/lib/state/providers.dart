@@ -38,6 +38,11 @@ class SignedOut extends SessionState {
   final String? message;
 }
 
+/// Signed in on this device, but the server couldn't be reached at launch — keep the session, offer Retry.
+class SessionUnreachable extends SessionState {
+  const SessionUnreachable();
+}
+
 class SignedIn extends SessionState {
   const SignedIn(this.staff);
   final Staff staff;
@@ -60,14 +65,19 @@ class SessionController extends Notifier<SessionState> {
     try {
       state = SignedIn(await _repo.me());
     } on ApiException catch (e) {
-      // Offline at launch: keep the person signed in; screens show "no internet" and retry.
-      if (e.isNetwork) {
-        state = const SignedOut(message: 'No internet connection. Check the network and sign in again.');
+      if (e.isNetwork || e.status >= 500) {
+        // Network blip or server restart at launch: don't sign the person out over it.
+        state = const SessionUnreachable();
       } else {
         await ref.read(tokenStoreProvider).clear();
         state = const SignedOut();
       }
     }
+  }
+
+  Future<void> retry() async {
+    state = const SessionLoading();
+    await _restore();
   }
 
   Future<void> login(String username, String password) async {
