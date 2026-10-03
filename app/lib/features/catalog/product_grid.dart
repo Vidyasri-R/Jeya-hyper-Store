@@ -59,10 +59,10 @@ class ProductGrid extends ConsumerWidget {
               ),
             ),
           if (state.items.isNotEmpty && !state.done)
-            const SliverToBoxAdapter(
+            SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.all(16),
-                child: Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: AppColors.green700))),
+                child: Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: AppColors.brand700))),
               ),
             ),
           const SliverToBoxAdapter(child: SizedBox(height: 100)),

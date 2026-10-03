@@ -9,6 +9,7 @@ import 'package:jeya_staff/core/api/api_client.dart';
 import 'package:jeya_staff/core/api/token_store.dart';
 import 'package:jeya_staff/data/models.dart';
 import 'package:jeya_staff/data/repository.dart';
+import 'package:jeya_staff/features/admin/settings_screen.dart';
 import 'package:jeya_staff/router.dart';
 import 'package:jeya_staff/state/providers.dart';
 
@@ -73,6 +74,32 @@ class FakeRepo extends StaffRepository {
 
   @override
   Future<Map<String, dynamic>> dashboard(int days) async => fixture('dashboard.json');
+
+  @override
+  Future<Map<String, dynamic>> settings() async => {
+    'store.info': {'name': 'Jeya Hyper Store', 'city': 'Tiruchirappalli', 'supportPhone': null, 'supportWhatsApp': null},
+    'delivery.rules': {
+      'storeLocation': {'lat': 10.8127737, 'lng': 78.6358536},
+      'maxDistanceKm': 10,
+      'roadDistanceFactor': 1.3,
+      'freeDeliveryAbove': '999.00',
+      'minOrderAmount': '0.00',
+      'deliveryDays': 1,
+      'tiers': [
+        {'upToKm': 3, 'fee': '20.00'},
+        {'upToKm': 10, 'fee': '60.00'},
+      ],
+    },
+    'checkout.payment_methods': {'cod': true, 'online': true},
+    'app.maintenance': {'enabled': false, 'message': ''},
+    'auth.demo_login_enabled': false,
+  };
+
+  @override
+  Future<Object?> saveSetting(String key, Object? value) async {
+    calls.add({'call': 'saveSetting', 'key': key, 'value': value});
+    return value;
+  }
 }
 
 class SignedInSession extends SessionController {
@@ -193,6 +220,31 @@ void main() {
     expect(find.textContaining('Render (API server)'), findsOneWidget);
     await tester.scrollUntilVisible(find.textContaining('Razorpay (payment fees)'), 300);
     expect(find.textContaining('Cloudflare R2'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('admin switches the customer app to the Diwali theme', (tester) async {
+    final repo = FakeRepo(orderAt('placed'));
+    await pumpApp(tester, repo, at: '/more/settings');
+    final list = find.descendant(of: find.byType(SettingsScreen), matching: find.byType(Scrollable)).first;
+    await tester.scrollUntilVisible(find.text('Save theme'), 300, scrollable: list);
+    expect(find.text('Customers see the everyday green look.'), findsOneWidget);
+    await tester.ensureVisible(find.text('Diwali'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Diwali'));
+    await tester.pumpAndSettle();
+    expect(find.text('From: now'), findsOneWidget);
+    expect(find.text('Live now (until you switch back to Normal).'), findsOneWidget);
+    await tester.enterText(find.widgetWithText(TextField, 'Message on the home screen (optional)'), '  Happy Deepavali! ');
+    await tester.ensureVisible(find.text('Save theme'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save theme'));
+    await tester.pumpAndSettle();
+    expect(repo.calls.last, {
+      'call': 'saveSetting',
+      'key': 'app.theme',
+      'value': {'preset': 'diwali', 'startsAt': null, 'endsAt': null, 'greeting': 'Happy Deepavali!'},
+    });
     expect(tester.takeException(), isNull);
   });
 

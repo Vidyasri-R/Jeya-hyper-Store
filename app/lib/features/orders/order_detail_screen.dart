@@ -52,15 +52,15 @@ class OrderDetailScreen extends ConsumerWidget {
                 ),
         ),
         body: order.when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: AppColors.green700),
+          loading: () => Center(
+            child: CircularProgressIndicator(color: AppColors.brand700),
           ),
           error: (e, _) => ErrorRetry(
             error: e,
             onRetry: () => ref.invalidate(orderDetailProvider(orderId)),
           ),
           data: (o) => RefreshIndicator(
-            color: AppColors.green700,
+            color: AppColors.brand700,
             onRefresh: () async => ref.invalidate(orderDetailProvider(orderId)),
             child: _Body(order: o),
           ),
@@ -336,7 +336,7 @@ class _Timeline extends StatelessWidget {
                   CircleAvatar(
                     radius: 12,
                     backgroundColor: i <= reached
-                        ? AppColors.green700
+                        ? AppColors.brand700
                         : AppColors.line,
                     child: Icon(
                       i <= reached ? Icons.check_rounded : Icons.circle,
@@ -348,7 +348,7 @@ class _Timeline extends StatelessWidget {
                     Container(
                       width: 2,
                       height: 30,
-                      color: i < reached ? AppColors.green700 : AppColors.line,
+                      color: i < reached ? AppColors.brand700 : AppColors.line,
                     ),
                 ],
               ),
@@ -479,7 +479,7 @@ class _Row extends StatelessWidget {
             b,
             style: (bold ? text.titleMedium : text.bodyMedium)?.copyWith(
               fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
-              color: b == 'FREE' ? AppColors.green700 : null,
+              color: b == 'FREE' ? AppColors.brand700 : null,
             ),
           ),
         ],
@@ -503,11 +503,11 @@ class _DeliveryLine extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(color: AppColors.green50, borderRadius: BorderRadius.circular(AppRadius.md)),
+        decoration: BoxDecoration(color: AppColors.brand50, borderRadius: BorderRadius.circular(AppRadius.md)),
         child: Row(children: [
-          Icon(icon, color: AppColors.green700, size: 20),
+          Icon(icon, color: AppColors.brand700, size: 20),
           const SizedBox(width: 8),
-          Expanded(child: Text(text, style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppColors.green800))),
+          Expanded(child: Text(text, style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppColors.brand800))),
         ]),
       );
 }

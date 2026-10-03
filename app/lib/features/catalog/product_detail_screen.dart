@@ -23,7 +23,7 @@ class ProductDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final product = ref.watch(productProvider(slug));
     return product.when(
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator(color: AppColors.green700))),
+      loading: () => Scaffold(body: Center(child: CircularProgressIndicator(color: AppColors.brand700))),
       error: (e, _) => Scaffold(appBar: AppBar(), body: ErrorRetry(error: e, onRetry: () => ref.invalidate(productProvider(slug)))),
       data: (p) => _Detail(product: p),
     );
@@ -58,7 +58,7 @@ class _Detail extends ConsumerWidget {
             ],
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
-                color: AppColors.mint,
+                color: AppColors.brandTint,
                 padding: EdgeInsets.fromLTRB(32, MediaQuery.paddingOf(context).top + 56, 32, 24),
                 child: Hero(tag: 'p${p.id}', child: ProductImage(url: p.imageUrl, name: p.name, radius: AppRadius.lg)),
               ),
@@ -150,7 +150,7 @@ class _StockLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color, icon) = switch (product.stockStatus) {
-      StockStatus.inStock => ('In stock', AppColors.green700, Icons.check_circle_rounded),
+      StockStatus.inStock => ('In stock', AppColors.brand700, Icons.check_circle_rounded),
       StockStatus.lowStock => ('Only a few left', const Color(0xFFB7791F), Icons.timelapse_rounded),
       StockStatus.outOfStock => ('Out of stock', AppColors.offerRed, Icons.remove_circle_outline_rounded),
     };
@@ -169,7 +169,7 @@ class _PromiseStrip extends ConsumerWidget {
     final text = Theme.of(context).textTheme;
     Widget item(IconData icon, String a, String b) => Expanded(
           child: Row(children: [
-            Icon(icon, color: AppColors.green700, size: 22),
+            Icon(icon, color: AppColors.brand700, size: 22),
             const SizedBox(width: 6),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -181,7 +181,7 @@ class _PromiseStrip extends ConsumerWidget {
         );
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AppColors.green50, borderRadius: BorderRadius.circular(AppRadius.md)),
+      decoration: BoxDecoration(color: AppColors.brand50, borderRadius: BorderRadius.circular(AppRadius.md)),
       child: Row(children: [
         item(Icons.local_shipping_outlined, ref.watch(deliverySpeedProvider).short, 'delivery'),
         item(Icons.verified_outlined, 'Quality', 'checked'),

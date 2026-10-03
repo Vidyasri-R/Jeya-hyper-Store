@@ -83,7 +83,7 @@ class AddToCartControl extends ConsumerWidget {
     return Container(
       height: height,
       width: expanded ? double.infinity : null,
-      decoration: BoxDecoration(color: AppColors.green700, borderRadius: BorderRadius.circular(big ? AppRadius.lg : AppRadius.sm)),
+      decoration: BoxDecoration(color: AppColors.brand700, borderRadius: BorderRadius.circular(big ? AppRadius.lg : AppRadius.sm)),
       child: Row(
         mainAxisSize: expanded ? MainAxisSize.max : MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

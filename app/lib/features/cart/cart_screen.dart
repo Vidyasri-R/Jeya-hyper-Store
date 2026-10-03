@@ -71,7 +71,7 @@ class CartScreen extends ConsumerWidget {
         ],
       ),
       body: cart.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.green700)),
+        loading: () => Center(child: CircularProgressIndicator(color: AppColors.brand700)),
         error: (e, _) => ErrorRetry(error: e, onRetry: () => ref.invalidate(cartProvider)),
         data: (c) => c.lines.isEmpty
             ? EmptyState(
@@ -82,7 +82,7 @@ class CartScreen extends ConsumerWidget {
                 onAction: () => context.go('/home'),
               )
             : RefreshIndicator(
-                color: AppColors.green700,
+                color: AppColors.brand700,
                 onRefresh: () => ref.read(cartProvider.notifier).refresh(),
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
@@ -203,9 +203,9 @@ class _FreeDeliveryProgress extends ConsumerWidget {
     final done = subtotal >= threshold;
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: AppColors.green50, borderRadius: BorderRadius.circular(AppRadius.lg)),
+      decoration: BoxDecoration(color: AppColors.brand50, borderRadius: BorderRadius.circular(AppRadius.lg)),
       child: Row(children: [
-        Icon(done ? Icons.celebration_rounded : Icons.local_shipping_outlined, color: AppColors.green700),
+        Icon(done ? Icons.celebration_rounded : Icons.local_shipping_outlined, color: AppColors.brand700),
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -220,7 +220,7 @@ class _FreeDeliveryProgress extends ConsumerWidget {
                 value: (subtotal / threshold).clamp(0, 1).toDouble(),
                 minHeight: 6,
                 backgroundColor: Colors.white,
-                color: AppColors.green700,
+                color: AppColors.brand700,
               ),
             ),
           ]),
@@ -253,13 +253,13 @@ class _BillSummary extends ConsumerWidget {
         Text('Bill Summary', style: text.titleSmall),
         const SizedBox(height: 8),
         row('Item total (${cart.lines.length} items)', formatRupees(cart.subtotal)),
-        row('Delivery charge', delivery, color: delivery == 'FREE' ? AppColors.green700 : null),
+        row('Delivery charge', delivery, color: delivery == 'FREE' ? AppColors.brand700 : null),
         const Divider(height: 18),
         row('To pay', formatRupees(quote?.total ?? cart.subtotal), bold: true),
         if (toPaise(cart.savings) > 0)
           Align(
             alignment: Alignment.centerRight,
-            child: Text('You save ${formatRupees(cart.savings)}', style: text.labelMedium?.copyWith(color: AppColors.green700, fontWeight: FontWeight.w700)),
+            child: Text('You save ${formatRupees(cart.savings)}', style: text.labelMedium?.copyWith(color: AppColors.brand700, fontWeight: FontWeight.w700)),
           ),
       ]),
     );
@@ -278,7 +278,7 @@ class _CheckoutBar extends ConsumerWidget {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
         child: Material(
-          color: AppColors.green700,
+          color: AppColors.brand700,
           borderRadius: BorderRadius.circular(AppRadius.lg),
           child: InkWell(
             borderRadius: BorderRadius.circular(AppRadius.lg),

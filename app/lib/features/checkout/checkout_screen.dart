@@ -149,15 +149,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: Row(children: [
-              const Icon(Icons.verified_user_rounded, color: AppColors.green700, size: 18),
+              Icon(Icons.verified_user_rounded, color: AppColors.brand700, size: 18),
               const SizedBox(width: 4),
-              Text('100% Secure', style: text.labelSmall?.copyWith(color: AppColors.green700, fontWeight: FontWeight.w700)),
+              Text('100% Secure', style: text.labelSmall?.copyWith(color: AppColors.brand700, fontWeight: FontWeight.w700)),
             ]),
           ),
         ],
       ),
       body: addresses.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.green700)),
+        loading: () => Center(child: CircularProgressIndicator(color: AppColors.brand700)),
         error: (e, _) => ErrorRetry(error: e, onRetry: () => ref.invalidate(addressesProvider)),
         data: (list) {
           if (list.isEmpty || address == null) {
@@ -171,7 +171,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           }
           final quote = ref.watch(_quoteProvider(address.id));
           return quote.when(
-            loading: () => const Center(child: CircularProgressIndicator(color: AppColors.green700)),
+            loading: () => Center(child: CircularProgressIndicator(color: AppColors.brand700)),
             error: (e, _) => ErrorRetry(error: e, onRetry: () => ref.invalidate(_quoteProvider(address.id))),
             data: (q) => _body(context, address, q),
           );
@@ -233,8 +233,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: AppColors.green50, borderRadius: BorderRadius.circular(AppRadius.sm)),
-              child: Icon(address.title.toLowerCase() == 'work' ? Icons.business_rounded : Icons.home_rounded, color: AppColors.green700),
+              decoration: BoxDecoration(color: AppColors.brand50, borderRadius: BorderRadius.circular(AppRadius.sm)),
+              child: Icon(address.title.toLowerCase() == 'work' ? Icons.business_rounded : Icons.home_rounded, color: AppColors.brand700),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -250,7 +250,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           number: 2,
           title: 'Delivery',
           child: Row(children: [
-            const Icon(Icons.local_shipping_outlined, color: AppColors.green700),
+            Icon(Icons.local_shipping_outlined, color: AppColors.brand700),
             const SizedBox(width: 10),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -272,7 +272,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               ]),
             ),
             Text(q.freeDeliveryApplied || toPaise(q.deliveryFee) == 0 ? 'FREE' : formatRupees(q.deliveryFee),
-                style: text.titleSmall?.copyWith(color: AppColors.green700, fontWeight: FontWeight.w800)),
+                style: text.titleSmall?.copyWith(color: AppColors.brand700, fontWeight: FontWeight.w800)),
           ]),
         ),
         _Section(
@@ -326,7 +326,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             if (toPaise(q.savings) > 0)
               Align(
                 alignment: Alignment.centerRight,
-                child: Text('You save ${formatRupees(q.savings)}', style: text.labelMedium?.copyWith(color: AppColors.green700, fontWeight: FontWeight.w700)),
+                child: Text('You save ${formatRupees(q.savings)}', style: text.labelMedium?.copyWith(color: AppColors.brand700, fontWeight: FontWeight.w700)),
               ),
           ]),
         ),
@@ -356,7 +356,7 @@ class _Steps extends StatelessWidget {
       return Column(children: [
         CircleAvatar(
           radius: 13,
-          backgroundColor: done || active ? AppColors.green700 : AppColors.line,
+          backgroundColor: done || active ? AppColors.brand700 : AppColors.line,
           child: done
               ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
               : Text('${i + 1}', style: text.labelSmall?.copyWith(color: active ? Colors.white : AppColors.inkMuted, fontWeight: FontWeight.w800)),
@@ -366,7 +366,7 @@ class _Steps extends StatelessWidget {
       ]);
     }
 
-    Widget bar(bool on) => Expanded(child: Container(height: 2, margin: const EdgeInsets.only(bottom: 16), color: on ? AppColors.green700 : AppColors.line));
+    Widget bar(bool on) => Expanded(child: Container(height: 2, margin: const EdgeInsets.only(bottom: 16), color: on ? AppColors.brand700 : AppColors.line));
     return Row(children: [dot(0, 'Cart'), bar(current > 0), dot(1, 'Delivery'), bar(current > 1), dot(2, 'Payment')]);
   }
 }
@@ -418,12 +418,12 @@ class _PayOption extends StatelessWidget {
         margin: const EdgeInsets.only(top: 6),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: selected ? AppColors.green50 : null,
+          color: selected ? AppColors.brand50 : null,
           borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(color: selected ? AppColors.green700 : AppColors.line, width: selected ? 1.6 : 1),
+          border: Border.all(color: selected ? AppColors.brand700 : AppColors.line, width: selected ? 1.6 : 1),
         ),
         child: Row(children: [
-          Icon(selected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded, color: selected ? AppColors.green700 : AppColors.inkFaint),
+          Icon(selected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded, color: selected ? AppColors.brand700 : AppColors.inkFaint),
           const SizedBox(width: 10),
           Icon(icon, color: AppColors.ink),
           const SizedBox(width: 10),
@@ -435,7 +435,7 @@ class _PayOption extends StatelessWidget {
                   const SizedBox(width: 6),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                    decoration: BoxDecoration(color: AppColors.green700, borderRadius: BorderRadius.circular(10)),
+                    decoration: BoxDecoration(color: AppColors.brand700, borderRadius: BorderRadius.circular(10)),
                     child: Text(badge!, style: text.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
                   ),
                 ],
@@ -464,7 +464,7 @@ class _BillRow extends StatelessWidget {
         Text(value,
             style: (bold ? text.titleMedium : text.bodyMedium)?.copyWith(
               fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
-              color: value == 'FREE' ? AppColors.green700 : null,
+              color: value == 'FREE' ? AppColors.brand700 : null,
             )),
       ]),
     );

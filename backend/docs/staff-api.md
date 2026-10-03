@@ -96,10 +96,15 @@ order is refunded in full automatically.
 
 ### Store settings
 - `GET /admin/settings` → `{ settings: { "delivery.rules", "checkout.payment_methods",
-  "store.info", "app.maintenance", "auth.demo_login_enabled", "app.min_supported_version",
+  "store.info", "app.theme", "app.maintenance", "auth.demo_login_enabled", "app.min_supported_version",
   "usage.limits" } }`
 - `PUT /admin/settings/:key` `{ value }` — validated per key (422 with field errors);
-  customer app picks it up within a minute.
+  served to newly opened customer apps within a minute (running apps re-read it when they
+  come back to the foreground after 10 minutes).
+- `app.theme` `{ preset: "standard" | "diwali", startsAt, endsAt, greeting }` — festival look of
+  the customer app (colours, home banners, greeting). `startsAt`/`endsAt` are ISO times or null
+  (open-ended); the app switches on/off by itself and re-checks every 10 minutes. New presets
+  are designed into the app, then added to the enum.
 
 ### Products (photos and store-owned fields)
 - `GET /admin/products?q=&filter=all|no_image|with_image|inactive&cursor=&limit=30`

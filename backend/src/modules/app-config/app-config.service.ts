@@ -10,6 +10,7 @@ export const CONFIG_KEYS = {
   MAINTENANCE: 'app.maintenance',
   PAYMENT_METHODS: 'checkout.payment_methods',
   DELIVERY_RULES: 'delivery.rules',
+  APP_THEME: 'app.theme',
   USAGE_LIMITS: 'usage.limits',
   USAGE_NOTIFY: 'usage.notify',
 } as const;

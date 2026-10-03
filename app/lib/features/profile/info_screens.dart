@@ -91,10 +91,10 @@ class _Contact extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Card(
         elevation: 0,
-        color: AppColors.green50,
+        color: AppColors.brand50,
         margin: const EdgeInsets.only(bottom: 10),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-        child: ListTile(leading: Icon(icon, color: AppColors.green700), title: Text(title), subtitle: Text(subtitle), onTap: onTap),
+        child: ListTile(leading: Icon(icon, color: AppColors.brand700), title: Text(title), subtitle: Text(subtitle), onTap: onTap),
       );
 }
 

@@ -72,7 +72,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
         ],
       ),
       body: categories.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.green700)),
+        loading: () => Center(child: CircularProgressIndicator(color: AppColors.brand700)),
         error: (e, _) => ErrorRetry(error: e, onRetry: () => ref.invalidate(categoriesProvider)),
         data: (roots) {
           if (roots.isEmpty) return const EmptyState(icon: Icons.storefront_outlined, title: 'No categories yet');
@@ -136,7 +136,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                                     for (final e in _sorts.entries)
                                       ListTile(
                                         title: Text(e.value),
-                                        trailing: e.key == _sort ? const Icon(Icons.check_rounded, color: AppColors.green700) : null,
+                                        trailing: e.key == _sort ? Icon(Icons.check_rounded, color: AppColors.brand700) : null,
                                         onTap: () => Navigator.pop(context, e.key),
                                       ),
                                   ]),
@@ -190,8 +190,8 @@ class _Rail extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
               decoration: BoxDecoration(
-                color: active ? AppColors.green50 : null,
-                border: Border(left: BorderSide(color: active ? AppColors.green700 : Colors.transparent, width: 3)),
+                color: active ? AppColors.brand50 : null,
+                border: Border(left: BorderSide(color: active ? AppColors.brand700 : Colors.transparent, width: 3)),
               ),
               child: Column(children: [
                 Container(
@@ -206,7 +206,7 @@ class _Rail extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: text.labelSmall?.copyWith(
-                      color: active ? AppColors.green800 : AppColors.inkMuted,
+                      color: active ? AppColors.brand800 : AppColors.inkMuted,
                       fontWeight: active ? FontWeight.w800 : FontWeight.w500,
                       height: 1.15,
                     )),
@@ -240,7 +240,7 @@ class _Banner extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.all(14),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-            Text(category.name, style: text.titleLarge?.copyWith(color: AppColors.green900, fontWeight: FontWeight.w800, height: 1.1)),
+            Text(category.name, style: text.titleLarge?.copyWith(color: AppColors.brand900, fontWeight: FontWeight.w800, height: 1.1)),
             const SizedBox(height: 4),
             Text('Fresh stock from Jeya Hyper Store', style: text.bodySmall?.copyWith(color: AppColors.ink)),
           ]),
@@ -278,9 +278,9 @@ class _FilterButton extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(0, 36),
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          foregroundColor: active ? AppColors.green700 : AppColors.ink,
-          side: BorderSide(color: active ? AppColors.green700 : AppColors.line),
-          backgroundColor: active ? AppColors.green50 : null,
+          foregroundColor: active ? AppColors.brand700 : AppColors.ink,
+          side: BorderSide(color: active ? AppColors.brand700 : AppColors.line),
+          backgroundColor: active ? AppColors.brand50 : null,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
         ),
       );

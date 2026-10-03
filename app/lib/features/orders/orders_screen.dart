@@ -21,7 +21,7 @@ class OrdersScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('My Orders')),
       body: orders.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.green700)),
+        loading: () => Center(child: CircularProgressIndicator(color: AppColors.brand700)),
         error: (e, _) => ErrorRetry(error: e, onRetry: () => ref.invalidate(ordersListProvider)),
         data: (list) => list.isEmpty
             ? EmptyState(
@@ -32,7 +32,7 @@ class OrdersScreen extends ConsumerWidget {
                 onAction: () => context.go('/home'),
               )
             : RefreshIndicator(
-                color: AppColors.green700,
+                color: AppColors.brand700,
                 onRefresh: () async => ref.invalidate(ordersListProvider),
                 child: ListView.separated(
                   padding: const EdgeInsets.all(16),
@@ -66,8 +66,8 @@ class OrderCard extends StatelessWidget {
           child: Row(children: [
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: AppColors.green50, borderRadius: BorderRadius.circular(AppRadius.md)),
-              child: const Icon(Icons.shopping_bag_outlined, color: AppColors.green700),
+              decoration: BoxDecoration(color: AppColors.brand50, borderRadius: BorderRadius.circular(AppRadius.md)),
+              child: Icon(Icons.shopping_bag_outlined, color: AppColors.brand700),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -84,7 +84,7 @@ class OrderCard extends StatelessWidget {
                   if (!order.isClosed && !order.awaitingPayment && order.expectedDeliveryBy != null)
                     Text(
                       deliveryDay(order.expectedDeliveryBy!) == 'Today' ? 'Arriving today' : 'Arriving ${deliveryDay(order.expectedDeliveryBy!) == 'Tomorrow' ? 'tomorrow' : deliveryDay(order.expectedDeliveryBy!)}',
-                      style: text.labelSmall?.copyWith(color: AppColors.green800, fontWeight: FontWeight.w700),
+                      style: text.labelSmall?.copyWith(color: AppColors.brand800, fontWeight: FontWeight.w700),
                     ),
                 ]),
               ]),
@@ -101,7 +101,7 @@ class OrderCard extends StatelessWidget {
 }
 
 (Color, Color) statusColors(String status) => switch (status) {
-      'delivered' => (AppColors.green100, AppColors.green800),
+      'delivered' => (AppColors.brand100, AppColors.brand800),
       'cancelled' || 'payment_failed' => (AppColors.offerRedSoft, AppColors.offerRed),
       'pending_payment' => (AppColors.amberSoft, const Color(0xFF9A6100)),
       _ => (AppColors.brandBlueSoft, AppColors.brandBlue),

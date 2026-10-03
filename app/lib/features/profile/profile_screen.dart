@@ -64,7 +64,7 @@ class ProfileScreen extends ConsumerWidget {
         padding: EdgeInsets.zero,
         children: [
           Container(
-            decoration: const BoxDecoration(gradient: AppColors.headerGradient, borderRadius: BorderRadius.vertical(bottom: Radius.circular(26))),
+            decoration: BoxDecoration(gradient: AppColors.headerGradient, borderRadius: BorderRadius.vertical(bottom: Radius.circular(26))),
             child: SafeArea(
               bottom: false,
               child: Padding(
@@ -73,7 +73,7 @@ class ProfileScreen extends ConsumerWidget {
                   CircleAvatar(
                     radius: 34,
                     backgroundColor: Colors.white,
-                    child: Text(initial, style: text.headlineSmall?.copyWith(color: AppColors.green700, fontWeight: FontWeight.w800)),
+                    child: Text(initial, style: text.headlineSmall?.copyWith(color: AppColors.brand700, fontWeight: FontWeight.w800)),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -94,7 +94,7 @@ class ProfileScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(AppRadius.lg),
-                gradient: const LinearGradient(colors: [AppColors.brandBlueSoft, AppColors.green50]),
+                gradient: LinearGradient(colors: [AppColors.brandBlueSoft, AppColors.brand50]),
               ),
               child: Row(children: [
                 Image.asset('assets/brand/logo_mark.png', height: 40),
@@ -169,7 +169,7 @@ class _QuickAction extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(AppRadius.lg), border: Border.all(color: AppColors.line)),
           child: Row(children: [
-            Icon(icon, color: AppColors.green700),
+            Icon(icon, color: AppColors.brand700),
             const SizedBox(width: 10),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

@@ -233,14 +233,14 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
                       ),
                     ],
                   ),
-                  const IgnorePointer(
+                  IgnorePointer(
                     child: Center(
                       child: Padding(
                         padding: EdgeInsets.only(bottom: 36),
                         child: Icon(
                           Icons.location_on_rounded,
                           size: 44,
-                          color: AppColors.green700,
+                          color: AppColors.brand700,
                         ),
                       ),
                     ),
@@ -253,7 +253,7 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
                       style: FilledButton.styleFrom(
                         minimumSize: const Size(0, 40),
                         backgroundColor: Colors.white,
-                        foregroundColor: AppColors.green700,
+                        foregroundColor: AppColors.brand700,
                         elevation: 2,
                       ),
                       icon: _locating
@@ -276,7 +276,7 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
                 color: e == null
                     ? AppColors.bg
                     : (serviceable
-                          ? AppColors.green50
+                          ? AppColors.brand50
                           : AppColors.offerRedSoft),
                 borderRadius: BorderRadius.circular(AppRadius.md),
               ),
@@ -287,7 +287,7 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
                         ? Icons.local_shipping_outlined
                         : Icons.info_outline_rounded,
                     color: serviceable
-                        ? AppColors.green700
+                        ? AppColors.brand700
                         : AppColors.offerRed,
                   ),
                   const SizedBox(width: 10),
@@ -365,7 +365,7 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     value: _isDefault,
-                    activeThumbColor: AppColors.green700,
+                    activeThumbColor: AppColors.brand700,
                     onChanged: _existing?.isDefault == true
                         ? null
                         : (v) => setState(() => _isDefault = v),

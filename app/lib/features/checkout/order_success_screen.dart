@@ -33,8 +33,8 @@ class OrderSuccessScreen extends ConsumerWidget {
               Container(
                 width: 112,
                 height: 112,
-                decoration: const BoxDecoration(color: AppColors.green50, shape: BoxShape.circle),
-                child: Icon(paidPending ? Icons.hourglass_top_rounded : Icons.check_circle_rounded, size: 72, color: AppColors.green700),
+                decoration: BoxDecoration(color: AppColors.brand50, shape: BoxShape.circle),
+                child: Icon(paidPending ? Icons.hourglass_top_rounded : Icons.check_circle_rounded, size: 72, color: AppColors.brand700),
               ),
               const SizedBox(height: 22),
               Text(paidPending ? 'Confirming your payment…' : 'Order placed!', style: text.headlineMedium, textAlign: TextAlign.center),
@@ -50,12 +50,12 @@ class OrderSuccessScreen extends ConsumerWidget {
                   const SizedBox(height: 14),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(color: AppColors.green50, borderRadius: BorderRadius.circular(AppRadius.md)),
+                    decoration: BoxDecoration(color: AppColors.brand50, borderRadius: BorderRadius.circular(AppRadius.md)),
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      const Icon(Icons.local_shipping_outlined, color: AppColors.green700, size: 20),
+                      Icon(Icons.local_shipping_outlined, color: AppColors.brand700, size: 20),
                       const SizedBox(width: 8),
                       Text('Expected delivery: ${deliveryPromise(order.expectedDeliveryBy!)}',
-                          style: text.titleSmall?.copyWith(color: AppColors.green800)),
+                          style: text.titleSmall?.copyWith(color: AppColors.brand800)),
                     ]),
                   ),
                 ],

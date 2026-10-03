@@ -80,7 +80,7 @@ class CartBar extends ConsumerWidget {
                               style: text.labelSmall?.copyWith(decoration: TextDecoration.lineThrough, color: AppColors.inkFaint)),
                         ],
                       ]),
-                      if (savings > 0) Text('You save ${formatPaise(savings)}', style: text.labelSmall?.copyWith(color: AppColors.green700, fontWeight: FontWeight.w700)),
+                      if (savings > 0) Text('You save ${formatPaise(savings)}', style: text.labelSmall?.copyWith(color: AppColors.brand700, fontWeight: FontWeight.w700)),
                     ],
                   ),
                 ),
@@ -144,8 +144,8 @@ class EmptyState extends StatelessWidget {
             Container(
               width: 96,
               height: 96,
-              decoration: const BoxDecoration(color: AppColors.green50, shape: BoxShape.circle),
-              child: Icon(icon, size: 44, color: AppColors.green700),
+              decoration: BoxDecoration(color: AppColors.brand50, shape: BoxShape.circle),
+              child: Icon(icon, size: 44, color: AppColors.brand700),
             ),
             const SizedBox(height: 18),
             Text(title, style: text.titleMedium, textAlign: TextAlign.center),
@@ -193,7 +193,7 @@ SliverGridDelegate productGridDelegate(BuildContext context, {double extraHeight
 /// Visual identity for a category tile (until category photos are uploaded to R2).
 ({IconData icon, Color bg, Color fg}) categoryVisual(String name) {
   final n = name.toLowerCase();
-  if (n.contains('fruit') || n.contains('veg') || n.contains('fresh')) return (icon: Icons.eco_rounded, bg: const Color(0xFFE6F6E9), fg: AppColors.green700);
+  if (n.contains('fruit') || n.contains('veg') || n.contains('fresh')) return (icon: Icons.eco_rounded, bg: const Color(0xFFE6F6E9), fg: AppColors.brand700);
   if (n.contains('dairy') || n.contains('milk') || n.contains('egg') || n.contains('bread')) return (icon: Icons.egg_alt_rounded, bg: const Color(0xFFFFF6E0), fg: const Color(0xFFB7791F));
   if (n.contains('snack') || n.contains('biscuit')) return (icon: Icons.cookie_rounded, bg: const Color(0xFFFFEDE0), fg: const Color(0xFFC05621));
   if (n.contains('tea') || n.contains('coffee') || n.contains('bever')) return (icon: Icons.local_cafe_rounded, bg: const Color(0xFFF3ECE6), fg: const Color(0xFF7B4B2A));
@@ -205,7 +205,7 @@ SliverGridDelegate productGridDelegate(BuildContext context, {double extraHeight
   if (n.contains('rice') || n.contains('atta') || n.contains('dal') || n.contains('staple') || n.contains('flour')) return (icon: Icons.rice_bowl_rounded, bg: const Color(0xFFF5F0E6), fg: const Color(0xFF8B6B2E));
   if (n.contains('salt') || n.contains('sugar')) return (icon: Icons.grain_rounded, bg: const Color(0xFFF1F3F5), fg: const Color(0xFF4A5568));
   if (n.contains('frozen')) return (icon: Icons.ac_unit_rounded, bg: const Color(0xFFE6F6FF), fg: const Color(0xFF2B6CB0));
-  return (icon: Icons.storefront_rounded, bg: AppColors.green50, fg: AppColors.green700);
+  return (icon: Icons.storefront_rounded, bg: AppColors.brand50, fg: AppColors.brand700);
 }
 
 /// Round-cornered category tile with icon (or photo when available) + label.

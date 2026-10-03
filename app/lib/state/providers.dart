@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart' show ValueNotifier;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/festival.dart';
+
 import '../core/api/api_client.dart';
 import '../core/api/token_store.dart';
 import '../core/money.dart';
@@ -104,6 +106,15 @@ final categoriesProvider = FutureProvider<List<Category>>((ref) => ref.watch(rep
 
 /// Public remote config (store info, delivery rules, pause message…); the API caches it for a minute.
 final publicConfigProvider = FutureProvider<Map<String, dynamic>>((ref) => ref.watch(repositoryProvider).publicConfig());
+
+/// Re-checks festival start/end times during long sessions.
+final _themeClockProvider = StreamProvider<DateTime>((ref) => Stream.periodic(const Duration(minutes: 10), (_) => DateTime.now()));
+
+/// The festival theme in effect now (Admin → Store settings → App theme), or null for the everyday look.
+final festivalProvider = Provider<FestivalTheme?>((ref) {
+  ref.watch(_themeClockProvider);
+  return FestivalTheme.activeFrom(ref.watch(publicConfigProvider).valueOrNull?['app.theme'], DateTime.now());
+});
 
 /// How fast the store delivers — Admin → Store settings → Deliver within (delivery.rules.deliveryDays).
 class DeliverySpeed {

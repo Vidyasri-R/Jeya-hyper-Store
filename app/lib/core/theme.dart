@@ -1,16 +1,83 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Brand palette — greens from the approved UI, blue from the Jeya peacock logo.
+/// One festival-able colour family. `AppColors.brand*` read the active palette, so a festival
+/// theme (Admin → Store settings → App theme) recolours every button, chip and header at once.
+class BrandPalette {
+  const BrandPalette({
+    required this.id,
+    required this.b900,
+    required this.b800,
+    required this.b700,
+    required this.b600,
+    required this.b500,
+    required this.b100,
+    required this.b50,
+    required this.tint,
+    required this.header,
+    required this.accent,
+  });
+
+  final String id;
+  final Color b900, b800, b700, b600, b500, b100, b50, tint;
+
+  /// Home header gradient (top-left → bottom-right).
+  final List<Color> header;
+
+  /// Festive highlight (decorations, greeting strip).
+  final Color accent;
+}
+
+abstract final class Palettes {
+  /// The approved everyday look: Jeya greens.
+  static const standard = BrandPalette(
+    id: 'standard',
+    b900: Color(0xFF0F4D2A),
+    b800: Color(0xFF14612F),
+    b700: Color(0xFF1B7A3E),
+    b600: Color(0xFF23934B),
+    b500: Color(0xFF2EA65A),
+    b100: Color(0xFFDDF1E2),
+    b50: Color(0xFFEFF8F1),
+    tint: Color(0xFFF4FAF5),
+    header: [Color(0xFF14612F), Color(0xFF23934B)],
+    accent: Color(0xFFF6A609),
+  );
+
+  /// Diwali: deep maroon and festive orange with diya gold (white text stays readable on all of them).
+  static const diwali = BrandPalette(
+    id: 'diwali',
+    b900: Color(0xFF4A0D1A),
+    b800: Color(0xFF6E1428),
+    b700: Color(0xFFA3261B),
+    b600: Color(0xFFC2410C),
+    b500: Color(0xFFE2600F),
+    b100: Color(0xFFFCE3C4),
+    b50: Color(0xFFFFF3E2),
+    tint: Color(0xFFFFF8EE),
+    header: [Color(0xFF5E0F22), Color(0xFFB0321E)],
+    accent: Color(0xFFFFC53D),
+  );
+
+  static BrandPalette byId(String? id) => switch (id) {
+    'diwali' => diwali,
+    _ => standard,
+  };
+}
+
+/// App colours. `brand*` follow the active festival palette; everything else is fixed.
 abstract final class AppColors {
-  static const green900 = Color(0xFF0F4D2A);
-  static const green800 = Color(0xFF14612F);
-  static const green700 = Color(0xFF1B7A3E); // primary buttons
-  static const green600 = Color(0xFF23934B);
-  static const green500 = Color(0xFF2EA65A);
-  static const green100 = Color(0xFFDDF1E2);
-  static const green50 = Color(0xFFEFF8F1); // soft panels / chips
-  static const mint = Color(0xFFF4FAF5); // page background tint
+  static BrandPalette palette = Palettes.standard;
+
+  static Color get brand900 => palette.b900;
+  static Color get brand800 => palette.b800;
+  static Color get brand700 => palette.b700; // primary buttons
+  static Color get brand600 => palette.b600;
+  static Color get brand500 => palette.b500;
+  static Color get brand100 => palette.b100;
+  static Color get brand50 => palette.b50; // soft panels / chips
+  static Color get brandTint => palette.tint; // page background tint
+  static Color get festiveAccent => palette.accent;
 
   static const brandBlue = Color(0xFF1E4FA8); // logo wordmark
   static const brandBlueSoft = Color(0xFFE8EEFA);
@@ -27,11 +94,8 @@ abstract final class AppColors {
   static const amber = Color(0xFFF6A609);
   static const amberSoft = Color(0xFFFFF4DC);
 
-  static const headerGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [green800, green600],
-  );
+  static LinearGradient get headerGradient =>
+      LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: palette.header);
 }
 
 abstract final class AppRadius {
@@ -45,8 +109,8 @@ ThemeData buildTheme() {
   final base = ThemeData(
     useMaterial3: true,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: AppColors.green700,
-      primary: AppColors.green700,
+      seedColor: AppColors.brand700,
+      primary: AppColors.brand700,
       secondary: AppColors.brandBlue,
       surface: AppColors.surface,
       error: AppColors.offerRed,
@@ -78,7 +142,7 @@ ThemeData buildTheme() {
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: AppColors.green700,
+        backgroundColor: AppColors.brand700,
         foregroundColor: Colors.white,
         minimumSize: const Size(64, 52),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
@@ -87,15 +151,15 @@ ThemeData buildTheme() {
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.green700,
-        side: const BorderSide(color: AppColors.green700),
+        foregroundColor: AppColors.brand700,
+        side: BorderSide(color: AppColors.brand700),
         minimumSize: const Size(64, 48),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
         textStyle: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(foregroundColor: AppColors.green700, textStyle: text.titleSmall),
+      style: TextButton.styleFrom(foregroundColor: AppColors.brand700, textStyle: text.titleSmall),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
@@ -104,12 +168,12 @@ ThemeData buildTheme() {
       hintStyle: text.bodyMedium?.copyWith(color: AppColors.inkFaint),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.line)),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.line)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.green700, width: 1.6)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.brand700, width: 1.6)),
       errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.offerRed)),
     ),
     chipTheme: base.chipTheme.copyWith(
       backgroundColor: AppColors.surface,
-      selectedColor: AppColors.green700,
+      selectedColor: AppColors.brand700,
       side: const BorderSide(color: AppColors.line),
       shape: const StadiumBorder(),
       labelStyle: text.labelLarge?.copyWith(color: AppColors.ink),

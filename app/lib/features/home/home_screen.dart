@@ -26,7 +26,7 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: RefreshIndicator(
-        color: AppColors.green700,
+        color: AppColors.brand700,
         onRefresh: () async {
           ref.invalidate(categoriesProvider);
           ref.invalidate(_homeProductsProvider);
@@ -36,6 +36,8 @@ class HomeScreen extends ConsumerWidget {
         child: CustomScrollView(
           slivers: [
             const SliverToBoxAdapter(child: HomeHeader()),
+            if (ref.watch(festivalProvider) case final festival?)
+              SliverToBoxAdapter(child: _FestiveStrip(text: festival.greeting?.trim().isNotEmpty == true ? festival.greeting!.trim() : festival.subline, emoji: festival.emoji)),
             if (paused != null)
               SliverToBoxAdapter(
                 child: Container(
@@ -125,8 +127,8 @@ class _QuickCategories extends StatelessWidget {
                 Container(
                   width: 56,
                   height: 56,
-                  decoration: BoxDecoration(color: AppColors.green50, borderRadius: BorderRadius.circular(AppRadius.lg)),
-                  child: const Icon(Icons.apps_rounded, color: AppColors.green700, size: 28),
+                  decoration: BoxDecoration(color: AppColors.brand50, borderRadius: BorderRadius.circular(AppRadius.lg)),
+                  child: Icon(Icons.apps_rounded, color: AppColors.brand700, size: 28),
                 ),
                 const SizedBox(height: 6),
                 Text('View All', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppColors.ink, fontWeight: FontWeight.w600)),
@@ -156,6 +158,16 @@ class _HeroBanner {
   final String route;
 }
 
+/// Banners that lead the carousel while a festival theme is on.
+const _festivalBanners = {
+  'diwali': [
+    _HeroBanner('DIWALI SPECIAL', 'Sweets, dry fruits\n& gift packs', 'Make the festival sweeter', 'Festive picks', 'Shop Diwali', Icons.card_giftcard_rounded,
+        [Color(0xFFFFF0D9), Color(0xFFFFD69E)], '/categories'),
+    _HeroBanner('LIGHT UP YOUR HOME', 'Oil, ghee &\npooja essentials', 'Deepam oil, camphor & agarbatti', 'For your Lakshmi pooja', 'Shop Now',
+        Icons.local_fire_department_rounded, [Color(0xFFFFE8D6), Color(0xFFFFC7A1)], '/categories'),
+  ],
+};
+
 const _banners = [
   _HeroBanner('FRESH DEALS', 'Freshness\nat your doorstep', 'Farm fresh fruits & vegetables', 'Picked daily in Trichy', 'Shop Now', Icons.eco_rounded,
       [Color(0xFFE3F4E6), Color(0xFFC9EBD0)], '/categories'),
@@ -166,13 +178,13 @@ const _banners = [
       [Color(0xFFE5ECFA), Color(0xFFCCD9F5)], '/categories'),
 ];
 
-class _HeroCarousel extends StatefulWidget {
+class _HeroCarousel extends ConsumerStatefulWidget {
   const _HeroCarousel();
   @override
-  State<_HeroCarousel> createState() => _HeroCarouselState();
+  ConsumerState<_HeroCarousel> createState() => _HeroCarouselState();
 }
 
-class _HeroCarouselState extends State<_HeroCarousel> {
+class _HeroCarouselState extends ConsumerState<_HeroCarousel> {
   final _controller = PageController(viewportFraction: 0.92);
 
   @override
@@ -184,6 +196,7 @@ class _HeroCarouselState extends State<_HeroCarousel> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final banners = [...?_festivalBanners[ref.watch(festivalProvider)?.preset], ..._banners];
     return Column(
       children: [
         const SizedBox(height: 14),
@@ -192,9 +205,9 @@ class _HeroCarouselState extends State<_HeroCarousel> {
           height: 176,
           child: PageView.builder(
             controller: _controller,
-            itemCount: _banners.length,
+            itemCount: banners.length,
             itemBuilder: (context, i) {
-              final b = _banners[i];
+              final b = banners[i];
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: InkWell(
@@ -210,7 +223,7 @@ class _HeroCarouselState extends State<_HeroCarousel> {
                       Positioned(
                         right: -18,
                         bottom: -22,
-                        child: Icon(b.icon, size: 170, color: AppColors.green800.withValues(alpha: 0.10)),
+                        child: Icon(b.icon, size: 170, color: AppColors.brand800.withValues(alpha: 0.10)),
                       ),
                       Positioned(right: 14, top: 14, child: Image.asset('assets/brand/logo_mark.png', height: 44)),
                       Padding(
@@ -220,11 +233,11 @@ class _HeroCarouselState extends State<_HeroCarousel> {
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(color: AppColors.green700, borderRadius: BorderRadius.circular(20)),
+                              decoration: BoxDecoration(color: AppColors.brand700, borderRadius: BorderRadius.circular(20)),
                               child: Text(b.tag, style: text.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w800, letterSpacing: 0.6)),
                             ),
                             const SizedBox(height: 8),
-                            Text(b.title, style: text.titleLarge?.copyWith(height: 1.1, color: AppColors.green900, fontWeight: FontWeight.w800)),
+                            Text(b.title, style: text.titleLarge?.copyWith(height: 1.1, color: AppColors.brand900, fontWeight: FontWeight.w800)),
                             const SizedBox(height: 4),
                             Consumer(
                               builder: (context, ref, _) => Text(
@@ -235,7 +248,7 @@ class _HeroCarouselState extends State<_HeroCarousel> {
                             const Spacer(),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                              decoration: BoxDecoration(color: AppColors.green800, borderRadius: BorderRadius.circular(20)),
+                              decoration: BoxDecoration(color: AppColors.brand800, borderRadius: BorderRadius.circular(20)),
                               child: Row(mainAxisSize: MainAxisSize.min, children: [
                                 Text(b.cta, style: text.labelLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
                                 const SizedBox(width: 4),
@@ -255,8 +268,8 @@ class _HeroCarouselState extends State<_HeroCarousel> {
         const SizedBox(height: 10),
         SmoothPageIndicator(
           controller: _controller,
-          count: _banners.length,
-          effect: const ExpandingDotsEffect(dotHeight: 6, dotWidth: 6, activeDotColor: AppColors.green700, dotColor: AppColors.line),
+          count: banners.length,
+          effect: ExpandingDotsEffect(dotHeight: 6, dotWidth: 6, activeDotColor: AppColors.brand700, dotColor: AppColors.line),
         ),
       ],
     );
@@ -321,7 +334,7 @@ class _StorePromise extends ConsumerWidget {
     final text = Theme.of(context).textTheme;
     Widget item(IconData icon, String title, String sub) => Expanded(
           child: Column(children: [
-            Icon(icon, color: AppColors.green700),
+            Icon(icon, color: AppColors.brand700),
             const SizedBox(height: 6),
             Text(title, style: text.labelMedium?.copyWith(fontWeight: FontWeight.w700), textAlign: TextAlign.center),
             Text(sub, style: text.labelSmall, textAlign: TextAlign.center),
@@ -330,7 +343,7 @@ class _StorePromise extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 24, 16, 0),
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-      decoration: BoxDecoration(color: AppColors.green50, borderRadius: BorderRadius.circular(AppRadius.lg)),
+      decoration: BoxDecoration(color: AppColors.brand50, borderRadius: BorderRadius.circular(AppRadius.lg)),
       child: Row(children: [
         item(Icons.local_shipping_outlined, ref.watch(deliverySpeedProvider).headline, 'Across Trichy'),
         item(Icons.verified_outlined, 'Quality checked', 'Every order'),
@@ -339,3 +352,33 @@ class _StorePromise extends ConsumerWidget {
     );
   }
 }
+
+/// Festival greeting under the header (Admin → Store settings → App theme).
+class _FestiveStrip extends StatelessWidget {
+  const _FestiveStrip({required this.text, required this.emoji});
+  final String text;
+  final String emoji;
+
+  @override
+  Widget build(BuildContext context) {
+    if (text.isEmpty) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: [AppColors.brand800, AppColors.brand600]),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Row(children: [
+        if (emoji.isNotEmpty) ...[Text(emoji, style: const TextStyle(fontSize: 22)), const SizedBox(width: 10)],
+        Expanded(
+          child: Text(
+            text,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppColors.festiveAccent, fontWeight: FontWeight.w700),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/theme.dart';
@@ -59,6 +60,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 _StoreInfoCard(value: Map<String, dynamic>.from(s['store.info'] as Map), onSave: (v) => _save('store.info', v, 'Store details saved')),
+                const SizedBox(height: 14),
+                _ThemeCard(
+                  value: Map<String, dynamic>.from((s['app.theme'] as Map?) ?? const {'preset': 'standard'}),
+                  onSave: (v) => _save('app.theme', v, 'Theme saved — customers see it the next time they open the app'),
+                ),
                 const SizedBox(height: 14),
                 _DeliveryCard(
                   value: Map<String, dynamic>.from(s['delivery.rules'] as Map),
@@ -492,4 +498,179 @@ class _DemoLoginCard extends StatelessWidget {
       ),
     ],
   );
+}
+
+/// Festival theme for the customer app: a designed preset, optional dates, optional greeting.
+class _ThemeCard extends StatefulWidget {
+  const _ThemeCard({required this.value, required this.onSave});
+  final Map<String, dynamic> value;
+  final Future<bool> Function(Map<String, dynamic>) onSave;
+
+  @override
+  State<_ThemeCard> createState() => _ThemeCardState();
+}
+
+class _ThemeCardState extends State<_ThemeCard> {
+  static const _presets = [
+    ('standard', 'Normal', '🛒', [Color(0xFF14612F), Color(0xFF23934B), Color(0xFFEFF8F1)]),
+    ('diwali', 'Diwali', '🪔', [Color(0xFF6E1428), Color(0xFFC2410C), Color(0xFFFFC53D)]),
+  ];
+
+  late String _preset = (widget.value['preset'] as String?) ?? 'standard';
+  late DateTime? _from = _parse(widget.value['startsAt']);
+  late DateTime? _until = _parse(widget.value['endsAt']);
+  late final _greeting = TextEditingController(text: (widget.value['greeting'] as String?) ?? '');
+  bool _busy = false;
+
+  static DateTime? _parse(Object? v) => v is String ? DateTime.tryParse(v)?.toLocal() : null;
+  static String _day(DateTime d) => DateFormat('EEE d MMM').format(d);
+
+  @override
+  void dispose() {
+    _greeting.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pick({required bool start}) async {
+    final now = DateTime.now();
+    final initial = (start ? _from : _until) ?? (start ? now : (_from ?? now).add(const Duration(days: 6)));
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(now.year, now.month, now.day).subtract(const Duration(days: 1)),
+      lastDate: now.add(const Duration(days: 400)),
+      helpText: start ? 'Show the theme from' : 'Show the theme until',
+    );
+    if (picked == null) return;
+    setState(() {
+      if (start) {
+        _from = DateTime(picked.year, picked.month, picked.day);
+      } else {
+        _until = DateTime(picked.year, picked.month, picked.day, 23, 59, 59);
+      }
+    });
+  }
+
+  String _status() {
+    if (_preset == 'standard') return 'Customers see the everyday green look.';
+    final now = DateTime.now();
+    if (_until != null && now.isAfter(_until!)) return 'Ended on ${_day(_until!)} — customers see the normal look.';
+    if (_from != null && now.isBefore(_from!)) return 'Starts ${_day(_from!)}${_until != null ? ', ends ${_day(_until!)}' : ''} — switches on by itself.';
+    return 'Live now${_until != null ? ' until ${_day(_until!)}' : ' (until you switch back to Normal)'}.';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final status = _status();
+    final live = status.startsWith('Live');
+    return _Card(
+      title: 'Festival theme',
+      subtitle: 'Dresses up the customer app for festivals — colours, home banners and a greeting. Switches on and off by itself on your dates.',
+      children: [
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (final (id, label, emoji, swatch) in _presets)
+              ChoiceChip(
+                selected: _preset == id,
+                onSelected: (_) => setState(() => _preset = id),
+                avatar: Text(emoji),
+                label: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(label),
+                    const SizedBox(width: 8),
+                    for (final c in swatch)
+                      Container(
+                        width: 12,
+                        height: 12,
+                        margin: const EdgeInsets.only(right: 2),
+                        decoration: BoxDecoration(
+                          color: c,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+        if (_preset != 'standard') ...[
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _pick(start: true),
+                  icon: const Icon(Icons.event_rounded, size: 18),
+                  label: Text(_from == null ? 'From: now' : 'From ${_day(_from!)}'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _pick(start: false),
+                  icon: const Icon(Icons.event_available_rounded, size: 18),
+                  label: Text(_until == null ? 'Until: no end' : 'Until ${_day(_until!)}'),
+                ),
+              ),
+            ],
+          ),
+          if (_from != null || _until != null)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: () => setState(() {
+                  _from = null;
+                  _until = null;
+                }),
+                child: const Text('Clear dates'),
+              ),
+            ),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _greeting,
+            maxLength: 120,
+            decoration: const InputDecoration(labelText: 'Message on the home screen (optional)', hintText: 'e.g. Happy Diwali! Festive offers on sweets'),
+          ),
+        ],
+        Row(
+          children: [
+            Icon(live ? Icons.celebration_rounded : Icons.info_outline_rounded, size: 18, color: live ? AppColors.green700 : AppColors.inkMuted),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                status,
+                style: text.bodySmall?.copyWith(color: live ? AppColors.green800 : null, fontWeight: live ? FontWeight.w600 : null),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        FilledButton(
+          onPressed: _busy
+              ? null
+              : () async {
+                  if (_from != null && _until != null && !_until!.isAfter(_from!)) {
+                    showSnack(context, 'The end date must be after the start date', error: true);
+                    return;
+                  }
+                  setState(() => _busy = true);
+                  final festive = _preset != 'standard';
+                  await widget.onSave({
+                    'preset': _preset,
+                    'startsAt': festive && _from != null ? _from!.toUtc().toIso8601String() : null,
+                    'endsAt': festive && _until != null ? _until!.toUtc().toIso8601String() : null,
+                    'greeting': festive && _greeting.text.trim().isNotEmpty ? _greeting.text.trim() : null,
+                  });
+                  if (mounted) setState(() => _busy = false);
+                },
+          child: const Text('Save theme'),
+        ),
+      ],
+    );
+  }
 }

@@ -52,6 +52,22 @@ const SETTINGS = {
     isPublic: true,
     description: 'Store contact details shown in the app.',
   },
+  [CONFIG_KEYS.APP_THEME]: {
+    schema: z
+      .object({
+        /** Festival look of the customer app; presets are designed into the app. */
+        preset: z.enum(['standard', 'diwali']),
+        /** Shown from/until (ISO times); null = no limit on that side. */
+        startsAt: z.iso.datetime({ offset: true }).nullable(),
+        endsAt: z.iso.datetime({ offset: true }).nullable(),
+        greeting: z.string().trim().max(120).nullable(),
+      })
+      .strict()
+      .refine((v) => !v.startsAt || !v.endsAt || new Date(v.endsAt) > new Date(v.startsAt), { message: 'End must be after start', path: ['endsAt'] }),
+    fallback: { preset: 'standard', startsAt: null, endsAt: null, greeting: null },
+    isPublic: true,
+    description: 'Festival theme for the customer app (e.g. Diwali) and when it is shown.',
+  },
   [CONFIG_KEYS.MAINTENANCE]: {
     schema: z.object({ enabled: z.boolean(), message: z.string().trim().max(200) }).strict(),
     fallback: { enabled: false, message: '' },

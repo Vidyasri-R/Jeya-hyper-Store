@@ -19,7 +19,7 @@ class AddressesScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(selectMode ? 'Deliver to' : 'Saved Addresses')),
       body: addresses.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.green700)),
+        loading: () => Center(child: CircularProgressIndicator(color: AppColors.brand700)),
         error: (e, _) => ErrorRetry(error: e, onRetry: () => ref.invalidate(addressesProvider)),
         data: (list) => list.isEmpty
             ? EmptyState(
@@ -73,9 +73,9 @@ class _AddressCard extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: selected ? AppColors.green50 : AppColors.surface,
+        color: selected ? AppColors.brand50 : AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: selected ? AppColors.green700 : AppColors.line, width: selected ? 1.6 : 1),
+        border: Border.all(color: selected ? AppColors.brand700 : AppColors.line, width: selected ? 1.6 : 1),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -83,7 +83,7 @@ class _AddressCard extends ConsumerWidget {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 12, 4, 12),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Icon(a.title.toLowerCase() == 'work' ? Icons.business_rounded : Icons.home_rounded, color: AppColors.green700),
+            Icon(a.title.toLowerCase() == 'work' ? Icons.business_rounded : Icons.home_rounded, color: AppColors.brand700),
             const SizedBox(width: 12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -93,7 +93,7 @@ class _AddressCard extends ConsumerWidget {
                     const SizedBox(width: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                      decoration: BoxDecoration(color: AppColors.green700, borderRadius: BorderRadius.circular(10)),
+                      decoration: BoxDecoration(color: AppColors.brand700, borderRadius: BorderRadius.circular(10)),
                       child: Text('Default', style: text.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
                     ),
                   ],

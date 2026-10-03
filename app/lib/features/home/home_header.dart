@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme.dart';
 import '../../state/providers.dart';
+import '../../widgets/festive_decor.dart';
 
 /// Green hero header from the design: brand, deliver-to, greeting and search.
 class HomeHeader extends ConsumerWidget {
@@ -22,9 +23,12 @@ class HomeHeader extends ConsumerWidget {
     final auth = ref.watch(authProvider);
     final address = ref.watch(selectedAddressProvider);
     final firstName = auth is SignedIn ? auth.user.name?.split(' ').first : null;
+    final festival = ref.watch(festivalProvider);
+    final diwali = festival?.isDiwali ?? false;
+    final topInset = MediaQuery.paddingOf(context).top;
 
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: AppColors.headerGradient,
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(26)),
       ),
@@ -33,11 +37,19 @@ class HomeHeader extends ConsumerWidget {
         children: [
           Positioned(right: -40, top: -30, child: _Glow(size: 200)),
           Positioned(right: 60, bottom: -60, child: _Glow(size: 140)),
-          Positioned(
-            right: -6,
-            top: 64,
-            child: Opacity(opacity: 0.16, child: Image.asset('assets/brand/logo_mark.png', height: 150, color: Colors.white, colorBlendMode: BlendMode.srcIn)),
-          ),
+          if (diwali) ...[
+            Positioned(left: 0, right: 0, top: topInset + 2, height: 34, child: const DiwaliLights()),
+            Positioned(
+              right: 16,
+              top: topInset + 92,
+              child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: const [Diya(size: 30), SizedBox(width: 4), Diya(size: 42), SizedBox(width: 4), Diya(size: 30)]),
+            ),
+          ] else
+            Positioned(
+              right: -6,
+              top: 64,
+              child: Opacity(opacity: 0.16, child: Image.asset('assets/brand/logo_mark.png', height: 150, color: Colors.white, colorBlendMode: BlendMode.srcIn)),
+            ),
           SafeArea(
             bottom: false,
             child: Padding(
@@ -93,9 +105,16 @@ class HomeHeader extends ConsumerWidget {
                     ]),
                   ),
                   const SizedBox(height: 14),
-                  Text(firstName != null ? '${_greeting().replaceAll('!', '')}, $firstName!' : _greeting(),
-                      style: text.headlineSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w800)),
-                  Text('What are you looking for today?', style: text.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.92))),
+                  Text(
+                    diwali
+                        ? (firstName != null ? 'Happy Diwali, $firstName!' : 'Happy Diwali!')
+                        : (firstName != null ? '${_greeting().replaceAll('!', '')}, $firstName!' : _greeting()),
+                    style: text.headlineSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
+                  ),
+                  Text(
+                    diwali ? 'What can we get you for the festival?' : 'What are you looking for today?',
+                    style: text.bodyMedium?.copyWith(color: diwali ? AppColors.festiveAccent : Colors.white.withValues(alpha: 0.92)),
+                  ),
                   const SizedBox(height: 14),
                   Material(
                     color: Colors.white,

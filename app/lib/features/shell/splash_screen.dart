@@ -29,7 +29,7 @@ class SplashScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 FilledButton(onPressed: () => ref.read(authProvider.notifier).retry(), child: const Text('Try again')),
               ] else
-                const SizedBox(width: 26, height: 26, child: CircularProgressIndicator(strokeWidth: 2.6, color: AppColors.green700)),
+                SizedBox(width: 26, height: 26, child: CircularProgressIndicator(strokeWidth: 2.6, color: AppColors.brand700)),
             ],
           ),
         ),

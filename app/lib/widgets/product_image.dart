@@ -28,7 +28,7 @@ class ProductImage extends StatelessWidget {
                 imageUrl: url!,
                 fit: fit,
                 fadeInDuration: const Duration(milliseconds: 180),
-                placeholder: (_, _) => Container(color: AppColors.green50),
+                placeholder: (_, _) => Container(color: AppColors.brand50),
                 errorWidget: (_, _, _) => placeholder,
               ),
       ),
