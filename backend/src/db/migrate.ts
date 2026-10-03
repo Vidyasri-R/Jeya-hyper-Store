@@ -45,7 +45,19 @@ async function run(): Promise<void> {
   }
 }
 
-run().catch((error: unknown) => {
-  logger.fatal({ err: error }, '❌ migration failed');
-  process.exitCode = 1;
-});
+// Render pre-deploy step: always finish (see scripts/seed.ts), and never sit on a stuck lock forever.
+setTimeout(() => {
+  logger.fatal('❌ migration still running after 5 minutes — exiting');
+  logger.flush?.();
+  process.exit(1);
+}, 300_000).unref();
+
+run()
+  .catch((error: unknown) => {
+    logger.fatal({ err: error }, '❌ migration failed');
+    process.exitCode = 1;
+  })
+  .finally(() => {
+    logger.flush?.();
+    process.exit(Number(process.exitCode ?? 0));
+  });

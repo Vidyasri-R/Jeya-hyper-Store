@@ -85,9 +85,19 @@ async function main(): Promise<void> {
   for (const row of rows) console.log(`  ${row.isPublic ? 'public ' : 'private'}  ${row.key} = ${JSON.stringify(row.value)}`);
 }
 
+// Render pre-deploy step: always finish. A pooled connection that never closes used to keep the
+// process alive after the work was done, leaving the deploy stuck in "Predeploy".
+setTimeout(() => {
+  console.error('❌ seed still running after 2 minutes — exiting');
+  process.exit(1);
+}, 120_000).unref();
+
 main()
   .catch((error: unknown) => {
     console.error('❌ seed failed:', error instanceof Error ? error.message : error);
     process.exitCode = 1;
   })
-  .finally(() => closeDb());
+  .finally(async () => {
+    await closeDb().catch(() => undefined);
+    process.exit(Number(process.exitCode ?? 0));
+  });
