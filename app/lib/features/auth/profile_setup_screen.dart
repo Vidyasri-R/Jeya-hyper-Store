@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/festival_pack.dart';
 import '../../core/theme.dart';
 import '../../state/providers.dart';
 
@@ -46,7 +47,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
           children: [
-            Center(child: Image.asset('assets/brand/logo_mark.png', height: 84)),
+            Center(child: Image.asset(BrandLogo.mark, height: 84)),
             const SizedBox(height: 24),
             Text('Welcome to Jeya Hyper Store!', style: text.headlineMedium, textAlign: TextAlign.center),
             const SizedBox(height: 6),

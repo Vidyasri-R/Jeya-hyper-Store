@@ -4,6 +4,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/config.dart';
+import '../../core/festival_pack.dart';
 import '../../core/theme.dart';
 import '../../state/providers.dart';
 
@@ -69,7 +70,7 @@ class AboutScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('About')),
       body: ListView(padding: const EdgeInsets.all(24), children: [
-        Image.asset('assets/brand/logo_full.png', height: 150),
+        Image.asset(BrandLogo.full, height: 150),
         const SizedBox(height: 16),
         Text('${info['name'] ?? AppConfig.storeName}, ${info['city'] ?? 'Tiruchirappalli'}', style: text.titleMedium, textAlign: TextAlign.center),
         const SizedBox(height: 6),

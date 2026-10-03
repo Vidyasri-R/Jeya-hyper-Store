@@ -221,7 +221,7 @@ class _HeroCarouselState extends ConsumerState<_HeroCarousel> {
                         bottom: -22,
                         child: Icon(b.icon, size: 170, color: AppColors.brand800.withValues(alpha: 0.10)),
                       ),
-                      Positioned(right: 14, top: 14, child: Image.asset('assets/brand/logo_mark.png', height: 44)),
+                      Positioned(right: 14, top: 14, child: Image.asset(BrandLogo.mark, height: 44)),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
                         child: Column(

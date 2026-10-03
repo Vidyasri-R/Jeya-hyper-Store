@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/festival_pack.dart';
 import '../../core/theme.dart';
 import '../../state/providers.dart';
 import '../../widgets/festive_decor.dart';
@@ -64,7 +65,7 @@ class HomeHeader extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
-                        child: Image.asset('assets/brand/logo_mark.png', height: 30),
+                        child: Image.asset(BrandLogo.mark, height: 30),
                       ),
                       const SizedBox(width: 8),
                       Expanded(

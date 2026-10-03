@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/festival_pack.dart';
 import '../../core/theme.dart';
 import '../../state/providers.dart';
 
@@ -60,7 +61,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
           children: [
-            Center(child: Image.asset('assets/brand/logo_full.png', height: 150)),
+            Center(child: Image.asset(BrandLogo.full, height: 150)),
             const SizedBox(height: 28),
             Text('Login or sign up', style: text.headlineMedium),
             const SizedBox(height: 6),
