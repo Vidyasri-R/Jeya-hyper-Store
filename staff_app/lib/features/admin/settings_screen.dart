@@ -514,6 +514,7 @@ class _ThemeCardState extends State<_ThemeCard> {
   static const _presets = [
     ('standard', 'Normal', '🛒', [Color(0xFF14612F), Color(0xFF23934B), Color(0xFFEFF8F1)]),
     ('diwali', 'Diwali', '🪔', [Color(0xFF6E1428), Color(0xFFC2410C), Color(0xFFFFC53D)]),
+    ('pongal', 'Pongal', '🌾', [Color(0xFF6B3510), Color(0xFFBF6119), Color(0xFFFFD54F)]),
   ];
 
   late String _preset = (widget.value['preset'] as String?) ?? 'standard';

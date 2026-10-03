@@ -18,7 +18,13 @@ void main() {
     test('on with no dates, and inside its dates', () {
       expect(FestivalTheme.activeFrom(theme(), now)?.palette, same(Palettes.diwali));
       final t = FestivalTheme.activeFrom(theme(from: '2026-10-31T18:30:00.000Z', until: '2026-11-10T18:29:59.000Z'), now);
-      expect(t?.isDiwali, isTrue);
+      expect(t?.pack?.id, 'diwali');
+    });
+
+    test('Pongal has its own look', () {
+      final t = FestivalTheme.activeFrom(theme(preset: 'pongal'), now);
+      expect(t?.palette, same(Palettes.pongal));
+      expect(t?.pack?.greeting, 'Happy Pongal');
     });
 
     test('off before it starts and after it ends', () {

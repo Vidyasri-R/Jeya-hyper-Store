@@ -1,6 +1,9 @@
-import { and, asc, eq, gt, inArray, isNull, ne, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNull, ne, or, sql } from 'drizzle-orm';
 import type { DbExecutor } from '../../db/client';
 import { staffSessions, staffUsers, type NewStaffUser, type StaffUser } from '../../db/schema';
+
+/** How long a just-replaced refresh token still works (the app may close before saving the new one). */
+const REFRESH_GRACE = '2 minutes';
 
 export type StaffSessionState = {
   sessionId: string;
@@ -80,14 +83,24 @@ export const staffRepository = {
     return row;
   },
 
-  /** Refresh-token rotation in one statement (same contract as the customer sessions). */
+  /** Refresh-token rotation in one statement (same contract as the customer sessions, grace window included). */
   async rotateSession(db: DbExecutor, currentHash: string, nextHash: string, nextExpiresAt: Date) {
+    const isCurrent = sql`${staffSessions.refreshTokenHash} = ${currentHash}`;
     const [row] = await db
       .update(staffSessions)
-      .set({ refreshTokenHash: nextHash, expiresAt: nextExpiresAt, lastUsedAt: sql`now()` })
+      .set({
+        previousRefreshTokenHash: sql`case when ${isCurrent} then ${currentHash} else ${staffSessions.previousRefreshTokenHash} end`,
+        rotatedAt: sql`case when ${isCurrent} then now() else ${staffSessions.rotatedAt} end`,
+        refreshTokenHash: nextHash,
+        expiresAt: nextExpiresAt,
+        lastUsedAt: sql`now()`,
+      })
       .where(
         and(
-          eq(staffSessions.refreshTokenHash, currentHash),
+          or(
+            eq(staffSessions.refreshTokenHash, currentHash),
+            and(eq(staffSessions.previousRefreshTokenHash, currentHash), gt(staffSessions.rotatedAt, sql`now() - ${REFRESH_GRACE}::interval`)),
+          ),
           isNull(staffSessions.revokedAt),
           gt(staffSessions.expiresAt, sql`now()`),
           sql`exists (select 1 from ${staffUsers} where ${staffUsers.id} = ${staffSessions.staffId} and ${staffUsers.isActive})`,

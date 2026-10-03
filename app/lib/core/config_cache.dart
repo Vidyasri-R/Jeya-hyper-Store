@@ -27,10 +27,10 @@ abstract final class ConfigCache {
     } catch (_) {}
   }
 
-  /// Android 13+ only; elsewhere the call is simply ignored.
-  static Future<void> launchSplash({required bool festive}) async {
+  /// Android 13+ only; elsewhere the call is simply ignored. [preset] null = everyday splash.
+  static Future<void> launchSplash(String? preset) async {
     try {
-      await _splash.invokeMethod<void>('setFestive', {'festive': festive});
+      await _splash.invokeMethod<void>('setTheme', {'preset': preset});
     } catch (_) {}
   }
 }

@@ -328,7 +328,8 @@ def banner_hamper():
     s.save(f'{OUT}/banner_hamper.svg')
 
 
-banner_sweets()
-banner_pooja()
-banner_hamper()
-print('ok')
+if __name__ == '__main__':
+    banner_sweets()
+    banner_pooja()
+    banner_hamper()
+    print('ok')

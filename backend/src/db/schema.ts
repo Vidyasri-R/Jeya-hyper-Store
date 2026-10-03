@@ -145,6 +145,9 @@ export const userSessions = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     /** SHA-256 of the refresh token — the raw token is never stored. */
     refreshTokenHash: varchar({ length: 64 }).notNull(),
+    /** The token this one replaced, still honoured for a short grace window (app closed mid-refresh). */
+    previousRefreshTokenHash: varchar({ length: 64 }),
+    rotatedAt: tstz(),
     deviceId: varchar({ length: 128 }),
     deviceInfo: varchar({ length: 255 }),
     ipAddress: varchar({ length: 45 }),
@@ -155,6 +158,7 @@ export const userSessions = pgTable(
   },
   (t) => [
     uniqueIndex('user_sessions_token_hash_uq').on(t.refreshTokenHash),
+    index('user_sessions_prev_token_hash_idx').on(t.previousRefreshTokenHash),
     index('user_sessions_user_idx').on(t.userId),
   ],
 );
@@ -225,6 +229,9 @@ export const staffSessions = pgTable(
       .notNull()
       .references(() => staffUsers.id, { onDelete: 'cascade' }),
     refreshTokenHash: varchar({ length: 64 }).notNull(),
+    /** The token this one replaced, still honoured for a short grace window (app closed mid-refresh). */
+    previousRefreshTokenHash: varchar({ length: 64 }),
+    rotatedAt: tstz(),
     deviceInfo: varchar({ length: 255 }),
     ipAddress: varchar({ length: 45 }),
     expiresAt: tstz().notNull(),
@@ -234,6 +241,7 @@ export const staffSessions = pgTable(
   },
   (t) => [
     uniqueIndex('staff_sessions_token_hash_uq').on(t.refreshTokenHash),
+    index('staff_sessions_prev_token_hash_idx').on(t.previousRefreshTokenHash),
     index('staff_sessions_staff_idx').on(t.staffId),
   ],
 );

@@ -59,52 +59,91 @@ class _FestiveSplash extends StatelessWidget {
       child: Scaffold(
         backgroundColor: AppColors.brand900,
         body: DecoratedBox(
-          decoration: BoxDecoration(image: DecorationImage(image: AssetImage(pack.splashBackground), fit: BoxFit.cover)),
-          child: Stack(children: [
-            const Positioned.fill(child: Twinkles()),
-            Positioned(top: MediaQuery.paddingOf(context).top, left: 0, right: 0, height: 44, child: Thoranam(pack: pack)),
-            SafeArea(
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 56),
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(color: gold, width: 2),
-                        boxShadow: [BoxShadow(color: gold.withValues(alpha: 0.45), blurRadius: 36, spreadRadius: 4)],
-                      ),
-                      child: Image.asset('assets/brand/logo_full.png', width: 180),
+          decoration: BoxDecoration(
+            image: DecorationImage(image: AssetImage(pack.splashBackground), fit: BoxFit.cover),
+          ),
+          child: Stack(
+            children: [
+              const Positioned.fill(child: Twinkles()),
+              Positioned(
+                top: MediaQuery.paddingOf(context).top,
+                left: 0,
+                right: 0,
+                height: 44,
+                child: Thoranam(pack: pack),
+              ),
+              SafeArea(
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 56),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            // e.g. the Pongal sun rising from behind the top of the card (never below it)
+                            if (pack.haloImage case final halo?)
+                              Positioned.fill(
+                                child: OverflowBox(
+                                  maxWidth: 360,
+                                  maxHeight: 360,
+                                  alignment: Alignment.topCenter,
+                                  child: FractionalTranslation(
+                                    translation: const Offset(0, -0.42),
+                                    child: IgnorePointer(child: Image.asset(halo, width: 360, height: 360)),
+                                  ),
+                                ),
+                              ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(28),
+                                border: Border.all(color: gold, width: 2),
+                                boxShadow: [BoxShadow(color: gold.withValues(alpha: 0.45), blurRadius: 36, spreadRadius: 4)],
+                              ),
+                              child: Image.asset('assets/brand/logo_full.png', width: 180),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 26),
+                        Text(
+                          pack.greeting,
+                          textAlign: TextAlign.center,
+                          style: text.headlineSmall?.copyWith(
+                            color: gold,
+                            fontWeight: FontWeight.w800,
+                            shadows: const [Shadow(color: Color(0x99000000), blurRadius: 8)],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'from all of us at Jeya Hyper Store',
+                          textAlign: TextAlign.center,
+                          style: text.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.85)),
+                        ),
+                        const SizedBox(height: 28),
+                        if (offline) ...[
+                          const Icon(Icons.wifi_off_rounded, color: Colors.white70, size: 30),
+                          const SizedBox(height: 8),
+                          Text("Can't reach Jeya Hyper Store", style: text.titleSmall?.copyWith(color: Colors.white)),
+                          const SizedBox(height: 4),
+                          Text('Check your internet connection.', style: text.bodySmall?.copyWith(color: Colors.white70)),
+                          const SizedBox(height: 16),
+                          FilledButton(clipBehavior: Clip.antiAlias, onPressed: onRetry, child: const Text('Try again')),
+                        ] else ...[
+                          FestiveHero(pack: pack, width: 168),
+                          const SizedBox(height: 18),
+                          SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.2, color: gold)),
+                        ],
+                      ],
                     ),
-                    const SizedBox(height: 26),
-                    Text(
-                      pack.greeting,
-                      textAlign: TextAlign.center,
-                      style: text.headlineSmall?.copyWith(color: gold, fontWeight: FontWeight.w800, shadows: const [Shadow(color: Color(0x99000000), blurRadius: 8)]),
-                    ),
-                    const SizedBox(height: 4),
-                    Text('from all of us at Jeya Hyper Store', textAlign: TextAlign.center, style: text.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.85))),
-                    const SizedBox(height: 28),
-                    if (offline) ...[
-                      const Icon(Icons.wifi_off_rounded, color: Colors.white70, size: 30),
-                      const SizedBox(height: 8),
-                      Text("Can't reach Jeya Hyper Store", style: text.titleSmall?.copyWith(color: Colors.white)),
-                      const SizedBox(height: 4),
-                      Text('Check your internet connection.', style: text.bodySmall?.copyWith(color: Colors.white70)),
-                      const SizedBox(height: 16),
-                      FilledButton(clipBehavior: Clip.antiAlias, onPressed: onRetry, child: const Text('Try again')),
-                    ] else ...[
-                      DiyaCluster(pack: pack, width: 168),
-                      const SizedBox(height: 18),
-                      SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.2, color: gold)),
-                    ],
-                  ]),
+                  ),
                 ),
               ),
-            ),
-          ]),
+            ],
+          ),
         ),
       ),
     );

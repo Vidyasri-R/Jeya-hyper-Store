@@ -3,7 +3,16 @@ import 'package:flutter/painting.dart';
 /// Artwork and copy for one festival look. The art is original vector illustration rendered to
 /// WebP at 3× (sources: design/festival-art/); Admin → Store settings → Festival theme turns it on.
 class FestivalPack {
-  const FestivalPack({required this.id, required this.dir, required this.greeting, required this.question, required this.wicks, required this.banners});
+  const FestivalPack({
+    required this.id,
+    required this.dir,
+    required this.greeting,
+    required this.question,
+    required this.heroAspect,
+    required this.flames,
+    required this.banners,
+    this.halo,
+  });
 
   final String id;
 
@@ -14,26 +23,33 @@ class FestivalPack {
   final String greeting;
   final String question;
 
-  /// Flame positions on [diyas] as fractions of the image: (x, y of the wick, lamp size).
-  final List<(double, double, double)> wicks;
+  /// The festival's centrepiece on the header and splash (diyas, a pongal pot…): width ÷ height.
+  final double heroAspect;
+
+  /// Where flames flicker on [hero], as fractions of the image: (x, y of the flame's base, size).
+  final List<(double, double, double)> flames;
 
   /// Illustrated banners that lead the Home carousel.
   final List<FestivalBanner> banners;
+
+  /// Optional art rising behind the splash logo card (the Pongal sun).
+  final String? halo;
 
   String _art(String name) => '$dir/$name.webp';
 
   String get headerBackground => _art('header_bg');
   String get splashBackground => _art('splash_bg');
   String get thoranam => _art('thoranam');
-  String get diyas => _art('diyas_base');
+  String get hero => _art('hero');
   String get flame => _art('flame');
-  String get sectionIcon => _art('diya_icon');
+  String get sectionIcon => _art('section_icon');
+  String? get haloImage => halo == null ? null : _art(halo!);
 
   /// Seamless gold-sparkle tile laid over festive buttons.
   ImageProvider get buttonTexture => ExactAssetImage(_art('btn_tile'), scale: 3);
 
   /// Sprites for the once-per-visit petal shower.
-  List<String> get petals => [_art('petal_orange'), _art('petal_yellow'), _art('petal_red'), _art('marigold_small')];
+  List<String> get petals => [_art('petal_1'), _art('petal_2'), _art('petal_3'), _art('petal_4')];
 }
 
 class FestivalBanner {
@@ -61,7 +77,8 @@ abstract final class FestivalPacks {
     dir: 'assets/themes/diwali',
     greeting: 'Happy Deepavali',
     question: 'Festive essentials, delivered',
-    wicks: [(0.2458, 0.5556, 0.2458), (0.5, 0.4667, 0.3125), (0.7542, 0.5556, 0.2458)],
+    heroAspect: 480 / 270,
+    flames: [(0.2458, 0.5556, 0.2458), (0.5, 0.4667, 0.3125), (0.7542, 0.5556, 0.2458)],
     banners: [
       FestivalBanner(
         image: 'assets/themes/diwali/banner_sweets.webp',
@@ -91,8 +108,47 @@ abstract final class FestivalPacks {
     ],
   );
 
+  /// Surya Pongal: sunrise, kolam, sugarcane and a pongal pot boiling over on its hearth.
+  static const pongal = FestivalPack(
+    id: 'pongal',
+    dir: 'assets/themes/pongal',
+    greeting: 'Happy Pongal',
+    question: 'Fresh harvest, delivered',
+    heroAspect: 480 / 300,
+    flames: [(0.425, 0.8533, 0.0792), (0.5083, 0.86, 0.0958), (0.5833, 0.8533, 0.075)],
+    halo: 'sun',
+    banners: [
+      FestivalBanner(
+        image: 'assets/themes/pongal/banner_essentials.webp',
+        tag: 'PONGAL SPECIAL',
+        title: 'Pongal\nessentials',
+        subtitle: 'Rice, jaggery, dal & ghee',
+        cta: 'Shop now',
+        route: '/search?q=jaggery',
+      ),
+      FestivalBanner(
+        image: 'assets/themes/pongal/banner_harvest.webp',
+        tag: 'FRESH HARVEST',
+        title: 'Sugarcane &\nveggies',
+        subtitle: 'For your Pongal kootu',
+        cta: 'Shop fresh',
+        route: '/categories',
+        dark: true,
+      ),
+      FestivalBanner(
+        image: 'assets/themes/pongal/banner_kolam.webp',
+        tag: 'KOLAM & POOJA',
+        title: 'Kolam colours\n& pooja',
+        subtitle: 'Flowers, camphor & more',
+        cta: 'Explore',
+        route: '/search?q=camphor',
+      ),
+    ],
+  );
+
   static FestivalPack? byId(String? id) => switch (id) {
     'diwali' => diwali,
+    'pongal' => pongal,
     _ => null,
   };
 }

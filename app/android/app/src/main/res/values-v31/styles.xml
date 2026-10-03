@@ -6,8 +6,12 @@
         <item name="android:windowSplashScreenBackground">@android:color/white</item>
     </style>
     <!-- Chosen by the app for the next launch while a festival theme is on (Android 13+, see MainActivity). -->
-    <style name="FestiveSplashTheme" parent="LaunchTheme">
+    <style name="DiwaliSplashTheme" parent="LaunchTheme">
         <item name="android:windowSplashScreenBackground">#FF5E0F22</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/white</item>
+    </style>
+    <style name="PongalSplashTheme" parent="LaunchTheme">
+        <item name="android:windowSplashScreenBackground">#FF6B3510</item>
         <item name="android:windowSplashScreenIconBackgroundColor">@android:color/white</item>
     </style>
 </resources>

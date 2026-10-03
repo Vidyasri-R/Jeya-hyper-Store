@@ -49,7 +49,7 @@ class HomeHeader extends ConsumerWidget {
             const Positioned.fill(child: Twinkles()),
             Positioned(left: 0, right: 0, top: topInset, height: 44, child: Thoranam(pack: pack)),
             // Sits just above the search bar, which tucks over the rangoli's front edge.
-            Positioned(right: 4, bottom: 60, child: DiyaCluster(pack: pack, width: 132)),
+            Positioned(right: 4, bottom: 60, child: FestiveHero(pack: pack, width: 132)),
           ],
           SafeArea(
             bottom: false,

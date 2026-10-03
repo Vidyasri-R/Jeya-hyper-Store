@@ -9,8 +9,13 @@ python3 header_art.py      # header + splash backgrounds, thoranam, diyas on ran
 python3 banners.py         # home banners (sweets & savouries, pooja, gift hampers)
 python3 small_art.py       # button sparkle tile, section diya, petals
 node render.mjs            # → out/webp/*.webp (needs backend/node_modules for sharp)
-python3 festive_logo.py    # Deepavali app icon (feather eyes lit like diyas) → app/branding/app_icon/diwali/
+python3 festive_logo.py    # festival app icons (Deepavali flames, Pongal sun) → app/branding/app_icon/<id>/
 cp out/webp/*.webp ../../app/assets/themes/diwali/
+
+python3 pongal_art.py      # Pongal: header, thoranam (aavaram poo), pongal pot hero, splash, sun
+python3 pongal_more.py     # Pongal banners, kolam button tile, section icon, petals
+node render.mjs --dir out/pongal
+cp out/pongal/webp/*.webp ../../app/assets/themes/pongal/   # plus flame.webp from diwali
 ```
 
 How the app uses them: `app/lib/core/festival_pack.dart` (asset names, banner copy, flame
@@ -18,8 +23,8 @@ positions) and `app/lib/widgets/festive_decor.dart` (thoranam, flickering diyas,
 petal shower, banner card). Text on banners is live Flutter text, so copy can change
 without redrawing.
 
-Adding a festival (e.g. Pongal, Christmas): draw its pack with the same file names into
-`out/`, copy to `app/assets/themes/<id>/`, add a palette in `theme.dart`, a pack in
+Adding a festival (e.g. Christmas): draw its pack with the same file names into
+`out/<id>/`, copy to `app/assets/themes/<id>/`, add a palette in `theme.dart`, a pack in
 `festival_pack.dart`, and the id to the `app.theme` preset enum in
 `backend/src/modules/admin/admin-settings.service.ts` and the staff app's theme card.
 

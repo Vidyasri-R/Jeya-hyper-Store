@@ -44,29 +44,35 @@ Future<void> pumpAt(WidgetTester tester, Widget child, {Size size = const Size(3
 }
 
 void main() {
+  for (final pack in [FestivalPacks.diwali, FestivalPacks.pongal]) {
+    group(pack.id, () => _festiveLayout(pack));
+  }
+}
+
+void _festiveLayout(FestivalPack pack) {
   setUp(() {
-    AppColors.palette = Palettes.diwali;
-    Festive.pack = FestivalPacks.diwali;
+    AppColors.palette = Palettes.byId(pack.id);
+    Festive.pack = pack;
   });
   tearDown(() {
     AppColors.palette = Palettes.standard;
     Festive.pack = null;
   });
 
-  testWidgets('Deepavali header: greeting, thoranam and diyas fit a small phone', (tester) async {
+  testWidgets('header: greeting, thoranam and centrepiece fit a small phone', (tester) async {
     await pumpAt(
       tester,
       const SingleChildScrollView(child: HomeHeader()),
       overrides: [
-        festivalProvider.overrideWithValue(const FestivalTheme(preset: 'diwali')),
+        festivalProvider.overrideWithValue(FestivalTheme(preset: pack.id)),
         authProvider.overrideWith(() => _SignedInAs('Jayaprakash Ramalingam')),
         selectedAddressProvider.overrideWithValue(null),
       ],
     );
-    expect(find.textContaining('Happy Deepavali, Jayaprakash!'), findsOneWidget);
-    expect(find.text('Festive essentials, delivered'), findsOneWidget);
+    expect(find.textContaining('${pack.greeting}, Jayaprakash!'), findsOneWidget);
+    expect(find.text(pack.question), findsOneWidget);
     expect(find.byType(Thoranam), findsOneWidget);
-    expect(find.byType(DiyaCluster), findsOneWidget);
+    expect(find.byType(FestiveHero), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -75,11 +81,11 @@ void main() {
       await pumpAt(
         tester,
         Column(children: [
-          for (final b in FestivalPacks.diwali.banners) SizedBox(width: width, height: 176, child: FestiveBannerCard(b)),
+          for (final b in pack.banners) SizedBox(width: width, height: 176, child: FestiveBannerCard(b)),
         ]),
         size: Size(width + 20, 700),
       );
-      expect(find.text('Sweets &\nsavouries'), findsOneWidget);
+      expect(find.text(pack.banners.first.title), findsOneWidget);
       expect(tester.takeException(), isNull, reason: 'at $width dp');
     }
   });
@@ -89,12 +95,12 @@ void main() {
       tester,
       const SingleChildScrollView(child: HomeHeader()),
       overrides: [
-        festivalProvider.overrideWithValue(FestivalTheme(preset: 'diwali', greeting: 'Festive offers on sweets, dry fruits and pooja needs — order by 6 PM! ' * 2)),
+        festivalProvider.overrideWithValue(FestivalTheme(preset: pack.id, greeting: 'Festive offers on sweets, dry fruits and pooja needs — order by 6 PM! ' * 2)),
         authProvider.overrideWith(() => _SignedInAs('Jai')),
         selectedAddressProvider.overrideWithValue(null),
       ],
     );
-    expect(find.text('Festive essentials, delivered'), findsNothing);
+    expect(find.text(pack.question), findsNothing);
     expect(find.textContaining('Festive offers on sweets'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -106,19 +112,19 @@ void main() {
         const SplashScreen(),
         size: const Size(320, 568),
         overrides: [
-          festivalProvider.overrideWithValue(const FestivalTheme(preset: 'diwali')),
+          festivalProvider.overrideWithValue(FestivalTheme(preset: pack.id)),
           authProvider.overrideWith(() => _Starting(offline ? const AuthOffline() : const AuthUnknown())),
         ],
       );
-      expect(find.text('Happy Deepavali'), findsOneWidget);
-      expect(find.byType(DiyaCluster), offline ? findsNothing : findsOneWidget);
+      expect(find.text(pack.greeting), findsOneWidget);
+      expect(find.byType(FestiveHero), offline ? findsNothing : findsOneWidget);
       expect(find.text('Try again'), offline ? findsOneWidget : findsNothing);
       expect(tester.takeException(), isNull);
     });
   }
 
   testWidgets('petal shower plays once and gets out of the way', (tester) async {
-    await pumpAt(tester, const SizedBox.expand(child: PetalShower(pack: FestivalPacks.diwali)), size: const Size(390, 800), textScale: 1);
+    await pumpAt(tester, SizedBox.expand(child: PetalShower(pack: pack)), size: const Size(390, 800), textScale: 1);
     expect(find.byType(Image), findsWidgets);
     await tester.pump(const Duration(seconds: 5));
     await tester.pump();

@@ -26,17 +26,17 @@ class Thoranam extends StatelessWidget {
   }
 }
 
-/// Three agal vilakku on a rangoli; the flames flicker.
-class DiyaCluster extends StatefulWidget {
-  const DiyaCluster({super.key, required this.pack, this.width = 132});
+/// The festival's centrepiece (agal vilakku on a rangoli, a pongal pot on its hearth…); its flames flicker.
+class FestiveHero extends StatefulWidget {
+  const FestiveHero({super.key, required this.pack, this.width = 132});
   final FestivalPack pack;
   final double width;
 
   @override
-  State<DiyaCluster> createState() => _DiyaClusterState();
+  State<FestiveHero> createState() => _FestiveHeroState();
 }
 
-class _DiyaClusterState extends State<DiyaCluster> with SingleTickerProviderStateMixin {
+class _FestiveHeroState extends State<FestiveHero> with SingleTickerProviderStateMixin {
   late final _flicker = AnimationController(vsync: this, duration: const Duration(milliseconds: 2400));
 
   @override
@@ -58,7 +58,7 @@ class _DiyaClusterState extends State<DiyaCluster> with SingleTickerProviderStat
   @override
   Widget build(BuildContext context) {
     final w = widget.width;
-    final h = w * 270 / 480;
+    final h = w / widget.pack.heroAspect;
     return IgnorePointer(
       child: RepaintBoundary(
         child: SizedBox(
@@ -67,8 +67,8 @@ class _DiyaClusterState extends State<DiyaCluster> with SingleTickerProviderStat
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              Positioned.fill(child: Image.asset(widget.pack.diyas, fit: BoxFit.fill)),
-              for (final (i, (x, y, size)) in widget.pack.wicks.indexed) _flame(i, left: x * w, wickY: y * h, width: size * w * 0.52),
+              Positioned.fill(child: Image.asset(widget.pack.hero, fit: BoxFit.fill)),
+              for (final (i, (x, y, size)) in widget.pack.flames.indexed) _flame(i, left: x * w, wickY: y * h, width: size * w * 0.52),
             ],
           ),
         ),

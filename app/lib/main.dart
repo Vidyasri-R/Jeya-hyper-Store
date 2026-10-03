@@ -50,7 +50,7 @@ class _JeyaAppState extends ConsumerState<JeyaApp> with WidgetsBindingObserver {
     ref.listenManual(publicConfigProvider, (_, next) {
       if (next.hasValue) ConfigCache.write(next.value!);
     });
-    ref.listenManual<bool>(festivalProvider.select((f) => f?.pack != null), (_, festive) => ConfigCache.launchSplash(festive: festive), fireImmediately: true);
+    ref.listenManual<String?>(festivalProvider.select((f) => f?.pack?.id), (_, preset) => ConfigCache.launchSplash(preset), fireImmediately: true);
   }
 
   @override

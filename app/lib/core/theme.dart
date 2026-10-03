@@ -61,8 +61,24 @@ abstract final class Palettes {
     accent: Color(0xFFFFC53D),
   );
 
+  /// Pongal: clay terracotta and the turmeric gold of the Surya Pongal sunrise.
+  static const pongal = BrandPalette(
+    id: 'pongal',
+    b900: Color(0xFF4A2408),
+    b800: Color(0xFF6B3510),
+    b700: Color(0xFF9A4A16),
+    b600: Color(0xFFBF6119),
+    b500: Color(0xFFE07E22),
+    b100: Color(0xFFFCE9C8),
+    b50: Color(0xFFFFF5E3),
+    tint: Color(0xFFFFFAF0),
+    header: [Color(0xFF6B3510), Color(0xFFBF6119)],
+    accent: Color(0xFFFFD54F),
+  );
+
   static BrandPalette byId(String? id) => switch (id) {
     'diwali' => diwali,
+    'pongal' => pongal,
     _ => standard,
   };
 }

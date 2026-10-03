@@ -17,8 +17,6 @@ class FestivalTheme {
   /// Artwork for this festival (null if this build has none for it).
   FestivalPack? get pack => FestivalPacks.byId(preset);
 
-  bool get isDiwali => preset == 'diwali';
-
   /// The store's own line under the Home greeting (Admin → Festival theme), or null for the default.
   String? get message {
     final m = greeting?.trim();

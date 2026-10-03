@@ -14,8 +14,12 @@ BRAND = '../../app/assets/brand'
 OUT = 'out'
 os.makedirs(OUT, exist_ok=True)
 
-# flame colours from the edge (0) to the core (1)
-STOPS = [(0.0, (214, 64, 22)), (0.3, (244, 128, 16)), (0.58, (255, 190, 40)), (0.82, (255, 238, 150)), (1.0, (255, 253, 235))]
+# eye colours from the edge (0) to the core (1), per festival
+RAMPS = {
+    'diwali': [(0.0, (214, 64, 22)), (0.3, (244, 128, 16)), (0.58, (255, 190, 40)), (0.82, (255, 238, 150)), (1.0, (255, 253, 235))],  # diya flames
+    'pongal': [(0.0, (222, 150, 0)), (0.3, (250, 192, 0)), (0.65, (255, 222, 40)), (1.0, (255, 244, 160))],  # turmeric-and-sun yellow
+}
+STOPS = RAMPS['diwali']
 
 
 def ramp(c):
@@ -93,16 +97,18 @@ IOS_ICONS = f'{APP}/ios/Runner/Assets.xcassets/AppIcon.appiconset'
 DENSITIES = {'mdpi': 1, 'hdpi': 1.5, 'xhdpi': 2, 'xxhdpi': 3, 'xxxhdpi': 4}
 
 
-def icon_sets():
+def icon_sets(festival):
     import json
     import shutil
-    std, fest = f'{APP}/branding/app_icon/standard', f'{APP}/branding/app_icon/diwali'
-    for root in (std, fest):
-        shutil.rmtree(root, ignore_errors=True)
-    # everyday set, exactly as the app ships today
-    for d in DENSITIES:
-        shutil.copytree(f'{ANDROID_RES}/mipmap-{d}', f'{std}/android/mipmap-{d}')
-    shutil.copytree(IOS_ICONS, f'{std}/ios/AppIcon.appiconset')
+    global STOPS
+    STOPS = RAMPS[festival]
+    std, fest = f'{APP}/branding/app_icon/standard', f'{APP}/branding/app_icon/{festival}'
+    shutil.rmtree(fest, ignore_errors=True)
+    if not os.path.isdir(std):
+        # everyday set, exactly as the app ships today
+        for d in DENSITIES:
+            shutil.copytree(f'{ANDROID_RES}/mipmap-{d}', f'{std}/android/mipmap-{d}')
+        shutil.copytree(IOS_ICONS, f'{std}/ios/AppIcon.appiconset')
     # Deepavali set: light the eyes on the largest artwork, scale down for every size
     fg, n1 = light_up(Image.open(f'{std}/android/mipmap-xxxhdpi/ic_launcher_foreground.png'), 432, halo=False)
     legacy, n2 = light_up(Image.open(f'{std}/android/mipmap-xxxhdpi/ic_launcher.png'), 192, halo=False)
@@ -123,7 +129,9 @@ def icon_sets():
         px_size = round(float(img['size'].split('x')[0]) * float(img['scale'].rstrip('x')))
         master.resize((px_size, px_size), Image.LANCZOS).save(f'{out}/{img["filename"]}', optimize=True)
     master.resize((512, 512), Image.LANCZOS).save(f'{fest}/play_store_512.png', optimize=True)
-    print('eyes lit — foreground', n1, 'legacy', n2, 'iOS', n3)
+    print(festival, 'eyes lit — foreground', n1, 'legacy', n2, 'iOS', n3)
 
 
-icon_sets()
+if __name__ == '__main__':
+    for festival in RAMPS:
+        icon_sets(festival)

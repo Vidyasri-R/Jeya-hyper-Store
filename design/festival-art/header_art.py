@@ -99,7 +99,7 @@ def diyas_base():
         s.add(f'<ellipse cx="{x}" cy="{y}" rx="9" ry="4" fill="#FB8C00" transform="rotate(20 {x} {y})"/>')
     for i, (x, y, size) in enumerate(WICKS):
         s.add(diya(s, x, y, size, style=i, with_flame=False))
-    s.save(f'{OUT}/diyas_base.svg')
+    s.save(f'{OUT}/hero.svg')
     return [{'x': x / 480, 'y': y / 270, 'size': size / 480} for x, y, size in WICKS]
 
 
@@ -149,10 +149,11 @@ def splash_bg():
     s.save(f'{OUT}/splash_bg.svg')
 
 
-thoranam()
-splash_bg()
-wicks = diyas_base()
-flame_asset()
-header_bg()
-json.dump({'wicks': wicks}, open(f'{OUT}/diyas_base.json', 'w'), indent=1)
-print('wicks', wicks)
+if __name__ == '__main__':
+    thoranam()
+    splash_bg()
+    wicks = diyas_base()
+    flame_asset()
+    header_bg()
+    json.dump({'flames': wicks}, open(f'{OUT}/hero.json', 'w'), indent=1)
+    print('wicks', wicks)

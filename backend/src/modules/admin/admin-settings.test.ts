@@ -32,6 +32,12 @@ describe('festival theme setting (app.theme)', () => {
     expect(stored.get('app.theme')).toEqual({ value, isPublic: true });
   });
 
+  it('offers every festival the customer app has art for', async () => {
+    for (const preset of ['standard', 'diwali', 'pongal']) {
+      await expect(adminSettingsService.set('app.theme', { preset, startsAt: null, endsAt: null, greeting: null })).resolves.toMatchObject({ preset });
+    }
+  });
+
   it('accepts open-ended dates and trims the message', async () => {
     const saved = await adminSettingsService.set('app.theme', { preset: 'diwali', startsAt: null, endsAt: null, greeting: '  Happy Deepavali!  ' });
     expect(saved).toEqual({ preset: 'diwali', startsAt: null, endsAt: null, greeting: 'Happy Deepavali!' });

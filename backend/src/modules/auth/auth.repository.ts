@@ -1,6 +1,9 @@
-import { and, desc, eq, gt, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, isNull, or, sql } from 'drizzle-orm';
 import type { DbExecutor, Transaction } from '../../db/client';
 import { otpRequests, userSessions, users } from '../../db/schema';
+
+/** How long a just-replaced refresh token still works (the app may close before saving the new one). */
+const REFRESH_GRACE = '2 minutes';
 
 export const authRepository = {
   /**
@@ -141,13 +144,28 @@ export const authRepository = {
    * token is current, unrevoked and unexpired, and the user is still active.
    * A replayed (already-rotated) token matches nothing.
    */
+  /**
+   * Refresh-token rotation in one statement. The token just replaced stays usable for a short
+   * grace window, so an app closed before it saved the new token isn't signed out.
+   */
   async rotateSession(db: DbExecutor, currentHash: string, nextHash: string, nextExpiresAt: Date) {
+    const isCurrent = sql`${userSessions.refreshTokenHash} = ${currentHash}`;
     const [row] = await db
       .update(userSessions)
-      .set({ refreshTokenHash: nextHash, expiresAt: nextExpiresAt, lastUsedAt: sql`now()` })
+      .set({
+        // SET sees the row as it was, so these read the token being replaced.
+        previousRefreshTokenHash: sql`case when ${isCurrent} then ${currentHash} else ${userSessions.previousRefreshTokenHash} end`,
+        rotatedAt: sql`case when ${isCurrent} then now() else ${userSessions.rotatedAt} end`,
+        refreshTokenHash: nextHash,
+        expiresAt: nextExpiresAt,
+        lastUsedAt: sql`now()`,
+      })
       .where(
         and(
-          eq(userSessions.refreshTokenHash, currentHash),
+          or(
+            eq(userSessions.refreshTokenHash, currentHash),
+            and(eq(userSessions.previousRefreshTokenHash, currentHash), gt(userSessions.rotatedAt, sql`now() - ${REFRESH_GRACE}::interval`)),
+          ),
           isNull(userSessions.revokedAt),
           gt(userSessions.expiresAt, sql`now()`),
           sql`exists (select 1 from ${users} where ${users.id} = ${userSessions.userId}
