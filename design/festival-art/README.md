@@ -21,6 +21,11 @@ python3 christmas_art.py   # Christmas & New Year: night sky, pine garland, tree
 python3 christmas_more.py  # treats / New Year party / baking banners, snowflake tile, tree icon, sprites
 node render.mjs --dir out/christmas
 cp out/christmas/webp/*.webp ../../app/assets/themes/christmas/   # plus flame.webp from diwali
+
+python3 valentine_art.py   # Valentine's Day: rose night, rose garland, chocolates & bouquet hero, splash heart
+python3 valentine_more.py  # chocolates / flowers & gifts / sweets banners, heart tile, icon, petals
+node render.mjs --dir out/valentine
+cp out/valentine/webp/*.webp ../../app/assets/themes/valentine/   # plus flame.webp from diwali
 ```
 
 How the app uses them: `app/lib/core/festival_pack.dart` (asset names, banner copy, flame

@@ -73,6 +73,7 @@ flutter:
     - assets/themes/diwali/
     - assets/themes/pongal/
     - assets/themes/christmas/
+    - assets/themes/valentine/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

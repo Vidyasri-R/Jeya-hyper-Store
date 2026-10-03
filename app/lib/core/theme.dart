@@ -91,10 +91,26 @@ abstract final class Palettes {
     accent: Color(0xFFFFD54F),
   );
 
+  /// Valentine's Day: deep rose and pink.
+  static const valentine = BrandPalette(
+    id: 'valentine',
+    b900: Color(0xFF5A0F2E),
+    b800: Color(0xFF8A1446),
+    b700: Color(0xFFC2185B),
+    b600: Color(0xFFD81B60),
+    b500: Color(0xFFEC407A),
+    b100: Color(0xFFFCE4EC),
+    b50: Color(0xFFFFF0F5),
+    tint: Color(0xFFFFF8FB),
+    header: [Color(0xFF6A0F35), Color(0xFFC2185B)],
+    accent: Color(0xFFFFD1DC),
+  );
+
   static BrandPalette byId(String? id) => switch (id) {
     'diwali' => diwali,
     'pongal' => pongal,
     'christmas' => christmas,
+    'valentine' => valentine,
     _ => standard,
   };
 }

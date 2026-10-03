@@ -44,7 +44,7 @@ Future<void> pumpAt(WidgetTester tester, Widget child, {Size size = const Size(3
 }
 
 void main() {
-  for (final pack in [FestivalPacks.diwali, FestivalPacks.pongal, FestivalPacks.christmas]) {
+  for (final pack in [FestivalPacks.diwali, FestivalPacks.pongal, FestivalPacks.christmas, FestivalPacks.valentine]) {
     group(pack.id, () => _festiveLayout(pack));
   }
 }

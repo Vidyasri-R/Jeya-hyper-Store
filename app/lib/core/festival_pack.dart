@@ -201,10 +201,49 @@ abstract final class FestivalPacks {
     ],
   );
 
+  /// Valentine's Day: roses, hearts and lace on a deep rose night, chocolates by candlelight.
+  static const valentine = FestivalPack(
+    id: 'valentine',
+    dir: 'assets/themes/valentine',
+    greeting: 'Happy Valentine’s Day',
+    question: 'Treats for your loved ones',
+    heroAspect: 480 / 300,
+    flames: [(0.1, 0.6533, 0.0708), (0.9167, 0.7, 0.0667)],
+    halo: 'heart',
+    banners: [
+      FestivalBanner(
+        image: 'assets/themes/valentine/banner_chocolates.webp',
+        tag: 'SAY IT SWEETLY',
+        title: 'Chocolates\n& treats',
+        subtitle: 'For someone special',
+        cta: 'Shop treats',
+        route: '/search?q=chocolate',
+      ),
+      FestivalBanner(
+        image: 'assets/themes/valentine/banner_flowers.webp',
+        tag: 'VALENTINE’S DAY',
+        title: 'Flowers\n& gifts',
+        subtitle: 'Little things that say a lot',
+        cta: 'Explore',
+        route: '/categories',
+        dark: true,
+      ),
+      FestivalBanner(
+        image: 'assets/themes/valentine/banner_sweets.webp',
+        tag: 'SWEETHEART SPECIAL',
+        title: 'Sweets for\nyour sweetheart',
+        subtitle: 'Cakes, sweets & more',
+        cta: 'Shop sweets',
+        route: '/search?q=sweets',
+      ),
+    ],
+  );
+
   static FestivalPack? byId(String? id) => switch (id) {
     'diwali' => diwali,
     'pongal' => pongal,
     'christmas' => christmas,
+    'valentine' => valentine,
     _ => null,
   };
 }

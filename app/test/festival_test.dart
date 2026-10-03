@@ -32,6 +32,12 @@ void main() {
       expect(FestivalPacks.pongal.greetingOn(DateTime(2027, 1, 14)), 'Happy Pongal');
     });
 
+    test("Valentine's Day has its own look", () {
+      final t = FestivalTheme.activeFrom(theme(preset: 'valentine'), now);
+      expect(t?.palette, same(Palettes.valentine));
+      expect(t?.pack?.greetingOn(DateTime(2027, 2, 14)), 'Happy Valentine’s Day');
+    });
+
     test('Pongal has its own look', () {
       final t = FestivalTheme.activeFrom(theme(preset: 'pongal'), now);
       expect(t?.palette, same(Palettes.pongal));
