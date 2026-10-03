@@ -13,9 +13,7 @@ services:
       paths:
         - backend/**
     # --include=dev: tsc/types are devDependencies but NODE_ENV=production is set below.
-    buildCommand: npm ci --include=dev && npm run build && npm prune --omit=dev
-    # Runs before traffic switches to the new build; a failed migration aborts the deploy.
-    preDeployCommand: npm run db:migrate:prod && npm run db:seed:prod
+    buildCommand: npm ci --include=dev && npm run build && npm prune --omit=dev && npm run db:migrate:prod && npm run db:seed:prod
     startCommand: npm start
     healthCheckPath: /health
     envVars:

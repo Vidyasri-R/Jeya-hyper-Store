@@ -2,7 +2,7 @@
  * Applies pending migrations from ./drizzle using the DIRECT (session pooler) URL.
  *
  *   npm run db:migrate          (local, via tsx)
- *   npm run db:migrate:prod     (Render pre-deploy command, from dist/)
+ *   npm run db:migrate:prod     (end of the Render build, from dist/)
  *
  * Takes a session-level advisory lock so two deploys running at once can't
  * apply the same migration twice. That's why this must NOT use the 6543 pooler.
@@ -45,7 +45,7 @@ async function run(): Promise<void> {
   }
 }
 
-// Render pre-deploy step: always finish (see scripts/seed.ts), and never sit on a stuck lock forever.
+// Deploy step (end of the Render build): always finish, and never sit on a stuck lock forever.
 setTimeout(() => {
   logger.fatal('❌ migration still running after 5 minutes — exiting');
   logger.flush?.();
