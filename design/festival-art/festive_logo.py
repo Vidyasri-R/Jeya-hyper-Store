@@ -1,139 +1,161 @@
-"""Festive Jeya app icon: every feather eye of the peacock is lit like a diya flame.
+"""Festival app icons: the everyday Jeya icon, untouched, with the festival's thoranam hung across
+its top — mango leaves and marigolds (Deepavali), aavaram poo (Pongal), a pine garland with
+baubles (Christmas & New Year), roses with little hearts (Valentine's Day).
 
-Writes the Deepavali icon set to app/branding/app_icon/diwali/ (Android launcher mipmaps + iOS
-AppIcon), next to a copy of the everyday set in app/branding/app_icon/standard/. Switch the app
-between them with app/tool/app_icon.sh.
+Writes app/branding/app_icon/<festival>/ (Android launcher mipmaps + iOS AppIcon), next to the
+everyday set in app/branding/app_icon/standard/. Switch the app between them with
+app/tool/app_icon.sh. Needs out/ renders: run `node render.mjs --dir out/icons` after this
+script writes the garland SVGs (it does that itself through sharp).
 """
+import io
+import json
+import math
 import os
+import shutil
+import subprocess
 
-import numpy as np
-from PIL import Image, ImageFilter
-from scipy import ndimage
+from PIL import Image
 
-BRAND = '../../app/assets/brand'
-OUT = 'out'
-os.makedirs(OUT, exist_ok=True)
-
-# eye colours from the edge (0) to the core (1), per festival
-RAMPS = {
-    'diwali': [(0.0, (214, 64, 22)), (0.3, (244, 128, 16)), (0.58, (255, 190, 40)), (0.82, (255, 238, 150)), (1.0, (255, 253, 235))],  # diya flames
-    'pongal': [(0.0, (222, 150, 0)), (0.3, (250, 192, 0)), (0.65, (255, 222, 40)), (1.0, (255, 244, 160))],  # turmeric-and-sun yellow
-    'christmas': [(0.0, (120, 0, 12)), (0.35, (190, 20, 32)), (0.7, (232, 64, 64)), (1.0, (255, 196, 196))],  # holly-berry red
-    'valentine': [(0.0, (150, 10, 70)), (0.35, (215, 40, 110)), (0.7, (245, 110, 160)), (1.0, (255, 214, 230))],  # rose pink
-}
-STOPS = RAMPS['diwali']
-
-
-def ramp(c):
-    c = np.clip(c, 0, 1)
-    out = np.zeros(c.shape + (3,))
-    for (a, ca), (b, cb) in zip(STOPS, STOPS[1:]):
-        m = (c >= a) & (c <= b)
-        t = ((c - a) / (b - a))[m][:, None]
-        out[m] = np.array(ca) * (1 - t) + np.array(cb) * t
-    return out
-
-
-def light_up(src, size_hint, halo=True):
-    """Light the peacock's feather eyes in src (RGBA, transparent or white background)."""
-    px = np.array(src.convert('RGBA')).astype(float)
-    alpha = px[:, :, 3]
-    r, g_, b = px[:, :, 0], px[:, :, 1], px[:, :, 2]
-    whiteish = (r > 200) & (g_ > 200) & (b > 200) & ((np.maximum(np.maximum(r, g_), b) - np.minimum(np.minimum(r, g_), b)) < 24)
-    clear = (alpha < 128) | whiteish
-    lab, n = ndimage.label(clear)
-    border = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]])))
-    min_area = max(10, int(size_hint * size_hint * 0.0002))
-    eyes = [i for i in range(1, n + 1) if i not in border and (lab == i).sum() >= min_area]
-    flame_rgb = np.zeros(px.shape[:2] + (3,))
-    flame_a = np.zeros(px.shape[:2])
-    glow_mask = np.zeros(px.shape[:2])
-    for i in eyes:
-        mask = lab == i
-        ys, xs = np.nonzero(mask)
-        cy, cx = ys.mean(), xs.mean()
-        far = np.argmax((ys - cy) ** 2 + (xs - cx) ** 2)              # the teardrop's point = flame tip
-        ty, tx = ys[far], xs[far]
-        axis = np.array([ty - cy, tx - cx]); axis /= np.linalg.norm(axis) + 1e-6
-        proj = (ys - cy) * axis[0] + (xs - cx) * axis[1]
-        u = (proj - proj.min()) / (proj.max() - proj.min() + 1e-6)     # 0 at the round base, 1 at the tip
-        dist = ndimage.distance_transform_edt(mask)[mask]
-        d = dist / (dist.max() + 1e-6)
-        core = d * 1.25 - u * 0.45 + 0.08
-        flame_rgb[ys, xs] = ramp(core)
-        # soft edge: use how transparent the original pixel was
-        flame_a[ys, xs] = 1.0
-        glow_mask[mask] = 1
-    # anti-alias the flame edge into the feather rim
-    edge = ndimage.binary_dilation(glow_mask > 0, iterations=2) & ~(glow_mask > 0)
-    soft = np.where(whiteish, 1.0, (255 - alpha) / 255.0)
-    flame_a = np.where(edge, np.minimum(soft, 0.9) * (ndimage.uniform_filter(glow_mask, 3) > 0), flame_a)
-    near = ndimage.distance_transform_edt(~(glow_mask > 0))
-    nearest = ndimage.distance_transform_edt(~(glow_mask > 0), return_distances=False, return_indices=True)
-    flame_rgb = np.where(edge[:, :, None], flame_rgb[nearest[0], nearest[1]], flame_rgb)
-
-    base = Image.fromarray(px.astype(np.uint8))
-    # warm glow spilling from the flames onto the feathers
-    glow = Image.fromarray((glow_mask * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(size_hint * 0.012))
-    glow_a = np.array(glow).astype(float) / 255.0 * 0.55 * (alpha / 255.0)
-    g = np.array(base).astype(float)
-    warm = np.array([255, 196, 60], float)
-    g[:, :, :3] = g[:, :, :3] * (1 - glow_a[:, :, None]) + warm * glow_a[:, :, None]
-    # flames on top
-    fa = np.clip(flame_a, 0, 1)[:, :, None]
-    g[:, :, :3] = g[:, :, :3] * (1 - fa) + flame_rgb * fa
-    g[:, :, 3] = np.maximum(g[:, :, 3], fa[:, :, 0] * 255)
-    lit = Image.fromarray(np.clip(g, 0, 255).astype(np.uint8))
-    if not halo:
-        return lit, len(eyes)
-    # faint golden halo around the whole peacock
-    halo_src = Image.fromarray(alpha.astype(np.uint8)).filter(ImageFilter.GaussianBlur(size_hint * 0.02))
-    halo_img = Image.new('RGBA', lit.size, (255, 200, 70, 0))
-    halo_img.putalpha(halo_src.point(lambda v: int(v * 0.35)))
-    return Image.alpha_composite(halo_img, lit), len(eyes)
-
+from svgkit import SVG, f, marigold, mango_leaf
+from header_art import bell
+from pongal_art import aavaram, poolai
+from christmas_art import bauble, bow, pine_branch, warm_light
+from valentine_art import heart, rose, rose_leaf
 
 APP = '../../app'
 ANDROID_RES = f'{APP}/android/app/src/main/res'
 IOS_ICONS = f'{APP}/ios/Runner/Assets.xcassets/AppIcon.appiconset'
 DENSITIES = {'mdpi': 1, 'hdpi': 1.5, 'xhdpi': 2, 'xxhdpi': 3, 'xxxhdpi': 4}
+OUT = 'out/icons'
+os.makedirs(OUT, exist_ok=True)
+
+# The garland is drawn on a 432 × 432 canvas (the xxxhdpi adaptive-icon foreground, 108 dp) and
+# hangs across the top of the visible circle; its rope ends sit just outside the round mask.
+W = 432
+X0, X1, Y0, SAG = 46, 386, 70, 46
+
+
+def _rope(t):
+    cx, cy = (X0 + X1) / 2, Y0 + 2 * SAG
+    x = (1 - t) ** 2 * X0 + 2 * (1 - t) * t * cx + t * t * X1
+    y = (1 - t) ** 2 * Y0 + 2 * (1 - t) * t * cy + t * t * Y0
+    dx = 2 * (1 - t) * (cx - X0) + 2 * t * (X1 - cx)
+    dy = 2 * (1 - t) * (cy - Y0) + 2 * t * (Y0 - cy)
+    return x, y, math.degrees(math.atan2(dy, dx))
+
+
+def _rope_path(colour='#5D4037', width=5):
+    cx, cy = (X0 + X1) / 2, Y0 + 2 * SAG
+    return f'<path d="M {X0},{Y0} Q {f(cx)},{f(cy)} {X1},{Y0}" stroke="{colour}" stroke-width="{width}" fill="none" stroke-linecap="round"/>'
+
+
+def garland(festival):
+    s = SVG(W, W, seed=5)
+    rnd = s.rnd
+    back, mid, front = [], [], []
+    if festival == 'diwali':
+        mid.append(_rope_path())
+        for i in range(9):
+            x, y, ang = _rope(0.08 + i * 0.105)
+            if i % 2 == 0:
+                back.append(mango_leaf(s, x, y + 6, 58, 22, angle=ang + rnd.uniform(-8, 8), tone=i))
+            front.append(marigold(s, x, y, 19 if i % 2 else 17, 'orange' if i % 3 else 'yellow'))
+        x, y, _ = _rope(0.5)
+        front.append(bell(s, x, y + 22, 18))
+    elif festival == 'pongal':
+        mid.append(_rope_path())
+        for i in range(11):
+            x, y, ang = _rope(0.06 + i * 0.088)
+            if i % 2 == 0:
+                back.append(mango_leaf(s, x, y + 6, 56, 21, angle=ang + rnd.uniform(-8, 8), tone=i))
+            front.append(poolai(s, x, y, 12) if i % 3 == 1 else aavaram(s, x, y, 16, rot=rnd.uniform(0, 72)))
+    elif festival == 'christmas':
+        for i in range(60):
+            x, y, ang = _rope((i + 0.5) / 60)
+            back.append(pine_branch(s, x, y, rnd.uniform(30, 40), ang + (180 if i % 2 else 0) + rnd.uniform(-40, 40) * (1 if i % 2 else -1), tone=i))
+        for i in range(7):
+            x, y, _ = _rope(0.14 + i * 0.12)
+            if i % 2 == 0:
+                drop = 22
+                front.append(f'<line x1="{f(x)}" y1="{f(y)}" x2="{f(x)}" y2="{f(y + drop - 10)}" stroke="#E0C080" stroke-width="1.6"/>')
+                front.append(bauble(s, x, y + drop, 13, 'red' if i % 4 == 0 else 'gold'))
+            else:
+                front.append(warm_light(s, x, y + 4, 5))
+        x, y, _ = _rope(0.5)
+        front.append(bow(s, x, y - 2, 16))
+    elif festival == 'valentine':
+        mid.append(_rope_path('#F48FB1', 6))
+        for i in range(10):
+            x, y, ang = _rope(0.07 + i * 0.096)
+            back.append(rose_leaf(s, x, y + 3, 26, ang + (60 if i % 2 else 120)))
+            front.append(rose(s, x, y + 2, 15, 'red' if i % 3 else 'pink'))
+            if i % 3 == 1:
+                front.append(f'<line x1="{f(x)}" y1="{f(y + 12)}" x2="{f(x)}" y2="{f(y + 34)}" stroke="#F8BBD0" stroke-width="1.6"/>')
+                front.append(heart(s, x, y + 42, 18, shadow=False))
+    else:
+        raise ValueError(festival)
+    s.add(''.join(back) + ''.join(mid) + ''.join(front))
+    path = f'{OUT}/garland_{festival}.svg'
+    s.save(path)
+    png = subprocess.run(['/opt/homebrew/opt/node@22/bin/node', '-e', _RENDER, path], capture_output=True, check=True).stdout
+    return Image.open(io.BytesIO(png)).convert('RGBA')
+
+
+_RENDER = """
+const {createRequire}=require('module');const r=createRequire(require('path').resolve('../../backend/package.json'));
+r('sharp')(require('fs').readFileSync(process.argv[1]),{density:72}).png().toBuffer().then(b=>process.stdout.write(b));
+"""
+
+
+def _over(base, layer, size):
+    """Composite the garland (drawn for a 108 dp canvas) onto an icon image of `size` pixels."""
+    g = layer.resize((size, size), Image.LANCZOS)
+    out = base.convert('RGBA').copy()
+    out.alpha_composite(g)
+    return out
 
 
 def icon_sets(festival):
-    import json
-    import shutil
-    global STOPS
-    STOPS = RAMPS[festival]
     std, fest = f'{APP}/branding/app_icon/standard', f'{APP}/branding/app_icon/{festival}'
     shutil.rmtree(fest, ignore_errors=True)
     if not os.path.isdir(std):
-        # everyday set, exactly as the app ships today
         for d in DENSITIES:
             shutil.copytree(f'{ANDROID_RES}/mipmap-{d}', f'{std}/android/mipmap-{d}')
         shutil.copytree(IOS_ICONS, f'{std}/ios/AppIcon.appiconset')
-    # Deepavali set: light the eyes on the largest artwork, scale down for every size
-    fg, n1 = light_up(Image.open(f'{std}/android/mipmap-xxxhdpi/ic_launcher_foreground.png'), 432, halo=False)
-    legacy, n2 = light_up(Image.open(f'{std}/android/mipmap-xxxhdpi/ic_launcher.png'), 192, halo=False)
+    layer = garland(festival)
     for d, k in DENSITIES.items():
-        out = f'{fest}/android/mipmap-{d}'
+        src, out = f'{std}/android/mipmap-{d}', f'{fest}/android/mipmap-{d}'
         os.makedirs(out, exist_ok=True)
-        fg.resize((round(108 * k), round(108 * k)), Image.LANCZOS).save(f'{out}/ic_launcher_foreground.png', optimize=True)
-        legacy.resize((round(48 * k), round(48 * k)), Image.LANCZOS).save(f'{out}/ic_launcher.png', optimize=True)
-        shutil.copy(f'{std}/android/mipmap-{d}/ic_launcher_monochrome.png', f'{out}/ic_launcher_monochrome.png')  # themed icons stay plain
-    master, n3 = light_up(Image.open(f'{std}/ios/AppIcon.appiconset/Icon-App-1024x1024@1x.png'), 1024, halo=False)
-    master = master.convert('RGB')  # App Store icons must not have transparency
+        fg = Image.open(f'{src}/ic_launcher_foreground.png')
+        _over(fg, layer, fg.width).save(f'{out}/ic_launcher_foreground.png', optimize=True)
+        legacy = Image.open(f'{src}/ic_launcher.png')
+        # the legacy icon shows the 72 dp middle of the 108 dp canvas: crop the garland the same way
+        lay = layer.resize((round(legacy.width * 108 / 72),) * 2, Image.LANCZOS)
+        off = (lay.width - legacy.width) // 2
+        cropped = lay.crop((off, off, off + legacy.width, off + legacy.height))
+        mask = legacy.convert('RGBA').split()[3]
+        cropped.putalpha(Image.fromarray(__import__('numpy').minimum(__import__('numpy').array(cropped.split()[3]), __import__('numpy').array(mask))))
+        merged = legacy.convert('RGBA').copy(); merged.alpha_composite(cropped)
+        merged.save(f'{out}/ic_launcher.png', optimize=True)
+        shutil.copy(f'{src}/ic_launcher_monochrome.png', f'{out}/ic_launcher_monochrome.png')  # themed icons stay plain
     out = f'{fest}/ios/AppIcon.appiconset'
     os.makedirs(out, exist_ok=True)
     shutil.copy(f'{std}/ios/AppIcon.appiconset/Contents.json', f'{out}/Contents.json')
+    master = Image.open(f'{std}/ios/AppIcon.appiconset/Icon-App-1024x1024@1x.png').convert('RGBA')
+    lay = layer.resize((round(1024 * 108 / 72),) * 2, Image.LANCZOS)
+    off = (lay.width - 1024) // 2
+    master.alpha_composite(lay.crop((off, off, off + 1024, off + 1024)))
+    master = master.convert('RGB')  # App Store icons must not have transparency
     for img in json.load(open(f'{out}/Contents.json'))['images']:
-        if 'filename' not in img:
-            continue
-        px_size = round(float(img['size'].split('x')[0]) * float(img['scale'].rstrip('x')))
-        master.resize((px_size, px_size), Image.LANCZOS).save(f'{out}/{img["filename"]}', optimize=True)
+        if 'filename' in img:
+            px = round(float(img['size'].split('x')[0]) * float(img['scale'].rstrip('x')))
+            master.resize((px, px), Image.LANCZOS).save(f'{out}/{img["filename"]}', optimize=True)
     master.resize((512, 512), Image.LANCZOS).save(f'{fest}/play_store_512.png', optimize=True)
-    print(festival, 'eyes lit — foreground', n1, 'legacy', n2, 'iOS', n3)
+    print(festival, 'icon set written')
 
+
+FESTIVALS = ('diwali', 'pongal', 'christmas', 'valentine')
 
 if __name__ == '__main__':
-    for festival in RAMPS:
+    for festival in FESTIVALS:
         icon_sets(festival)

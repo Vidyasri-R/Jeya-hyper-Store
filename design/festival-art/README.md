@@ -9,7 +9,7 @@ python3 header_art.py      # header + splash backgrounds, thoranam, diyas on ran
 python3 banners.py         # home banners (sweets & savouries, pooja, gift hampers)
 python3 small_art.py       # button sparkle tile, section diya, petals
 node render.mjs            # → out/webp/*.webp (needs backend/node_modules for sharp)
-python3 festive_logo.py    # festival app icons (Deepavali flames, Pongal sun) → app/branding/app_icon/<id>/
+python3 festive_logo.py    # festival app icons: the everyday logo with the festival's thoranam → app/branding/app_icon/<id>/
 cp out/webp/*.webp ../../app/assets/themes/diwali/
 
 python3 pongal_art.py      # Pongal: header, thoranam (aavaram poo), pongal pot hero, splash, sun

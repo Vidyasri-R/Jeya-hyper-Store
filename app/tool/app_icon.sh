@@ -1,9 +1,9 @@
 #!/bin/bash
 # Swap the home-screen app icon (Android launcher + iOS) for the next build:
-#   tool/app_icon.sh diwali     # Deepavali icon (feather eyes lit like diyas)
-#   tool/app_icon.sh pongal     # Pongal icon (feather eyes turmeric-and-sun yellow)
-#   tool/app_icon.sh christmas  # Christmas & New Year icon (feather eyes holly-berry red)
-#   tool/app_icon.sh valentine  # Valentine's Day icon (feather eyes rose pink)
+#   tool/app_icon.sh diwali     # everyday logo with a mango-leaf and marigold thoranam
+#   tool/app_icon.sh pongal     # … with an aavaram poo thoranam
+#   tool/app_icon.sh christmas  # … with a pine garland and baubles
+#   tool/app_icon.sh valentine  # … with a rose garland and little hearts
 #   tool/app_icon.sh standard   # everyday icon
 # Phones get the new icon with the next app update (Android only changes an icon in place
 # through an update; swapping it from inside the app removes it from many home screens).
