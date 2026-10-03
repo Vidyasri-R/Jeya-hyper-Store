@@ -104,6 +104,16 @@ export function buildMetric(
 }
 
 let cfR2: { at: number; usage: R2Usage } | null = null;
+
+/** Names of report queries still running — reported if the monitor step times out. */
+const inFlight = new Set<string>();
+function traced<T>(label: string, work: Promise<T>): Promise<T> {
+  inFlight.add(label);
+  return work.finally(() => inFlight.delete(label));
+}
+export function unfinishedReportQueries(): string[] {
+  return [...inFlight];
+}
 let alertSummaryCache: { at: number; value: { open: number; worst: AlertLevel | null } } | null = null;
 
 function describe(m: UsageMetric): string {
@@ -153,15 +163,15 @@ export const usageService = {
     const limits = await usageLimits();
     // Fold not-yet-flushed traffic in, so the screen is current to the second (deployed server
     // only: a laptop running the API against the same database must not add its traffic).
-    if (isProduction) await usageService.flushTraffic().catch((error: unknown) => logger.warn({ err: error }, 'usage flush before report failed'));
+    if (isProduction) await traced('report flush', usageService.flushTraffic()).catch((error: unknown) => logger.warn({ err: error }, 'usage flush before report failed'));
     const [rows, sizes, fees, syncRows, openAlerts, tables, backups] = await Promise.all([
-      usageRepository.range(db, month.firstDay, month.lastDay),
-      usageRepository.latestSizes(db),
-      usageRepository.razorpayFees(db, month.start),
-      usageRepository.syncHealth(db),
-      usageRepository.openAlerts(db),
-      usageRepository.largestTables(db, 6),
-      backupService.status(),
+      traced('usage range', usageRepository.range(db, month.firstDay, month.lastDay)),
+      traced('latest sizes', usageRepository.latestSizes(db)),
+      traced('razorpay fees', usageRepository.razorpayFees(db, month.start)),
+      traced('sync health', usageRepository.syncHealth(db)),
+      traced('open alerts', usageRepository.openAlerts(db)),
+      traced('largest tables', usageRepository.largestTables(db, 6)),
+      traced('backup status', backupService.status()),
     ]);
 
     const sum = (pick: (row: (typeof rows)[number]) => number) => rows.reduce((total, row) => total + Number(pick(row)), 0);
@@ -308,7 +318,7 @@ export const usageService = {
 
   /** Compare usage with the limits; open / escalate / resolve alerts and notify. */
   async evaluate(): Promise<{ open: number }> {
-    const report = await usageService.report();
+    const report = await traced('report', usageService.report());
     const checks: { metric: string; level: Level; title: string; message: string; data: unknown }[] = [];
     for (const service of report.services) {
       for (const m of service.metrics) {
@@ -324,7 +334,7 @@ export const usageService = {
     checks.push({ metric: 'health.catalog_sync', level: report.health.catalogSync.level, title: 'Catalog sync is failing', message: report.health.catalogSync.message, data: null });
     checks.push({ metric: 'health.backups', level: report.health.backups.level, title: 'Database backups need attention', message: report.health.backups.message, data: null });
 
-    const open = new Map((await usageRepository.openAlerts(db)).map((alert) => [alert.metric, alert]));
+    const open = new Map((await traced('open alerts (evaluate)', usageRepository.openAlerts(db))).map((alert) => [alert.metric, alert]));
     const toNotify: { title: string; message: string; level: AlertLevel; id: number }[] = [];
 
     for (const check of checks) {

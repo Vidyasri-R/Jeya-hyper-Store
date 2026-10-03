@@ -4,7 +4,8 @@ import { syncState } from '../../db/schema';
 import { backupService } from '../backup/backup.service';
 import { syncStateRepository } from '../sync/sync-state.repository';
 import { runHousekeeping } from './housekeeping';
-import { istDay, usageService } from './usage.service';
+import { traffic } from '../../infra/traffic';
+import { istDay, unfinishedReportQueries, usageService } from './usage.service';
 
 const TICK_MS = 5 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
@@ -68,8 +69,12 @@ async function tick(): Promise<void> {
       try {
         await withTimeout(work(), ms, label);
       } catch (error) {
-        problems.push(error instanceof Error ? error.message : String(error));
-        logger.error({ err: error, step: label }, 'usage monitor step failed');
+        const stuck = unfinishedReportQueries();
+        const sockets = traffic.openSockets();
+        problems.push(
+          `${error instanceof Error ? error.message : String(error)}${stuck.length ? ` [unfinished: ${stuck.join(', ')}]` : ''} [db sockets: ${sockets.db}]`,
+        );
+        logger.error({ err: error, step: label, stuck, sockets }, 'usage monitor step failed');
       }
     };
     await step('traffic flush', 30_000, () => usageService.flushTraffic());
