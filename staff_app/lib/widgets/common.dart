@@ -7,15 +7,16 @@ import '../core/theme.dart';
 
 final _time = DateFormat('h:mm a');
 final _dayTime = DateFormat('d MMM, h:mm a');
+final _day = DateFormat('d MMM');
 
-/// "5 min ago", "2:15 PM" (today), "3 Oct, 2:15 PM".
-String ago(DateTime at) {
+/// "5 min ago", "2:15 PM" (today), "3 Oct, 2:15 PM" — or just "3 Oct" when [short] (order cards).
+String ago(DateTime at, {bool short = false}) {
   final diff = DateTime.now().difference(at);
   if (diff.inSeconds < 60) return 'just now';
   if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
   final now = DateTime.now();
   if (at.year == now.year && at.month == now.month && at.day == now.day) return _time.format(at);
-  return _dayTime.format(at);
+  return short ? _day.format(at) : _dayTime.format(at);
 }
 
 String dayTime(DateTime at) => _dayTime.format(at);

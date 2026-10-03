@@ -388,10 +388,16 @@ class OrderCardTile extends StatelessWidget {
                   Text('#${order.shortNumber}', style: text.titleLarge),
                   const SizedBox(width: 10),
                   StatusChip(order.status, dense: true),
-                  const Spacer(),
-                  Text(
-                    ago(order.placedAt ?? order.createdAt),
-                    style: text.labelMedium?.copyWith(color: late ? AppColors.offerRed : AppColors.inkMuted, fontWeight: late ? FontWeight.w700 : null),
+                  const SizedBox(width: 8),
+                  // An order left over from an earlier day shows its date; never pushes the row off a phone.
+                  Expanded(
+                    child: Text(
+                      ago(order.placedAt ?? order.createdAt, short: true),
+                      textAlign: TextAlign.end,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.labelMedium?.copyWith(color: late ? AppColors.offerRed : AppColors.inkMuted, fontWeight: late ? FontWeight.w700 : null),
+                    ),
                   ),
                 ],
               ),
