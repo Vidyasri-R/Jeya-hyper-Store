@@ -1,0 +1,23 @@
+{
+ "orders": [
+  {
+   "id": "4144418e-1f03-4d4e-93d7-0f88b8ee941b",
+   "orderNumber": "JHS-261003-1016",
+   "status": "ready_for_delivery",
+   "paymentMethod": "cod",
+   "paymentStatus": "pending",
+   "totalAmount": "267.50",
+   "finalAmount": "254.30",
+   "recipientName": "App Reviewer",
+   "phone": "919999999999",
+   "area": "Demo Address, Near Jeya Hyper Store, 620017",
+   "hasNote": true,
+   "itemCount": 1,
+   "placedAt": "2026-10-03T01:50:37.756Z",
+   "createdAt": "2026-10-03T01:50:37.199Z",
+   "updatedAt": "2026-10-03T01:52:21.657Z",
+   "amountDue": "254.30"
+  }
+ ],
+ "nextCursor": null
+}

@@ -260,6 +260,7 @@ class Blocker {
   final Map<String, dynamic> raw;
 
   String get message => switch (reason) {
+        'store_paused' => _str(raw['message'], "We're not taking orders right now. Please try again later."),
         'cart_empty' => 'Your cart is empty',
         'cart_needs_review' => 'Some items in your cart changed. Please review your cart.',
         'address_not_serviceable' => raw['why'] == 'out_of_range'

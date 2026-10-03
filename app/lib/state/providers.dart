@@ -102,6 +102,17 @@ final isSignedInProvider = Provider((ref) => ref.watch(authProvider) is SignedIn
 
 final categoriesProvider = FutureProvider<List<Category>>((ref) => ref.watch(repositoryProvider).categories());
 
+/// Admin → Store settings → Pause orders. Null when orders are open.
+final storePausedMessageProvider = FutureProvider<String?>((ref) async {
+  final config = await ref.watch(repositoryProvider).publicConfig();
+  final pause = config['app.maintenance'];
+  if (pause is Map && pause['enabled'] == true) {
+    final message = (pause['message'] as String?)?.trim() ?? '';
+    return message.isEmpty ? "We're not taking orders right now. Please check back soon." : message;
+  }
+  return null;
+});
+
 final productProvider = FutureProvider.family<Product, String>((ref, slug) => ref.watch(repositoryProvider).product(slug));
 
 typedef ProductQuery = ({String? category, String? q, String? sort, bool inStock});

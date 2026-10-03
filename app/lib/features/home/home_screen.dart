@@ -21,6 +21,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final categories = ref.watch(categoriesProvider);
     final products = ref.watch(_homeProductsProvider);
+    final paused = ref.watch(storePausedMessageProvider).valueOrNull;
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -29,11 +30,25 @@ class HomeScreen extends ConsumerWidget {
         onRefresh: () async {
           ref.invalidate(categoriesProvider);
           ref.invalidate(_homeProductsProvider);
+          ref.invalidate(storePausedMessageProvider);
           await ref.read(_homeProductsProvider.future);
         },
         child: CustomScrollView(
           slivers: [
             const SliverToBoxAdapter(child: HomeHeader()),
+            if (paused != null)
+              SliverToBoxAdapter(
+                child: Container(
+                  margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(color: AppColors.amberSoft, borderRadius: BorderRadius.circular(AppRadius.md)),
+                  child: Row(children: [
+                    const Icon(Icons.storefront_outlined, color: Color(0xFF8A5A00)),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(paused, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: const Color(0xFF8A5A00), fontWeight: FontWeight.w600))),
+                  ]),
+                ),
+              ),
             SliverToBoxAdapter(
               child: categories.when(
                 data: (list) => _QuickCategories(roots: list),

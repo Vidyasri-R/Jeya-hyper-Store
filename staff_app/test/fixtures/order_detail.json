@@ -1,0 +1,86 @@
+{
+ "id": "4144418e-1f03-4d4e-93d7-0f88b8ee941b",
+ "orderNumber": "JHS-261003-1016",
+ "status": "ready_for_delivery",
+ "paymentMethod": "cod",
+ "paymentStatus": "pending",
+ "subtotal": "247.50",
+ "deliveryFee": "20.00",
+ "totalAmount": "267.50",
+ "finalAmount": "254.30",
+ "amountToCollect": "254.30",
+ "customerNote": "Please ring the bell twice",
+ "customer": {
+  "name": "App Reviewer",
+  "phone": "919999999999"
+ },
+ "deliveryAddress": {
+  "city": "Tiruchirappalli",
+  "line1": "Demo Address, Near Jeya Hyper Store",
+  "line2": "Thillai Nagar",
+  "phone": "919999999999",
+  "state": "Tamil Nadu",
+  "pincode": "620017",
+  "landmark": null,
+  "latitude": "10.814500",
+  "longitude": "78.637200",
+  "recipientName": "App Reviewer"
+ },
+ "mapsUrl": "https://www.google.com/maps/search/?api=1&query=10.814500,78.637200",
+ "items": [
+  {
+   "productId": 40,
+   "name": "Loose Toor Dal",
+   "itemCode": "MK1037",
+   "barcode": null,
+   "unit": "kg",
+   "packSize": null,
+   "isLoose": true,
+   "imageUrl": null,
+   "quantity": "1.5",
+   "packedQuantity": "1.42",
+   "unitPrice": "165.00",
+   "mrp": "165.00",
+   "totalPrice": "247.50"
+  }
+ ],
+ "history": [
+  {
+   "status": "placed",
+   "note": "Cash on delivery",
+   "at": "2026-10-03T01:50:37.199Z",
+   "by": "Customer"
+  },
+  {
+   "status": "packing",
+   "note": null,
+   "at": "2026-10-03T01:51:40.899Z",
+   "by": "QA Admin"
+  },
+  {
+   "status": "ready_for_delivery",
+   "note": "Packed less: Loose Toor Dal: 1.42 of 1.5. New total ₹254.30",
+   "at": "2026-10-03T01:52:21.399Z",
+   "by": "QA Admin"
+  }
+ ],
+ "payments": [],
+ "refunds": [],
+ "cod": {
+  "collectedAmount": null,
+  "collectedAt": null
+ },
+ "cancelledReason": null,
+ "placedAt": "2026-10-03T01:50:37.756Z",
+ "deliveredAt": null,
+ "cancelledAt": null,
+ "createdAt": "2026-10-03T01:50:37.199Z",
+ "actions": {
+  "next": {
+   "to": "out_for_delivery",
+   "label": "Out for delivery"
+  },
+  "canCancel": true,
+  "isAdmin": true
+ }
+}

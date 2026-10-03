@@ -20,6 +20,7 @@ export const PAYMENT_HOLD_MS = 15 * 60 * 1000;
 const CUSTOMER_CANCELLABLE: OrderStatus[] = ['pending_payment', 'placed'];
 
 type Blocker =
+  | { reason: 'store_paused'; message: string }
   | { reason: 'cart_empty' }
   | { reason: 'cart_needs_review'; items: { productId: number; name: string; issue: string; suggestedQuantity: string | null }[] }
   | { reason: 'address_not_serviceable'; pincode: string; why: 'out_of_range' | 'pincode_not_served'; distanceKm: number | null; maxDistanceKm: number }
@@ -45,6 +46,11 @@ async function evaluate(executor: Transaction | typeof db, userId: string, targe
   const summary = summarize(lines);
 
   const blockers: Blocker[] = [];
+  // Admin → Store settings → Pause orders (holidays, stock-taking): no checkout until it's lifted.
+  const pause = await appConfigService.getObject(CONFIG_KEYS.MAINTENANCE, { enabled: false, message: '' });
+  if (pause.enabled === true) {
+    blockers.push({ reason: 'store_paused', message: String(pause.message || "We're not taking orders right now. Please try again later.") });
+  }
   if (lines.length === 0) blockers.push({ reason: 'cart_empty' });
   const flagged = lines.filter((line) => line.issue !== null);
   if (flagged.length > 0) {
@@ -101,6 +107,7 @@ function orderNumber(seq: number, at: Date): string {
 
 function blockerError(blocker: Blocker): AppError {
   const messages: Record<Blocker['reason'], string> = {
+    store_paused: blocker.reason === 'store_paused' ? blocker.message : '',
     cart_empty: 'Your cart is empty',
     cart_needs_review: 'Some items in your cart changed. Please review your cart.',
     address_not_serviceable: "We don't deliver to this pincode yet",

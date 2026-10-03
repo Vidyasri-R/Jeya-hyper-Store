@@ -227,6 +227,14 @@ async function main() {
     check('settings write validated (same values written back)', write.status === 200, write.json);
     const badRules = await call('PUT', '/v1/admin/settings/delivery.rules', { token: adminToken, body: { value: { tiers: [] } } });
     check('invalid delivery rules refused (422)', badRules.status === 422, badRules.json);
+    const pauseBefore = settings.json.settings?.['app.maintenance'];
+    const paused = await call('PUT', '/v1/admin/settings/app.maintenance', { token: adminToken, body: { value: { enabled: true, message: 'Closed for Pongal (smoke test)' } } });
+    try {
+      const pausedQuote = await call('POST', '/v1/checkout/quote', { token: customer, body: { addressId: address!.id } });
+      check('paused store blocks checkout with its message', paused.status === 200 && pausedQuote.json.quote?.blockers?.[0]?.reason === 'store_paused' && pausedQuote.json.quote?.canPlaceOrder === false, pausedQuote.json);
+    } finally {
+      await call('PUT', '/v1/admin/settings/app.maintenance', { token: adminToken, body: { value: pauseBefore ?? { enabled: false, message: '' } } });
+    }
     const dashboard = await call('GET', '/v1/admin/dashboard?days=7', { token: adminToken });
     check('sales dashboard', dashboard.status === 200 && dashboard.json.totals && Array.isArray(dashboard.json.topProducts), dashboard.json);
     const usage = await call('POST', '/v1/admin/usage/refresh', { token: adminToken });

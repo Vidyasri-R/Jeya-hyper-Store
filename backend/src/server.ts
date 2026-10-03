@@ -1,5 +1,5 @@
 import { createApp } from './app';
-import { env } from './config/env';
+import { env, isProduction } from './config/env';
 import { logger } from './config/logger';
 import { closeDb } from './db/client';
 import { traffic } from './infra/traffic';
@@ -13,7 +13,9 @@ const server = createApp().listen(env.PORT, () => {
   logger.info({ port: env.PORT, env: env.NODE_ENV }, '🚀 Jeya API listening');
   syncScheduler.start();
   reservationSweeper.start();
-  usageScheduler.start();
+  // Only the deployed server meters Render/Supabase usage — a laptop running `npm run dev`
+  // against the same database must not add its traffic to the production bill estimate.
+  if (isProduction) usageScheduler.start();
 });
 
 // Bytes sent through Render's proxy ≈ Render outbound bandwidth (5 GB/month on Hobby).
