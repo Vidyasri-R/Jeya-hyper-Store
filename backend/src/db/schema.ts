@@ -17,6 +17,7 @@ import {
   boolean,
   check,
   customType,
+  date,
   index,
   integer,
   jsonb,
@@ -104,6 +105,11 @@ export const gofrugalSyncStatus = pgEnum('gofrugal_sync_status', [
 
 export const syncRunStatus = pgEnum('sync_run_status', ['idle', 'running', 'success', 'failed']);
 
+/** Back-office roles (Jeya Staff app) — separate from customer accounts. */
+export const staffRole = pgEnum('staff_role', ['staff', 'admin']);
+
+export const alertLevel = pgEnum('alert_level', ['info', 'warning', 'critical']);
+
 /* ───────────────────────────── Users & auth ───────────────────────────── */
 
 export const users = pgTable(
@@ -174,6 +180,61 @@ export const otpRequests = pgTable(
     index('otp_requests_phone_created_idx').on(t.phone, t.createdAt.desc()),
     index('otp_requests_ip_created_idx').on(t.ipAddress, t.createdAt.desc()),
     check('otp_requests_attempts_ck', sql`${t.attempts} >= 0`),
+  ],
+);
+
+/* ───────────────────────────── Staff (Jeya Staff app) ───────────────────────────── */
+
+/**
+ * Store staff and admins. Deliberately separate from `users` (customers): different
+ * login (username + password), different JWT audience, no customer data mixed in.
+ */
+export const staffUsers = pgTable(
+  'staff_users',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    /** Lower-case login name, e.g. "ravi.packing". */
+    username: varchar({ length: 40 }).notNull(),
+    name: varchar({ length: 120 }).notNull(),
+    phone: varchar({ length: 15 }),
+    role: staffRole().notNull().default('staff'),
+    /** scrypt$N$r$p$salt$hash — never the password itself. */
+    passwordHash: text().notNull(),
+    /** Set when an admin creates the account or resets the password. */
+    mustChangePassword: boolean().notNull().default(true),
+    passwordChangedAt: tstz(),
+    isActive: boolean().notNull().default(true),
+    failedLoginCount: smallint().notNull().default(0),
+    lockedUntil: tstz(),
+    lastLoginAt: tstz(),
+    createdBy: uuid().references((): AnyPgColumn => staffUsers.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex('staff_users_username_uq').on(t.username),
+    check('staff_users_username_ck', sql`${t.username} ~ '^[a-z0-9][a-z0-9._-]{2,39}$'`),
+    check('staff_users_failed_ck', sql`${t.failedLoginCount} >= 0`),
+  ],
+);
+
+export const staffSessions = pgTable(
+  'staff_sessions',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    staffId: uuid()
+      .notNull()
+      .references(() => staffUsers.id, { onDelete: 'cascade' }),
+    refreshTokenHash: varchar({ length: 64 }).notNull(),
+    deviceInfo: varchar({ length: 255 }),
+    ipAddress: varchar({ length: 45 }),
+    expiresAt: tstz().notNull(),
+    revokedAt: tstz(),
+    lastUsedAt: tstz(),
+    createdAt: tstz().notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('staff_sessions_token_hash_uq').on(t.refreshTokenHash),
+    index('staff_sessions_staff_idx').on(t.staffId),
   ],
 );
 
@@ -414,6 +475,10 @@ export const orders = pgTable(
     receiptSentAt: tstz(),
 
     cancelledReason: varchar({ length: 255 }),
+    /** COD: cash the delivery staff confirmed collecting. */
+    codCollectedAmount: money(),
+    codCollectedAt: tstz(),
+    codCollectedBy: uuid().references(() => staffUsers.id, { onDelete: 'set null' }),
     placedAt: tstz(),
     deliveredAt: tstz(),
     cancelledAt: tstz(),
@@ -492,8 +557,10 @@ export const orderStatusHistory = pgTable(
       .references(() => orders.id, { onDelete: 'cascade' }),
     fromStatus: orderStatus(),
     toStatus: orderStatus().notNull(),
-    /** NULL = system (webhook, sweeper, sync worker). */
+    /** Customer who made the change (place / cancel). */
     changedBy: uuid().references(() => users.id, { onDelete: 'set null' }),
+    /** Staff member who made the change. Both NULL = system (webhook, sweeper, sync). */
+    changedByStaff: uuid().references(() => staffUsers.id, { onDelete: 'set null' }),
     note: varchar({ length: 500 }),
     createdAt: tstz().notNull().defaultNow(),
   },
@@ -520,6 +587,9 @@ export const payments = pgTable(
     errorCode: varchar({ length: 64 }),
     errorDescription: text(),
     capturedAt: tstz(),
+    /** Gateway's charge for this payment and the GST on it (from the captured payment entity). */
+    gatewayFee: money(),
+    gatewayTax: money(),
     ...timestamps,
   },
   (t) => [
@@ -615,6 +685,58 @@ export const appConfig = pgTable('app_config', {
     .$onUpdate(() => new Date()),
 });
 
+/* ───────────────────────────── Usage & alerts (free-tier budget) ───────────────────────────── */
+
+/**
+ * One row per IST calendar day. Traffic columns are added to all day (wire bytes, TLS
+ * included — see infra/traffic.ts); size columns hold the latest sample of the day.
+ */
+export const usageDaily = pgTable('usage_daily', {
+  day: date({ mode: 'string' }).primaryKey(),
+  /** Supabase → API (Supabase egress quota). */
+  dbEgressBytes: bigint({ mode: 'number' }).notNull().default(0),
+  /** API → Supabase (counts toward Render outbound). */
+  dbIngressBytes: bigint({ mode: 'number' }).notNull().default(0),
+  /** API → clients via Render's proxy (Render outbound). */
+  httpOutBytes: bigint({ mode: 'number' }).notNull().default(0),
+  httpInBytes: bigint({ mode: 'number' }).notNull().default(0),
+  httpRequests: integer().notNull().default(0),
+  /** API → R2 uploads (Render outbound) and the Class A operations we made. */
+  r2UploadBytes: bigint({ mode: 'number' }).notNull().default(0),
+  r2ClassAOps: integer().notNull().default(0),
+  dbSizeBytes: bigint({ mode: 'number' }),
+  r2StorageBytes: bigint({ mode: 'number' }),
+  r2ObjectCount: integer(),
+  peakRssBytes: bigint({ mode: 'number' }),
+  updatedAt: tstz()
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+/** Budget / health alerts for admins. At most one open (unresolved) alert per metric. */
+export const adminAlerts = pgTable(
+  'admin_alerts',
+  {
+    id: bigint({ mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+    metric: varchar({ length: 64 }).notNull(),
+    level: alertLevel().notNull(),
+    title: varchar({ length: 160 }).notNull(),
+    message: varchar({ length: 1000 }).notNull(),
+    data: jsonb(),
+    /** Last time this alert was pushed out (email); critical alerts repeat daily. */
+    notifiedAt: tstz(),
+    resolvedAt: tstz(),
+    acknowledgedAt: tstz(),
+    acknowledgedBy: uuid().references(() => staffUsers.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex('admin_alerts_open_metric_uq').on(t.metric).where(sql`${t.resolvedAt} IS NULL`),
+    index('admin_alerts_created_idx').on(t.createdAt.desc()),
+  ],
+);
+
 /* ───────────────────────────── Relations (for db.query.*) ───────────────────────────── */
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -665,8 +787,17 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
   product: one(products, { fields: [orderItems.productId], references: [products.id] }),
 }));
 
+export const staffUsersRelations = relations(staffUsers, ({ many }) => ({
+  sessions: many(staffSessions),
+}));
+
+export const staffSessionsRelations = relations(staffSessions, ({ one }) => ({
+  staff: one(staffUsers, { fields: [staffSessions.staffId], references: [staffUsers.id] }),
+}));
+
 export const orderStatusHistoryRelations = relations(orderStatusHistory, ({ one }) => ({
   order: one(orders, { fields: [orderStatusHistory.orderId], references: [orders.id] }),
+  changedByStaffUser: one(staffUsers, { fields: [orderStatusHistory.changedByStaff], references: [staffUsers.id] }),
   changedByUser: one(users, { fields: [orderStatusHistory.changedBy], references: [users.id] }),
 }));
 
@@ -704,6 +835,12 @@ export type PaymentWebhookEvent = typeof paymentWebhookEvents.$inferSelect;
 export type Refund = typeof refunds.$inferSelect;
 export type SyncState = typeof syncState.$inferSelect;
 export type AppConfig = typeof appConfig.$inferSelect;
+export type StaffUser = typeof staffUsers.$inferSelect;
+export type NewStaffUser = typeof staffUsers.$inferInsert;
+export type StaffRole = (typeof staffRole.enumValues)[number];
+export type UsageDaily = typeof usageDaily.$inferSelect;
+export type AdminAlert = typeof adminAlerts.$inferSelect;
+export type AlertLevel = (typeof alertLevel.enumValues)[number];
 
 export type OrderStatus = (typeof orderStatus.enumValues)[number];
 export type PaymentStatus = (typeof paymentStatus.enumValues)[number];

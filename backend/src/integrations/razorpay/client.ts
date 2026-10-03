@@ -34,6 +34,9 @@ export type RazorpayPayment = {
   error_code: string | null;
   error_description: string | null;
   created_at: number;
+  /** Razorpay's charge incl. GST, and the GST part — paise; set once captured. */
+  fee?: number | null;
+  tax?: number | null;
 };
 
 export type RazorpayRefund = { id: string; payment_id: string; amount: number; status: 'pending' | 'processed' | 'failed' };

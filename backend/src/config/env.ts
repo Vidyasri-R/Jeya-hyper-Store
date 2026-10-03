@@ -111,6 +111,27 @@ const envSchema = z.object({
     .url()
     .transform((value) => value.replace(/\/+$/, ''))
     .optional(),
+
+  // ─── Usage & billing monitor (all optional) ───
+  /** Cloudflare API token with "Account Analytics: Read" → exact R2 storage + Class A/B counts. */
+  CLOUDFLARE_API_TOKEN: z.string().min(20).optional(),
+  /** Who gets budget/health alert emails, comma-separated. Needs the SMTP_* settings too. */
+  ALERT_EMAILS: z
+    .string()
+    .optional()
+    .transform((value) =>
+      (value ?? '')
+        .split(',')
+        .map((email) => email.trim())
+        .filter(Boolean),
+    )
+    .pipe(z.array(z.email('ALERT_EMAILS must be comma-separated email addresses'))),
+  /** e.g. Gmail: smtp.gmail.com, port 465, your Gmail address + a Google "App password". */
+  SMTP_HOST: z.string().min(3).optional(),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(465),
+  SMTP_USER: z.string().min(3).optional(),
+  SMTP_PASS: z.string().min(8).optional(),
+  SMTP_FROM: z.string().min(3).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

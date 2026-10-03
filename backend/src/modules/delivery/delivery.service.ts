@@ -30,6 +30,8 @@ const rulesSchema = z.object({
 });
 
 export type DeliveryRules = z.infer<typeof rulesSchema>;
+/** Same validation for admin edits as for reads. */
+export const deliveryRulesSchema = rulesSchema;
 
 /** Jeya Hyper Store, Trichy (from the store's Google Maps pin). Tiers are PLACEHOLDERS until the store confirms. */
 export const DEFAULT_DELIVERY_RULES: DeliveryRules = {

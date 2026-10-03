@@ -8,6 +8,7 @@ import { errorHandler, notFoundHandler } from './common/error-handler';
 import { env } from './config/env';
 import { logger } from './config/logger';
 import { pingDb } from './db/client';
+import { traffic } from './infra/traffic';
 import { razorpayWebhookHandler } from './modules/payments/payments.routes';
 import { v1Router } from './routes';
 
@@ -17,6 +18,10 @@ export function createApp(): Express {
   // Render terminates TLS at its proxy; needed for correct req.ip (OTP rate limiting).
   app.set('trust proxy', 1);
   app.disable('x-powered-by');
+  app.use((_req, _res, next) => {
+    traffic.countRequest();
+    next();
+  });
 
   app.use(
     pinoHttp({

@@ -8,6 +8,7 @@ import { catalogRouter } from './modules/catalog/catalog.routes';
 import { deliveryRouter } from './modules/delivery/delivery.routes';
 import { checkoutRouter, ordersRouter } from './modules/orders/orders.routes';
 import { orderPaymentRouter } from './modules/payments/payments.routes';
+import { staffRouter } from './modules/staff/staff.routes';
 import { meRouter } from './modules/users/users.routes';
 
 /** Versioned API — the app pins /v1, so breaking changes go to /v2 without a forced update. */
@@ -22,5 +23,6 @@ v1Router.use('/cart', cartRouter);
 v1Router.use('/checkout', checkoutRouter);
 v1Router.use('/orders/:id/payment', orderPaymentRouter);
 v1Router.use('/orders', ordersRouter);
+v1Router.use('/staff', staffRouter);
 v1Router.use('/admin', adminRouter);
 v1Router.use('/', catalogRouter);

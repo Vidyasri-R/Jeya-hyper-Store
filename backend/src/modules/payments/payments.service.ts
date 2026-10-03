@@ -6,6 +6,7 @@ import { logger } from '../../config/logger';
 import { db, type Transaction } from '../../db/client';
 import { orderItems, orders, users, type Order, type PaymentMethod } from '../../db/schema';
 import { razorpay, razorpayConfigured, type RazorpayPayment } from '../../integrations/razorpay/client';
+import { orderEvents } from '../orders/order-events';
 import { ordersRepository } from '../orders/orders.repository';
 import { paymentsRepository } from './payments.repository';
 
@@ -47,6 +48,8 @@ async function applyCaptured(providerOrderId: string, payment: RazorpayPayment):
       providerPaymentId: payment.id,
       method: mapMethod(payment.method),
       capturedAt: new Date((payment.created_at ?? Date.now() / 1000) * 1000),
+      gatewayFee: typeof payment.fee === 'number' ? fromPaise(payment.fee) : null,
+      gatewayTax: typeof payment.tax === 'number' ? fromPaise(payment.tax) : null,
     });
 
     const refundAll = (reason: string): { order: Order; refund: RefundRequest } => ({
@@ -100,6 +103,7 @@ async function applyCaptured(providerOrderId: string, payment: RazorpayPayment):
     return refundAll(`Payment captured for a ${order.orderStatus} order`);
   });
 
+  orderEvents.bump();
   if (result.refund) await issueRefund(result.refund);
   return result;
 }
@@ -118,12 +122,17 @@ async function issueRefund(request: RefundRequest): Promise<void> {
 
   try {
     const result = await razorpay.refund(request.providerPaymentId, request.amountPaise, { orderId: request.orderId, reason: request.reason.slice(0, 200) });
+    const payment = await paymentsRepository.findById(db, request.paymentId);
+    const partial = payment !== null && request.amountPaise < toPaise(payment.amount);
     await db.transaction(async (tx) => {
       await paymentsRepository.updateRefund(tx, refund.id, {
         providerRefundId: result.id,
         status: result.status === 'failed' ? 'failed' : 'processed',
       });
-      await tx.update(orders).set({ paymentStatus: 'refunded' }).where(eq(orders.id, request.orderId));
+      await tx
+        .update(orders)
+        .set({ paymentStatus: partial ? 'partially_refunded' : 'refunded' })
+        .where(eq(orders.id, request.orderId));
     });
     logger.warn({ orderId: request.orderId, amount: fromPaise(request.amountPaise), reason: request.reason }, 'refund issued');
   } catch (error) {
@@ -257,11 +266,28 @@ export const paymentsService = {
     return { captured, refundsRetried };
   },
 
-  /** Customer cancelled a paid order before the store started on it. */
+  /** A paid order was cancelled (by the customer or the store): refund it in full. */
   async refundOrder(orderId: string, reason: string) {
     const [paid] = await paymentsRepository.capturedForOrder(db, orderId);
     if (!paid?.providerPaymentId) return;
     await issueRefund({ paymentId: paid.id, providerPaymentId: paid.providerPaymentId, amountPaise: toPaise(paid.amount), orderId, reason });
+  },
+
+  /**
+   * Delivered with items short / loose items lighter than ordered: give back the difference.
+   * At most one refund per payment — the full refund on cancel and this one never both happen.
+   */
+  async refundShortfall(orderId: string, amountPaise: number, reason: string) {
+    if (amountPaise <= 0) return;
+    const [paid] = await paymentsRepository.capturedForOrder(db, orderId);
+    if (!paid?.providerPaymentId) return;
+    await issueRefund({
+      paymentId: paid.id,
+      providerPaymentId: paid.providerPaymentId,
+      amountPaise: Math.min(amountPaise, toPaise(paid.amount)),
+      orderId,
+      reason,
+    });
   },
 
   /** Exposed for tests / admin tools. */

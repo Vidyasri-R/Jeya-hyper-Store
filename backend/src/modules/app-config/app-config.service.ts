@@ -10,6 +10,8 @@ export const CONFIG_KEYS = {
   MAINTENANCE: 'app.maintenance',
   PAYMENT_METHODS: 'checkout.payment_methods',
   DELIVERY_RULES: 'delivery.rules',
+  USAGE_LIMITS: 'usage.limits',
+  USAGE_NOTIFY: 'usage.notify',
 } as const;
 
 const CACHE_TTL_MS = 30_000;
@@ -66,6 +68,17 @@ export const appConfigService = {
     const result: Record<string, unknown> = {};
     for (const key of current.publicKeys) result[key] = current.values.get(key);
     return result;
+  },
+
+  /** Raw stored value (admin settings screen). */
+  async getRaw(key: string): Promise<unknown> {
+    return (await getSnapshot()).values.get(key);
+  },
+
+  /** Admin write: value replaced, visibility/description kept (or set on first write). */
+  async set(key: string, value: unknown, meta: { isPublic: boolean; description: string }): Promise<void> {
+    await appConfigRepository.upsert(db, key, value, meta);
+    snapshot = null;
   },
 
   /** Tests / admin writes call this so the next read sees the change immediately. */

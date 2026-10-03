@@ -1,6 +1,7 @@
 import {
   DeleteObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   NotFound,
   PutObjectCommand,
   S3Client,
@@ -8,6 +9,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { AppError } from '../common/errors';
 import { env } from '../config/env';
+import { traffic } from './traffic';
 
 /**
  * Cloudflare R2 via its S3-compatible API.
@@ -85,6 +87,7 @@ export const r2 = {
       ...(options.metadata ? { Metadata: options.metadata } : {}),
     };
     const result = await s3.send(new PutObjectCommand(input));
+    traffic.countR2({ uploadBytes: body.length, classAOps: 1 });
     return { key, url: `${cfg.publicBaseUrl}/${key}`, etag: result.ETag };
   },
 
@@ -100,6 +103,35 @@ export const r2 = {
       }
       throw error;
     }
+  },
+
+  /**
+   * Total bytes/objects in the bucket (free tier: 10 GB). One Class A op per 1,000 objects,
+   * so a daily run over ~30k product images costs ~30 of the 1M free monthly operations.
+   */
+  async storageStats(prefix?: string): Promise<{ bytes: number; objects: number }> {
+    const { client: s3, config: cfg } = requireClient();
+    let bytes = 0;
+    let objects = 0;
+    let token: string | undefined;
+    do {
+      const page = await s3.send(
+        new ListObjectsV2Command({ Bucket: cfg.bucket, ContinuationToken: token, ...(prefix ? { Prefix: prefix } : {}) }),
+      );
+      traffic.countR2({ classAOps: 1 });
+      for (const object of page.Contents ?? []) {
+        bytes += object.Size ?? 0;
+        objects++;
+      }
+      token = page.IsTruncated ? page.NextContinuationToken : undefined;
+    } while (token);
+    return { bytes, objects };
+  },
+
+  /** Public URL → object key, or null when the URL isn't in our bucket. */
+  keyFromUrl(url: string): string | null {
+    if (!config || !url.startsWith(`${config.publicBaseUrl}/`)) return null;
+    return url.slice(config.publicBaseUrl.length + 1);
   },
 
   async remove(key: string): Promise<void> {

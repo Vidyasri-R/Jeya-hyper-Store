@@ -2,6 +2,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { env } from '../config/env';
 import { logger } from '../config/logger';
+import { traffic } from '../infra/traffic';
 import * as schema from './schema';
 
 /**
@@ -13,12 +14,18 @@ import * as schema from './schema';
  * use transaction-scoped variants (SET LOCAL, pg_try_advisory_xact_lock) instead.
  */
 export const sqlClient = postgres(env.DATABASE_URL, {
+  // Counted TCP sockets: Supabase Free bills egress (5 GB/month) — see infra/traffic.ts.
+  // (`socket` is a supported postgres.js option that its type definitions don't declare.)
+  ...({ socket: traffic.dbSocket } as object),
   prepare: false,
   ssl: 'require',
   max: env.DB_POOL_MAX,
-  idle_timeout: 20,
+  // Every new connection costs ~16 KB of TLS handshake + auth on the wire (measured), which
+  // counts toward Supabase egress and Render bandwidth. Keep idle connections around instead
+  // of reconnecting for each sporadic request; TCP keepalive holds them open through NAT.
+  idle_timeout: 10 * 60,
   connect_timeout: 10,
-  max_lifetime: 60 * 30,
+  max_lifetime: 2 * 60 * 60,
   onnotice: (notice) => logger.debug({ notice: notice.message }, 'postgres notice'),
   connection: {
     application_name: 'jeya-api',

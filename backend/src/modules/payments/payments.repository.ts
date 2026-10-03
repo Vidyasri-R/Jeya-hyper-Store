@@ -52,7 +52,7 @@ export const paymentsRepository = {
   async markCaptured(
     db: DbExecutor,
     id: string,
-    values: { providerPaymentId: string; method: PaymentMethod; capturedAt: Date },
+    values: { providerPaymentId: string; method: PaymentMethod; capturedAt: Date; gatewayFee: string | null; gatewayTax: string | null },
   ) {
     await db
       .update(payments)
@@ -85,6 +85,11 @@ export const paymentsRepository = {
   },
 
   // ── refunds ──
+  async findById(db: DbExecutor, id: string) {
+    const [row] = await db.select().from(payments).where(eq(payments.id, id)).limit(1);
+    return row ?? null;
+  },
+
   async refundForPayment(db: DbExecutor, paymentId: string) {
     const [row] = await db.select().from(refunds).where(eq(refunds.paymentId, paymentId)).limit(1);
     return row ?? null;

@@ -8,6 +8,8 @@ import { purchaseLimits, type StockStatus } from './purchase-rules';
 import { parseSearch } from './search-query';
 
 const TREE_TTL_MS = 5 * 60 * 1000;
+/** Listing / search / product pages. The sync and admin edits invalidate the cache sooner. */
+const PAGE_TTL_MS = 60 * 1000;
 const MAX_SEARCH_OFFSET = 1000;
 
 export type CategoryNode = {
@@ -151,7 +153,13 @@ export const catalogService = {
     return pruneEmpty((await categoryIndex()).roots);
   },
 
+  /** Listing pages are cached briefly: stock shown may lag ≤ 1 min; cart and checkout always read live. */
   async listProducts(query: ProductListQuery) {
+    const key = `list:${JSON.stringify([query.category ?? null, query.q ?? null, query.sort ?? null, query.inStock, query.cursor ?? null, query.limit])}`;
+    return catalogCache.get(key, PAGE_TTL_MS, () => catalogService.loadProducts(query));
+  },
+
+  async loadProducts(query: ProductListQuery) {
     const categoryIds = await resolveCategoryIds(query.category);
 
     if (query.q) {
@@ -195,6 +203,10 @@ export const catalogService = {
   },
 
   async suggest(q: string) {
+    return catalogCache.get(`suggest:${q.trim().toLowerCase()}`, PAGE_TTL_MS, () => catalogService.loadSuggestions(q));
+  },
+
+  async loadSuggestions(q: string) {
     const rows = await catalogRepository.searchProducts({
       search: parseSearch(q),
       categoryIds: null,
@@ -207,6 +219,10 @@ export const catalogService = {
   },
 
   async productDetail(slug: string) {
+    return catalogCache.get(`product:${slug}`, PAGE_TTL_MS, () => catalogService.loadProductDetail(slug));
+  },
+
+  async loadProductDetail(slug: string) {
     const row = await catalogRepository.findActiveProductBySlug(slug);
     if (!row) throw AppError.notFound('Product');
 

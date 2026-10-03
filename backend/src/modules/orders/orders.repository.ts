@@ -78,7 +78,14 @@ export const ordersRepository = {
 
   async addHistory(
     db: DbExecutor,
-    entries: { orderId: string; fromStatus: OrderStatus | null; toStatus: OrderStatus; changedBy: string | null; note?: string }[],
+    entries: {
+      orderId: string;
+      fromStatus: OrderStatus | null;
+      toStatus: OrderStatus;
+      changedBy: string | null;
+      changedByStaff?: string | null;
+      note?: string;
+    }[],
   ) {
     if (entries.length === 0) return;
     await db.insert(orderStatusHistory).values(entries);
@@ -99,12 +106,11 @@ export const ordersRepository = {
     return row ?? null;
   },
 
-  async listForUser(db: DbExecutor, userId: string, cursor: { createdAt: Date; id: string } | null, limit: number) {
+  async listForUser(db: DbExecutor, userId: string, cursor: { createdAt: string; id: string } | null, limit: number) {
     const filters: SQL[] = [eq(orders.userId, userId)];
     if (cursor) {
-      filters.push(
-        sql`(${orders.createdAt} < ${cursor.createdAt} OR (${orders.createdAt} = ${cursor.createdAt} AND ${orders.id} < ${cursor.id}))`,
-      );
+      // String params on purpose: drizzle's postgres-js driver can't encode a raw Date inside sql``.
+      filters.push(sql`(${orders.createdAt}, ${orders.id}) < (${cursor.createdAt}::timestamptz, ${cursor.id}::uuid)`);
     }
     return db
       .select({
@@ -112,6 +118,8 @@ export const ordersRepository = {
         // Explicitly qualified: inside a subquery drizzle renders bare column names, and a bare
         // "id" would bind to order_items.id instead of the outer orders.id.
         itemCount: sql<number>`(select count(*)::int from "order_items" oi where oi."order_id" = "orders"."id")`,
+        /** Exact (µs) creation time for the keyset cursor — a JS Date would drop the microseconds. */
+        cursorTs: sql<string>`to_char(${orders.createdAt} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`,
       })
       .from(orders)
       .where(and(...filters))

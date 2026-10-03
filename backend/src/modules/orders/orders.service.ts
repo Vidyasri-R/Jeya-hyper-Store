@@ -9,6 +9,7 @@ import { cartRepository } from '../cart/cart.repository';
 import { priceLine, summarize, toPublicLine, type PricedLine } from '../cart/pricing';
 import { deliveryService, type DeliveryQuote, type DeliveryTarget } from '../delivery/delivery.service';
 import { paymentsService } from '../payments/payments.service';
+import { orderEvents } from './order-events';
 import { ordersRepository } from './orders.repository';
 import type { PlaceOrderInput } from './orders.schemas';
 
@@ -152,16 +153,20 @@ function toPublicHistory(entry: OrderStatusHistory) {
   return { status: entry.toStatus, note: entry.note, at: entry.createdAt };
 }
 
-function encodeOrderCursor(order: Order): string {
-  return Buffer.from(JSON.stringify({ t: order.createdAt.toISOString(), id: order.id })).toString('base64url');
+function encodeOrderCursor(row: { cursorTs: string; order: Order }): string {
+  return Buffer.from(JSON.stringify({ t: row.cursorTs, id: row.order.id })).toString('base64url');
 }
 
-function decodeOrderCursor(raw: string): { createdAt: Date; id: string } {
+function decodeOrderCursor(raw: string): { createdAt: string; id: string } {
   try {
     const parsed = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8')) as { t?: unknown; id?: unknown };
-    const createdAt = new Date(String(parsed.t));
-    if (typeof parsed.id === 'string' && /^[0-9a-f-]{36}$/.test(parsed.id) && !Number.isNaN(createdAt.getTime())) {
-      return { createdAt, id: parsed.id };
+    if (
+      typeof parsed.t === 'string' &&
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?Z$/.test(parsed.t) &&
+      typeof parsed.id === 'string' &&
+      /^[0-9a-f-]{36}$/.test(parsed.id)
+    ) {
+      return { createdAt: parsed.t, id: parsed.id };
     }
   } catch {
     // fall through
@@ -304,6 +309,9 @@ export const ordersService = {
 
         logger.info({ orderId: order.id, orderNumber: order.orderNumber, total: order.totalAmount, method: input.paymentMethod }, 'order placed');
         return { order: toPublicOrder(order, evaluation.lines.length), created: true };
+      }).then((result) => {
+        if (result.created) orderEvents.bump();
+        return result;
       });
     } catch (error) {
       // Two simultaneous submits with the same key: the loser hits the unique index — return the winner's order.
@@ -321,7 +329,7 @@ export const ordersService = {
     const last = page.at(-1);
     return {
       orders: page.map((row) => toPublicOrder(row.order, Number(row.itemCount))),
-      nextCursor: rows.length > limit && last ? encodeOrderCursor(last.order) : null,
+      nextCursor: rows.length > limit && last ? encodeOrderCursor(last) : null,
     };
   },
 
@@ -359,6 +367,7 @@ export const ordersService = {
       ]);
       return updated!;
     });
+    orderEvents.bump();
     logger.info({ orderId, userId }, 'order cancelled by customer');
     // Paid online → full refund (idempotent; retried by the reconciler if Razorpay is unreachable).
     if (order.paymentStatus === 'paid') await paymentsService.refundOrder(orderId, reason ?? 'Cancelled by customer');
@@ -367,7 +376,7 @@ export const ordersService = {
 
   /** Sweeper: unpaid online orders past their hold → payment_failed, stock released. */
   async expireUnpaid(batchSize = 50): Promise<number> {
-    return db.transaction(async (tx) => {
+    const expiredCount = await db.transaction(async (tx) => {
       const expired = await ordersRepository.lockExpiredPending(tx, batchSize);
       const ids = expired.map((row) => row.id);
       if (ids.length === 0) return 0;
@@ -380,5 +389,7 @@ export const ordersService = {
       logger.info({ count: ids.length }, 'expired unpaid orders');
       return ids.length;
     });
+    if (expiredCount > 0) orderEvents.bump(); // after commit, so the next summary read sees it
+    return expiredCount;
   },
 };
