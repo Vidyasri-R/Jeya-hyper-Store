@@ -25,6 +25,8 @@ export type TrafficDelta = {
 };
 
 const live = new Set<Tracked>();
+const dbPorts = new Set<number>();
+let observing = false;
 let pending: TrafficDelta = empty();
 
 function empty(): TrafficDelta {
@@ -56,21 +58,25 @@ function sample(): void {
 
 export const traffic = {
   /**
-   * postgres.js `socket` factory: same TCP connection it would open itself, but counted.
-   * postgres.js still does the SSLRequest + TLS upgrade on top (it reads `socket.host` for SNI).
+   * Passively count bytes on database sockets: wraps net.Socket#connect only to remember sockets
+   * that connect to the pooler port, then calls the original unchanged. postgres.js opens and
+   * manages its connections exactly as it would on its own (a replacement socket factory once
+   * made pooled connections stall on Render).
    */
-  dbSocket(options: { host: string[]; port: number[] }): net.Socket {
-    const host = options.host[0]!;
-    const port = options.port[0]!;
-    const socket = net.connect({ host, port });
-    // Set on the raw TCP socket (postgres.js sets it on the TLS wrapper it adds later, which may not
-    // reach TCP): probes keep long-lived idle connections alive through cloud load balancers (AWS
-    // drops idle flows after 350 s) and reveal dead ones instead of letting a query hang.
-    socket.setKeepAlive(true, 30_000);
-    socket.setNoDelay(true);
-    Object.assign(socket, { host, port });
-    live.add({ socket, channel: 'db', read: 0, written: 0 });
-    return socket;
+  observeDbPort(port: string | number): void {
+    const dbPort = Number(port);
+    if (!dbPort) return;
+    dbPorts.add(dbPort);
+    if (observing) return;
+    observing = true;
+    const original = net.Socket.prototype.connect;
+    net.Socket.prototype.connect = function connect(this: net.Socket, ...args: unknown[]) {
+      // connect(port, host) | connect({ port }) | net.connect()'s normalized [{ port }, cb]
+      const first = Array.isArray(args[0]) ? (args[0] as unknown[])[0] : args[0];
+      const target = typeof first === 'object' && first !== null ? (first as { port?: unknown }).port : first;
+      if (dbPorts.has(Number(target))) live.add({ socket: this, channel: 'db', read: 0, written: 0 });
+      return (original as (...a: unknown[]) => net.Socket).apply(this, args);
+    } as typeof net.Socket.prototype.connect;
   },
 
   /** server.on('connection', traffic.trackHttp) */

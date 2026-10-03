@@ -29,10 +29,8 @@ services:
       # (The mobile apps don't send an Origin header, so they're unaffected.)
       - key: CORS_ORIGINS
         value: https://jeya-staff.pages.dev
-      # Each new DB connection costs ~16 KB of TLS handshake (Supabase Free meters egress) —
-      # a small pool of long-lived connections is plenty for one store.
       - key: DB_POOL_MAX
-        value: "5"
+        value: "10"
 
       # Supabase → Connect → Transaction pooler (6543) / Session pooler (5432)
       - key: DATABASE_URL

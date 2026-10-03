@@ -44,13 +44,14 @@ describe('usage metrics', () => {
 });
 
 describe('traffic meter', () => {
-  it('counts bytes both ways on database sockets', async () => {
+  it('counts bytes both ways on observed database sockets', async () => {
     const server = net.createServer((socket) => socket.on('data', (data) => socket.end(Buffer.concat([data, data]))));
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
     const { port } = server.address() as net.AddressInfo;
     traffic.drain();
 
-    const socket = traffic.dbSocket({ host: ['127.0.0.1'], port: [port] });
+    traffic.observeDbPort(port);
+    const socket = net.connect({ host: '127.0.0.1', port });
     await new Promise<void>((resolve) => {
       socket.on('connect', () => socket.write(Buffer.alloc(1000, 1)));
       socket.on('data', () => undefined);

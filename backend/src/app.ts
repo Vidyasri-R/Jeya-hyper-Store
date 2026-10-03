@@ -37,6 +37,16 @@ export function createApp(): Express {
   );
   app.use(helmet());
   app.use(cors({ origin: env.CORS_ORIGINS.length > 0 ? env.CORS_ORIGINS : false }));
+  // Never leave a client hanging: answer "busy, retry" (with the CORS headers already set above)
+  // before the apps' own 25 s timeout, which they would otherwise report as "no internet".
+  app.use((req, res, next) => {
+    res.setTimeout(req.path.endsWith('/image') ? 120_000 : 20_000, () => {
+      if (res.headersSent) return;
+      req.log.error({ path: req.path }, 'request timed out');
+      res.status(503).json({ error: { code: 'UPSTREAM_UNAVAILABLE', message: 'The server is busy right now. Please try again.', details: { reason: 'request_timeout' }, requestId: req.id } });
+    });
+    next();
+  });
   app.use(compression());
   // Raw body for signature verification — must be registered before express.json().
   app.post('/v1/webhooks/razorpay', ...razorpayWebhookHandler);
