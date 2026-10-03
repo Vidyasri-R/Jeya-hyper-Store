@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/money.dart';
+import '../../core/dates.dart';
 import '../../core/theme.dart';
 import '../../state/providers.dart';
 
@@ -45,6 +46,19 @@ class OrderSuccessScreen extends ConsumerWidget {
                   order.isCod ? 'Pay ${formatRupees(order.totalAmount)} when it arrives' : 'Paid ${formatRupees(order.totalAmount)} online',
                   style: text.bodyMedium,
                 ),
+                if (order.expectedDeliveryBy != null) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(color: AppColors.green50, borderRadius: BorderRadius.circular(AppRadius.md)),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const Icon(Icons.local_shipping_outlined, color: AppColors.green700, size: 20),
+                      const SizedBox(width: 8),
+                      Text('Expected delivery: ${deliveryPromise(order.expectedDeliveryBy!)}',
+                          style: text.titleSmall?.copyWith(color: AppColors.green800)),
+                    ]),
+                  ),
+                ],
               ],
               const SizedBox(height: 12),
               Text('We’re packing your order at Jeya Hyper Store. You’ll get updates as it moves.',

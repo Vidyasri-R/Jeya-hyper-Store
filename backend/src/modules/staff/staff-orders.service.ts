@@ -185,6 +185,7 @@ export const staffOrdersService = {
         : null,
       cancelledReason: order.cancelledReason,
       placedAt: order.placedAt,
+      promisedBy: order.promisedBy,
       deliveredAt: order.deliveredAt,
       cancelledAt: order.cancelledAt,
       createdAt: order.createdAt,

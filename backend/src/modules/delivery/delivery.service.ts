@@ -23,6 +23,8 @@ const rulesSchema = z.object({
   roadDistanceFactor: z.number().min(1).max(3),
   freeDeliveryAbove: money.nullable(),
   minOrderAmount: money,
+  /** Promise shown to customers: delivered by the end of the day this many days after ordering (0 = same day). */
+  deliveryDays: z.number().int().min(0).max(7).default(1),
   tiers: z
     .array(z.object({ upToKm: z.number().positive(), fee: money }))
     .min(1)
@@ -40,6 +42,7 @@ export const DEFAULT_DELIVERY_RULES: DeliveryRules = {
   roadDistanceFactor: 1.3,
   freeDeliveryAbove: '999.00',
   minOrderAmount: '0.00',
+  deliveryDays: 1,
   tiers: [
     { upToKm: 3, fee: '20.00' },
     { upToKm: 6, fee: '40.00' },
@@ -53,6 +56,15 @@ export async function deliveryRules(): Promise<DeliveryRules> {
   if (parsed.success) return parsed.data;
   logger.error({ issues: parsed.error.issues }, 'invalid delivery.rules in app_config — using defaults');
   return DEFAULT_DELIVERY_RULES;
+}
+
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+
+/** End of the IST day `days` after `at` — "delivery by tomorrow" for days = 1. */
+export function expectedDeliveryBy(at: Date, days: number): Date {
+  const ist = new Date(at.getTime() + IST_OFFSET_MS);
+  const endOfDayIst = Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate() + days, 23, 59, 59, 999);
+  return new Date(endOfDayIst - IST_OFFSET_MS);
 }
 
 export type DeliveryTarget = { pincode: string; latitude: string | null; longitude: string | null };

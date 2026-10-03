@@ -102,9 +102,32 @@ final isSignedInProvider = Provider((ref) => ref.watch(authProvider) is SignedIn
 
 final categoriesProvider = FutureProvider<List<Category>>((ref) => ref.watch(repositoryProvider).categories());
 
+/// Public remote config (store info, delivery rules, pause message…); the API caches it for a minute.
+final publicConfigProvider = FutureProvider<Map<String, dynamic>>((ref) => ref.watch(repositoryProvider).publicConfig());
+
+/// How fast the store delivers — Admin → Store settings → Deliver within (delivery.rules.deliveryDays).
+class DeliverySpeed {
+  const DeliverySpeed(this.days);
+  final int days;
+
+  /// "Next-day" (badge, paired with "delivery")
+  String get short => switch (days) { 0 => 'Same-day', 1 => 'Next-day', _ => '$days-day' };
+
+  /// "Next-day delivery"
+  String get headline => switch (days) { 0 => 'Same-day delivery', 1 => 'Next-day delivery', _ => 'Delivery in $days days' };
+
+  /// "by the next day"
+  String get phrase => switch (days) { 0 => 'the same day', 1 => 'by the next day', _ => 'within $days days' };
+}
+
+final deliverySpeedProvider = Provider<DeliverySpeed>((ref) {
+  final rules = ref.watch(publicConfigProvider).valueOrNull?['delivery.rules'];
+  return DeliverySpeed(rules is Map && rules['deliveryDays'] is num ? (rules['deliveryDays'] as num).toInt() : 1);
+});
+
 /// Admin → Store settings → Pause orders. Null when orders are open.
 final storePausedMessageProvider = FutureProvider<String?>((ref) async {
-  final config = await ref.watch(repositoryProvider).publicConfig();
+  final config = await ref.watch(publicConfigProvider.future);
   final pause = config['app.maintenance'];
   if (pause is Map && pause['enabled'] == true) {
     final message = (pause['message'] as String?)?.trim() ?? '';

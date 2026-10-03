@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/money.dart';
+import '../../core/dates.dart';
 import '../../core/theme.dart';
 import '../../data/models.dart';
 import '../../state/providers.dart';
@@ -249,12 +250,25 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           number: 2,
           title: 'Delivery',
           child: Row(children: [
-            const Icon(Icons.bolt_rounded, color: AppColors.green700),
+            const Icon(Icons.local_shipping_outlined, color: AppColors.green700),
             const SizedBox(width: 10),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Same-day delivery', style: text.titleSmall),
-                Text(q.distanceKm != null ? '${q.distanceKm!.toStringAsFixed(1)} km from Jeya Hyper Store' : 'From Jeya Hyper Store, Trichy', style: text.bodySmall),
+                Text(
+                  switch (q.expectedDeliveryBy) {
+                    null => 'Home delivery',
+                    final by when deliveryDay(by) == 'Today' => 'Delivery today',
+                    final by => 'Delivery by ${deliveryDay(by) == 'Tomorrow' ? 'tomorrow' : deliveryDay(by)}',
+                  },
+                  style: text.titleSmall,
+                ),
+                Text(
+                  [
+                    if (q.expectedDeliveryBy != null) 'Expected ${deliveryPromise(q.expectedDeliveryBy!)}',
+                    q.distanceKm != null ? '${q.distanceKm!.toStringAsFixed(1)} km from Jeya Hyper Store' : 'From Jeya Hyper Store, Trichy',
+                  ].join(' · '),
+                  style: text.bodySmall,
+                ),
               ]),
             ),
             Text(q.freeDeliveryApplied || toPaise(q.deliveryFee) == 0 ? 'FREE' : formatRupees(q.deliveryFee),

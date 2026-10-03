@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { haversineKm } from '../../common/geo';
-import { DEFAULT_DELIVERY_RULES, deliveryService, quoteByDistance } from './delivery.service';
+import { DEFAULT_DELIVERY_RULES, deliveryService, expectedDeliveryBy, quoteByDistance } from './delivery.service';
 
 const shop = DEFAULT_DELIVERY_RULES.storeLocation;
 /** Point `km` straight-line km due north of the shop (1° latitude ≈ 111.2 km). */
@@ -52,3 +52,21 @@ describe('free delivery threshold', () => {
     expect(deliveryService.charge(quote, 150_000).feePaise).toBe(0);
   });
 });
+
+describe('delivery promise (IST days)', () => {
+  it('"by tomorrow" ends at 23:59 IST the next day', () => {
+    // 12:00 IST on 3 Oct → end of 4 Oct IST (18:29:59.999 UTC)
+    expect(expectedDeliveryBy(new Date('2026-10-03T06:30:00Z'), 1).toISOString()).toBe('2026-10-04T18:29:59.999Z');
+  });
+
+  it('uses the Indian date, not UTC, just after midnight IST', () => {
+    // 00:30 IST on 4 Oct is still 3 Oct in UTC — tomorrow means 5 Oct
+    expect(expectedDeliveryBy(new Date('2026-10-03T19:00:00Z'), 1).toISOString()).toBe('2026-10-05T18:29:59.999Z');
+  });
+
+  it('same day when days = 0, and handles month ends', () => {
+    expect(expectedDeliveryBy(new Date('2026-10-03T06:30:00Z'), 0).toISOString()).toBe('2026-10-03T18:29:59.999Z');
+    expect(expectedDeliveryBy(new Date('2026-10-31T10:00:00Z'), 1).toISOString()).toBe('2026-11-01T18:29:59.999Z');
+  });
+});
+

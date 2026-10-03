@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/config.dart';
+import '../../core/dates.dart';
 import '../../core/money.dart';
 import '../../core/theme.dart';
 import '../../data/models.dart';
@@ -419,6 +420,15 @@ class OrderCardTile extends StatelessWidget {
                             icon: Icons.verified_outlined,
                           ),
                         if (order.hasNote) const Pill('Note', fg: AppColors.brandBlue, bg: AppColors.brandBlueSoft, icon: Icons.sticky_note_2_outlined),
+                        if (order.isOpen && order.promisedBy != null)
+                          order.isLate
+                              ? const Pill('Late', fg: AppColors.offerRed, bg: AppColors.offerRedSoft, icon: Icons.schedule_rounded)
+                              : Pill(
+                                  'By ${deliveryDay(order.promisedBy!).toLowerCase() == 'today' || deliveryDay(order.promisedBy!).toLowerCase() == 'tomorrow' ? deliveryDay(order.promisedBy!).toLowerCase() : deliveryDay(order.promisedBy!)}',
+                                  fg: deliveryDay(order.promisedBy!) == 'Today' ? const Color(0xFF8A5A00) : AppColors.green800,
+                                  bg: deliveryDay(order.promisedBy!) == 'Today' ? AppColors.amberSoft : AppColors.green50,
+                                  icon: Icons.local_shipping_outlined,
+                                ),
                       ],
                     ),
                   ),

@@ -162,10 +162,10 @@ class _StockLine extends StatelessWidget {
   }
 }
 
-class _PromiseStrip extends StatelessWidget {
+class _PromiseStrip extends ConsumerWidget {
   const _PromiseStrip();
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final text = Theme.of(context).textTheme;
     Widget item(IconData icon, String a, String b) => Expanded(
           child: Row(children: [
@@ -183,7 +183,7 @@ class _PromiseStrip extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(color: AppColors.green50, borderRadius: BorderRadius.circular(AppRadius.md)),
       child: Row(children: [
-        item(Icons.local_shipping_outlined, 'Same-day', 'delivery'),
+        item(Icons.local_shipping_outlined, ref.watch(deliverySpeedProvider).short, 'delivery'),
         item(Icons.verified_outlined, 'Quality', 'checked'),
         item(Icons.currency_rupee_rounded, 'Best price', 'in Trichy'),
       ]),

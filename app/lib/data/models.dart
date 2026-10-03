@@ -287,6 +287,7 @@ class Quote {
     required this.canPlaceOrder,
     required this.blockers,
     required this.lines,
+    this.expectedDeliveryBy,
   });
 
   final String subtotal;
@@ -303,6 +304,9 @@ class Quote {
   final bool canPlaceOrder;
   final List<Blocker> blockers;
   final List<CartLine> lines;
+
+  /// End of the promised delivery day ("by tomorrow"), from the store's delivery settings.
+  final DateTime? expectedDeliveryBy;
 
   factory Quote.fromJson(Map<String, dynamic> j) {
     final t = j['totals'] as Map<String, dynamic>;
@@ -323,6 +327,7 @@ class Quote {
       canPlaceOrder: j['canPlaceOrder'] == true,
       blockers: _list(j['blockers']).map((b) => Blocker(_str(b['reason']), b)).toList(),
       lines: _list(j['items']).map(CartLine.fromJson).toList(),
+      expectedDeliveryBy: j['expectedDeliveryBy'] == null ? null : DateTime.parse(_str(j['expectedDeliveryBy'])).toLocal(),
     );
   }
 }
@@ -370,6 +375,8 @@ class Order {
     required this.canCancel,
     required this.createdAt,
     this.reservationExpiresAt,
+    this.expectedDeliveryBy,
+    this.deliveredAt,
     this.itemCount = 0,
     this.items = const [],
     this.history = const [],
@@ -387,6 +394,10 @@ class Order {
   final bool canCancel;
   final DateTime createdAt;
   final DateTime? reservationExpiresAt;
+
+  /// Promised at checkout ("by tomorrow"); null on orders placed before promises existed.
+  final DateTime? expectedDeliveryBy;
+  final DateTime? deliveredAt;
   final int itemCount;
   final List<OrderItem> items;
   final List<StatusEvent> history;
@@ -421,6 +432,8 @@ class Order {
         canCancel: j['canCancel'] == true,
         createdAt: DateTime.parse(_str(j['createdAt'])).toLocal(),
         reservationExpiresAt: j['reservationExpiresAt'] == null ? null : DateTime.parse(_str(j['reservationExpiresAt'])).toLocal(),
+        expectedDeliveryBy: j['expectedDeliveryBy'] == null ? null : DateTime.parse(_str(j['expectedDeliveryBy'])).toLocal(),
+        deliveredAt: j['deliveredAt'] == null ? null : DateTime.parse(_str(j['deliveredAt'])).toLocal(),
         itemCount: _opt<int>(j['itemCount']) ?? 0,
         items: _list(j['items']).map(OrderItem.fromJson).toList(),
         history: _list(j['statusHistory']).map(StatusEvent.fromJson).toList(),

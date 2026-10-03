@@ -8,7 +8,7 @@ import '../../core/theme.dart';
 import '../../state/providers.dart';
 
 final _storeInfoProvider = FutureProvider<Map<String, dynamic>>((ref) async {
-  final config = await ref.watch(repositoryProvider).publicConfig();
+  final config = await ref.watch(publicConfigProvider.future);
   return (config['store.info'] as Map<String, dynamic>?) ?? const {};
 });
 
@@ -47,7 +47,10 @@ class HelpScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         Text('Common questions', style: text.titleSmall),
-        const _Faq('When will my order arrive?', 'Same day across Trichy. You can follow each step in Orders.'),
+        _Faq(
+          'When will my order arrive?',
+          '${ref.watch(deliverySpeedProvider).headline} across Trichy — checkout shows the expected date. You can follow each step in Orders.',
+        ),
         const _Faq('How do refunds work?', 'If you cancel a paid order before we start packing, the full amount is refunded to your original payment method in 3–5 working days.'),
         const _Faq('Is delivery free?', 'Delivery is free on orders of ₹999 and above. Below that, the charge depends on your distance from the store.'),
       ]),
@@ -70,7 +73,7 @@ class AboutScreen extends ConsumerWidget {
         const SizedBox(height: 16),
         Text('${info['name'] ?? AppConfig.storeName}, ${info['city'] ?? 'Tiruchirappalli'}', style: text.titleMedium, textAlign: TextAlign.center),
         const SizedBox(height: 6),
-        Text('Your neighbourhood supermarket — fresh groceries, daily essentials and household needs, delivered the same day.',
+        Text('Your neighbourhood supermarket — fresh groceries, daily essentials and household needs, delivered ${ref.watch(deliverySpeedProvider).phrase}.',
             textAlign: TextAlign.center, style: text.bodyMedium?.copyWith(color: AppColors.inkMuted)),
         const SizedBox(height: 24),
         if (version != null) Text('Version ${version.version} (${version.buildNumber})', textAlign: TextAlign.center, style: text.labelSmall),

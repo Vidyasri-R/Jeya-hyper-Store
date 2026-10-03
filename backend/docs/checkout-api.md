@@ -49,8 +49,11 @@ and offer "Fix cart". `summary.subtotal` only counts lines without issues.
 
 ## Checkout
 
-1. `POST /checkout/quote { addressId }` → `{ quote: { items, totals: { subtotal, mrpTotal, savings, deliveryFee, freeDeliveryApplied, total }, delivery, freeDeliveryShortBy, paymentMethods, canPlaceOrder, blockers } }`
+1. `POST /checkout/quote { addressId }` → `{ quote: { expectedDeliveryBy, items, totals: { subtotal, mrpTotal, savings, deliveryFee, freeDeliveryApplied, total }, delivery, freeDeliveryShortBy, paymentMethods, canPlaceOrder, blockers } }`
    - `freeDeliveryShortBy: "959.00"` → show "Add ₹959 more for FREE delivery".
+   - `expectedDeliveryBy` (ISO time, end of that IST day) → "Delivery by tomorrow, Sat 4 Oct". The number
+     of days comes from `delivery.rules.deliveryDays` (Admin → Store settings → Deliver within; default 1).
+   - Blocker `store_paused` (with `message`) while Admin → Pause orders is on.
    - `blockers[].reason`: `cart_empty`, `cart_needs_review`, `address_not_serviceable`, `below_minimum`.
 2. `POST /orders` with:
    ```json
@@ -66,5 +69,7 @@ and offer "Fix cart". `summary.subtotal` only counts lines without issues.
 
 `GET /orders?cursor=&limit=` (newest first) · `GET /orders/:id` (items + `statusHistory`) · `POST /orders/:id/cancel { reason? }`.
 `canCancel` tells the app whether to show the Cancel button (before the store confirms; unpaid only).
+`expectedDeliveryBy` is the delivery promise fixed when the order was placed (null on older orders);
+show "Arriving tomorrow" / "Expected delivery: …" until it's delivered (`deliveredAt`).
 
 Statuses: `pending_payment → placed → confirmed → packing → ready_for_delivery → out_for_delivery → delivered`, or `cancelled` / `payment_failed`.

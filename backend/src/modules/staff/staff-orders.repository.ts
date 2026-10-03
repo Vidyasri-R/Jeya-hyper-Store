@@ -35,6 +35,7 @@ const listColumns = {
   hasNote: sql<boolean>`${orders.customerNote} is not null`,
   itemCount: sql<number>`(select count(*)::int from "order_items" oi where oi."order_id" = "orders"."id")`,
   placedAt: orders.placedAt,
+  promisedBy: orders.promisedBy,
   createdAt: orders.createdAt,
   updatedAt: orders.updatedAt,
   /** Exact (µs) creation time for the keyset cursor — a JS Date would drop the microseconds. */

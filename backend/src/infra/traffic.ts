@@ -63,6 +63,11 @@ export const traffic = {
     const host = options.host[0]!;
     const port = options.port[0]!;
     const socket = net.connect({ host, port });
+    // Set on the raw TCP socket (postgres.js sets it on the TLS wrapper it adds later, which may not
+    // reach TCP): probes keep long-lived idle connections alive through cloud load balancers (AWS
+    // drops idle flows after 350 s) and reveal dead ones instead of letting a query hang.
+    socket.setKeepAlive(true, 30_000);
+    socket.setNoDelay(true);
     Object.assign(socket, { host, port });
     live.add({ socket, channel: 'db', read: 0, written: 0 });
     return socket;

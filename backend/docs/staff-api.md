@@ -49,7 +49,9 @@ cancelled / all list newest first. `q` (2+ chars) searches every tab: order numb
 digits (`1011`), customer phone digits, or name.
 
 Each order: `{ id, orderNumber, status, paymentMethod, paymentStatus, totalAmount, finalAmount,
-amountDue, recipientName, phone, area, hasNote, itemCount, placedAt, createdAt, updatedAt }`.
+amountDue, recipientName, phone, area, hasNote, itemCount, placedAt, promisedBy, createdAt, updatedAt }`.
+`promisedBy` = the delivery date promised to the customer (end of that IST day) — the app shows
+"By today / By tomorrow", and "Late" once it has passed.
 `nextCursor` pages on.
 
 ### `GET /staff/orders/:id`

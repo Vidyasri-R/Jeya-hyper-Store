@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/money.dart';
+import '../../core/dates.dart';
 import '../../core/theme.dart';
 import '../../data/models.dart';
 import '../../state/providers.dart';
@@ -173,6 +174,13 @@ class _Body extends ConsumerWidget {
                 'Placed on ${DateFormat('d MMM yyyy, h:mm a').format(order.createdAt)}',
                 style: text.bodySmall,
               ),
+              if (order.status == 'delivered' && order.deliveredAt != null) ...[
+                const SizedBox(height: 10),
+                _DeliveryLine(icon: Icons.home_rounded, text: 'Delivered on ${DateFormat('EEE d MMM, h:mm a').format(order.deliveredAt!)}'),
+              ] else if (!order.isClosed && !order.awaitingPayment && order.expectedDeliveryBy != null) ...[
+                const SizedBox(height: 10),
+                _DeliveryLine(icon: Icons.local_shipping_outlined, text: 'Expected delivery: ${deliveryPromise(order.expectedDeliveryBy!)}'),
+              ],
               const SizedBox(height: 16),
               if (order.status == 'cancelled' ||
                   order.status == 'payment_failed')
@@ -485,3 +493,22 @@ String _formatPhone(String phone) =>
     phone.length == 12 && phone.startsWith('91')
     ? '+91 ${phone.substring(2, 7)} ${phone.substring(7)}'
     : phone;
+
+class _DeliveryLine extends StatelessWidget {
+  const _DeliveryLine({required this.icon, required this.text});
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(color: AppColors.green50, borderRadius: BorderRadius.circular(AppRadius.md)),
+        child: Row(children: [
+          Icon(icon, color: AppColors.green700, size: 20),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text, style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppColors.green800))),
+        ]),
+      );
+}
+

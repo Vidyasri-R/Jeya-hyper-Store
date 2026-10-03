@@ -7,7 +7,7 @@ import { addressesRepository } from '../addresses/addresses.repository';
 import { appConfigService, CONFIG_KEYS } from '../app-config/app-config.service';
 import { cartRepository } from '../cart/cart.repository';
 import { priceLine, summarize, toPublicLine, type PricedLine } from '../cart/pricing';
-import { deliveryService, type DeliveryQuote, type DeliveryTarget } from '../delivery/delivery.service';
+import { deliveryRules, deliveryService, expectedDeliveryBy, type DeliveryQuote, type DeliveryTarget } from '../delivery/delivery.service';
 import { paymentsService } from '../payments/payments.service';
 import { orderEvents } from './order-events';
 import { ordersRepository } from './orders.repository';
@@ -134,6 +134,7 @@ function toPublicOrder(order: Order, itemCount?: number) {
     customerNote: order.customerNote,
     reservationExpiresAt: status === 'pending_payment' ? order.reservationExpiresAt : null,
     canCancel: CUSTOMER_CANCELLABLE.includes(status),
+    expectedDeliveryBy: order.promisedBy,
     placedAt: order.placedAt,
     deliveredAt: order.deliveredAt,
     cancelledAt: order.cancelledAt,
@@ -188,7 +189,10 @@ export const ordersService = {
     if (!address) throw AppError.notFound('Address');
     const evaluation = await evaluate(db, userId, address);
     const methods = await paymentMethods();
+    const rules = await deliveryRules();
     return {
+      /** What checkout promises ("delivery by tomorrow"): end of that IST day. */
+      expectedDeliveryBy: expectedDeliveryBy(new Date(), rules.deliveryDays),
       items: evaluation.lines.map(toPublicLine),
       totals: {
         subtotal: fromPaise(evaluation.subtotalPaise),
@@ -254,6 +258,7 @@ export const ordersService = {
         }
 
         const now = new Date();
+        const promisedBy = expectedDeliveryBy(now, (await deliveryRules()).deliveryDays);
         const isCod = input.paymentMethod === 'cod';
         const status: OrderStatus = isCod ? 'placed' : 'pending_payment';
         const snapshot: DeliveryAddressSnapshot = {
@@ -290,6 +295,7 @@ export const ordersService = {
           // Online orders are pushed to GoFrugal only after payment is captured.
           gofrugalSyncStatus: 'pending',
           placedAt: isCod ? now : null,
+          promisedBy,
         });
 
         await ordersRepository.insertItems(

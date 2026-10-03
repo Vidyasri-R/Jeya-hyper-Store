@@ -224,6 +224,9 @@ class _DeliveryCardState extends State<_DeliveryCard> {
   late final _freeAbove = TextEditingController(text: _plainMoney(widget.value['freeDeliveryAbove']));
   late final _minOrder = TextEditingController(text: _plainMoney(widget.value['minOrderAmount']));
   late final _maxKm = TextEditingController(text: '${widget.value['maxDistanceKm'] ?? ''}');
+
+  /// Delivery promise shown to customers: 0 = same day, 1 = next day, 2 = within 2 days.
+  late int _days = (widget.value['deliveryDays'] as num?)?.toInt() ?? 1;
   late final List<(TextEditingController, TextEditingController)> _tiers = [
     for (final t in (widget.value['tiers'] as List? ?? const []))
       (TextEditingController(text: '${(t as Map)['upToKm']}'), TextEditingController(text: _plainMoney(t['fee']))),
@@ -266,6 +269,7 @@ class _DeliveryCardState extends State<_DeliveryCard> {
       'freeDeliveryAbove': _freeAbove.text.trim().isEmpty ? null : _asMoney(_freeAbove.text),
       'minOrderAmount': _asMoney(_minOrder.text),
       'maxDistanceKm': maxKm,
+      'deliveryDays': _days,
       'tiers': tiers,
     };
   }
@@ -297,6 +301,23 @@ class _DeliveryCardState extends State<_DeliveryCard> {
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 14),
+        Text('Deliver within', style: text.titleSmall),
+        const SizedBox(height: 6),
+        SegmentedButton<int>(
+          segments: const [
+            ButtonSegment(value: 0, label: Text('Same day')),
+            ButtonSegment(value: 1, label: Text('Next day')),
+            ButtonSegment(value: 2, label: Text('2 days')),
+          ],
+          selected: {_days.clamp(0, 2)},
+          onSelectionChanged: (selection) => setState(() => _days = selection.first),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Customers see "Delivery by ${const ['today', 'tomorrow', 'in 2 days'][_days.clamp(0, 2)]}" at checkout; each order keeps the date it was promised.',
+          style: text.bodySmall,
         ),
         const SizedBox(height: 14),
         Text('Charge by distance', style: text.titleSmall),

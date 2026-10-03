@@ -30,7 +30,7 @@ class HomeScreen extends ConsumerWidget {
         onRefresh: () async {
           ref.invalidate(categoriesProvider);
           ref.invalidate(_homeProductsProvider);
-          ref.invalidate(storePausedMessageProvider);
+          ref.invalidate(publicConfigProvider);
           await ref.read(_homeProductsProvider.future);
         },
         child: CustomScrollView(
@@ -159,7 +159,8 @@ class _HeroBanner {
 const _banners = [
   _HeroBanner('FRESH DEALS', 'Freshness\nat your doorstep', 'Farm fresh fruits & vegetables', 'Picked daily in Trichy', 'Shop Now', Icons.eco_rounded,
       [Color(0xFFE3F4E6), Color(0xFFC9EBD0)], '/categories'),
-  _HeroBanner('FREE DELIVERY', 'Free delivery\non ₹999+', 'Same-day delivery from your store', 'No minimum order', 'Start Shopping', Icons.delivery_dining_rounded,
+  // {speed} → the store's delivery promise (Admin → Store settings), e.g. "Next-day delivery".
+  _HeroBanner('FREE DELIVERY', 'Free delivery\non ₹999+', '{speed} from your store', 'No minimum order', 'Start Shopping', Icons.delivery_dining_rounded,
       [Color(0xFFFFF1D6), Color(0xFFFFE2A8)], '/categories'),
   _HeroBanner('PAY YOUR WAY', 'UPI, cards\nor cash on delivery', 'Safe & secure payments', '100% secure checkout', 'Explore', Icons.verified_user_rounded,
       [Color(0xFFE5ECFA), Color(0xFFCCD9F5)], '/categories'),
@@ -225,7 +226,12 @@ class _HeroCarouselState extends State<_HeroCarousel> {
                             const SizedBox(height: 8),
                             Text(b.title, style: text.titleLarge?.copyWith(height: 1.1, color: AppColors.green900, fontWeight: FontWeight.w800)),
                             const SizedBox(height: 4),
-                            Text(b.subtitle, style: text.bodySmall?.copyWith(color: AppColors.ink)),
+                            Consumer(
+                              builder: (context, ref, _) => Text(
+                                b.subtitle.replaceAll('{speed}', ref.watch(deliverySpeedProvider).headline),
+                                style: text.bodySmall?.copyWith(color: AppColors.ink),
+                              ),
+                            ),
                             const Spacer(),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
@@ -308,10 +314,10 @@ class _ShopByCategory extends StatelessWidget {
   }
 }
 
-class _StorePromise extends StatelessWidget {
+class _StorePromise extends ConsumerWidget {
   const _StorePromise();
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final text = Theme.of(context).textTheme;
     Widget item(IconData icon, String title, String sub) => Expanded(
           child: Column(children: [
@@ -326,7 +332,7 @@ class _StorePromise extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       decoration: BoxDecoration(color: AppColors.green50, borderRadius: BorderRadius.circular(AppRadius.lg)),
       child: Row(children: [
-        item(Icons.local_shipping_outlined, 'Same-day delivery', 'Across Trichy'),
+        item(Icons.local_shipping_outlined, ref.watch(deliverySpeedProvider).headline, 'Across Trichy'),
         item(Icons.verified_outlined, 'Quality checked', 'Every order'),
         item(Icons.storefront_outlined, 'Your local store', 'Trusted for years'),
       ]),

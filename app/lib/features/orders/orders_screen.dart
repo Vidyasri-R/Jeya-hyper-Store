@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/money.dart';
+import '../../core/dates.dart';
 import '../../core/theme.dart';
 import '../../data/models.dart';
 import '../../state/providers.dart';
@@ -74,11 +75,18 @@ class OrderCard extends StatelessWidget {
                 Text(order.orderNumber, style: text.titleSmall),
                 Text('${DateFormat('d MMM, h:mm a').format(order.createdAt)} · ${order.itemCount} item${order.itemCount == 1 ? '' : 's'}', style: text.bodySmall),
                 const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
-                  child: Text(order.statusLabel, style: text.labelSmall?.copyWith(color: fg, fontWeight: FontWeight.w800)),
-                ),
+                Wrap(spacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+                    child: Text(order.statusLabel, style: text.labelSmall?.copyWith(color: fg, fontWeight: FontWeight.w800)),
+                  ),
+                  if (!order.isClosed && !order.awaitingPayment && order.expectedDeliveryBy != null)
+                    Text(
+                      deliveryDay(order.expectedDeliveryBy!) == 'Today' ? 'Arriving today' : 'Arriving ${deliveryDay(order.expectedDeliveryBy!) == 'Tomorrow' ? 'tomorrow' : deliveryDay(order.expectedDeliveryBy!)}',
+                      style: text.labelSmall?.copyWith(color: AppColors.green800, fontWeight: FontWeight.w700),
+                    ),
+                ]),
               ]),
             ),
             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [

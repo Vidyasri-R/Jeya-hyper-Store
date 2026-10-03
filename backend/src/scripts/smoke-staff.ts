@@ -134,8 +134,15 @@ async function main() {
     const ids = lines.map((line) => line.productId);
     const before = await reservedOf(ids);
 
-    const { placed } = await placeCodOrder(customer, address!.id, lines);
+    const { quote, placed } = await placeCodOrder(customer, address!.id, lines);
     check('customer places a COD order', placed.status === 201, placed.json);
+    const promised = placed.json.order?.expectedDeliveryBy as string | undefined;
+    const tomorrowIst = new Date(Date.now() + 5.5 * 3600_000 + 86_400_000).toISOString().slice(0, 10);
+    check(
+      'order promises delivery by end of tomorrow (IST), same as the quote showed',
+      Boolean(promised) && new Date(new Date(promised!).getTime() + 5.5 * 3600_000).toISOString().slice(0, 16) === `${tomorrowIst}T23:59` && quote.json.quote?.expectedDeliveryBy === promised,
+      { promised, quoted: quote.json.quote?.expectedDeliveryBy },
+    );
     const orderId = placed.json.order?.id as string;
     const reservedAfterPlace = await reservedOf(ids);
     check('stock reserved', ids.every((id) => Number(reservedAfterPlace.get(id)) > Number(before.get(id))), [...reservedAfterPlace]);

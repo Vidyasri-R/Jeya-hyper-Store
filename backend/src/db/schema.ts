@@ -480,6 +480,8 @@ export const orders = pgTable(
     codCollectedAt: tstz(),
     codCollectedBy: uuid().references(() => staffUsers.id, { onDelete: 'set null' }),
     placedAt: tstz(),
+    /** Delivery promised to the customer at checkout (end of that IST day); stored so later setting changes don't move it. */
+    promisedBy: tstz(),
     deliveredAt: tstz(),
     cancelledAt: tstz(),
     ...timestamps,

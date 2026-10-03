@@ -74,6 +74,7 @@ class OrderCard {
       hasNote = j['hasNote'] == true,
       itemCount = (j['itemCount'] as num?)?.toInt() ?? 0,
       placedAt = _date(j['placedAt']),
+      promisedBy = _date(j['promisedBy']),
       createdAt = _date(j['createdAt']) ?? DateTime.now();
 
   final String id;
@@ -88,10 +89,15 @@ class OrderCard {
   final bool hasNote;
   final int itemCount;
   final DateTime? placedAt;
+
+  /// Delivery promised to the customer (end of that day); null on old orders.
+  final DateTime? promisedBy;
   final DateTime createdAt;
 
   bool get isCod => paymentMethod == 'cod';
   String get shortNumber => orderNumber.split('-').last;
+  bool get isOpen => !const {'delivered', 'cancelled', 'payment_failed'}.contains(status);
+  bool get isLate => isOpen && promisedBy != null && DateTime.now().isAfter(promisedBy!);
 }
 
 class OrderItem {
@@ -168,6 +174,7 @@ class OrderDetail {
       codCollected = ((j['cod'] as Map?)?['collectedAmount']) as String?,
       cancelledReason = j['cancelledReason'] as String?,
       placedAt = _date(j['placedAt']),
+      promisedBy = _date(j['promisedBy']),
       createdAt = _date(j['createdAt']) ?? DateTime.now(),
       next = (j['actions'] as Map?)?['next'] is Map
           ? NextAction(_str(((j['actions'] as Map)['next'] as Map)['to']), _str(((j['actions'] as Map)['next'] as Map)['label']))
@@ -195,11 +202,14 @@ class OrderDetail {
   final String? codCollected;
   final String? cancelledReason;
   final DateTime? placedAt;
+  final DateTime? promisedBy;
   final DateTime createdAt;
   final NextAction? next;
   final bool canCancel;
 
   bool get isCod => paymentMethod == 'cod';
+  bool get isOpen => !const {'delivered', 'cancelled', 'payment_failed'}.contains(status);
+  bool get isLate => isOpen && promisedBy != null && DateTime.now().isAfter(promisedBy!);
   String get billedAmount => finalAmount ?? totalAmount;
   String get recipientName => _str(address['recipientName'], customerName ?? 'Customer');
   String get phone => _str(address['phone'], customerPhone ?? '');

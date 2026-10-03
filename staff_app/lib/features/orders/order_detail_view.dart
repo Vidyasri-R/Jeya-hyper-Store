@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/dates.dart';
 import '../../core/money.dart';
 import '../../core/theme.dart';
 import '../../data/models.dart';
@@ -194,6 +195,14 @@ class _OrderDetailViewState extends ConsumerState<OrderDetailView> {
                   Text(order.orderNumber, style: text.titleLarge),
                   const SizedBox(height: 4),
                   Text('Placed ${dayTime(order.placedAt ?? order.createdAt)}', style: text.bodySmall),
+                  if (order.isOpen && order.promisedBy != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        order.isLate ? 'Late — was due ${deliveryPromise(order.promisedBy!)}' : 'Deliver by ${deliveryPromise(order.promisedBy!)}',
+                        style: text.titleSmall?.copyWith(color: order.isLate ? AppColors.offerRed : AppColors.green800),
+                      ),
+                    ),
                 ],
               ),
             ),
