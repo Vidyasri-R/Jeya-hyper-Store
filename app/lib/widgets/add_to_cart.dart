@@ -60,6 +60,7 @@ class AddToCartControl extends ConsumerWidget {
         height: height,
         width: expanded ? double.infinity : null,
         child: FilledButton(
+          clipBehavior: Clip.antiAlias,
           onPressed: () => _change(context, ref, product.minMilli),
           style: FilledButton.styleFrom(
             minimumSize: Size(0, height),
@@ -83,7 +84,7 @@ class AddToCartControl extends ConsumerWidget {
     return Container(
       height: height,
       width: expanded ? double.infinity : null,
-      decoration: BoxDecoration(color: AppColors.brand700, borderRadius: BorderRadius.circular(big ? AppRadius.lg : AppRadius.sm)),
+      decoration: AppDecor.brandFill(radius: big ? AppRadius.lg : AppRadius.sm),
       child: Row(
         mainAxisSize: expanded ? MainAxisSize.max : MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

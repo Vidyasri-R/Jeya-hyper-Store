@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/festival_pack.dart';
 import 'core/theme.dart';
 import 'state/providers.dart';
 import 'router.dart';
@@ -45,9 +46,12 @@ class _JeyaAppState extends ConsumerState<JeyaApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final palette = ref.watch(festivalProvider)?.palette ?? Palettes.standard;
-    if (!identical(AppColors.palette, palette)) {
+    final festival = ref.watch(festivalProvider);
+    final palette = festival?.palette ?? Palettes.standard;
+    final pack = festival?.pack;
+    if (!identical(AppColors.palette, palette) || !identical(Festive.pack, pack)) {
       AppColors.palette = palette;
+      Festive.pack = pack;
       // Brand colours are read straight from AppColors, so repaint every widget once —
       // without losing the screen, scroll position or anything typed.
       WidgetsBinding.instance.addPostFrameCallback((_) {

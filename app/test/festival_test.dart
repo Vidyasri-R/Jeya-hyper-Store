@@ -28,7 +28,7 @@ void main() {
 
     test('custom greeting wins, blank falls back to the default', () {
       expect(FestivalTheme.activeFrom(theme(greeting: '  Deepavali offers are here  '), now)?.headline, 'Deepavali offers are here');
-      expect(FestivalTheme.activeFrom(theme(greeting: '   '), now)?.headline, 'Happy Diwali from Jeya Hyper Store!');
+      expect(FestivalTheme.activeFrom(theme(greeting: '   '), now)?.headline, 'Happy Deepavali from Jeya Hyper Store!');
     });
   });
 }

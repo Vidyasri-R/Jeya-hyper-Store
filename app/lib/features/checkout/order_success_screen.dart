@@ -64,7 +64,7 @@ class OrderSuccessScreen extends ConsumerWidget {
               Text('We’re packing your order at Jeya Hyper Store. You’ll get updates as it moves.',
                   textAlign: TextAlign.center, style: text.bodyMedium?.copyWith(color: AppColors.inkMuted)),
               const Spacer(),
-              FilledButton(onPressed: () => context.go('/order/$orderId'), child: const Text('Track Order')),
+              FilledButton(clipBehavior: Clip.antiAlias, onPressed: () => context.go('/order/$orderId'), child: const Text('Track Order')),
               const SizedBox(height: 10),
               OutlinedButton(onPressed: () => context.go('/home'), child: const Text('Continue Shopping')),
             ]),

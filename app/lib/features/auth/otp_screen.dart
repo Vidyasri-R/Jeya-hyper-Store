@@ -116,6 +116,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
             ),
             const SizedBox(height: 20),
             FilledButton(
+              clipBehavior: Clip.antiAlias,
               onPressed: _otp.text.length == 6 && !_busy ? _verify : null,
               child: _busy
                   ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))

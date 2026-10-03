@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
+import '../../core/festival_pack.dart';
 import '../../core/theme.dart';
 import '../../data/models.dart';
 import '../../state/providers.dart';
 import '../../widgets/common.dart';
+import '../../widgets/festive_decor.dart';
 import '../../widgets/product_card.dart';
 import 'home_header.dart';
 
@@ -22,10 +24,11 @@ class HomeScreen extends ConsumerWidget {
     final categories = ref.watch(categoriesProvider);
     final products = ref.watch(_homeProductsProvider);
     final paused = ref.watch(storePausedMessageProvider).valueOrNull;
+    final festival = ref.watch(festivalProvider);
 
     return Scaffold(
       backgroundColor: AppColors.surface,
-      body: RefreshIndicator(
+      body: PetalOverlay(pack: festival?.pack, child: RefreshIndicator(
         color: AppColors.brand700,
         onRefresh: () async {
           ref.invalidate(categoriesProvider);
@@ -36,8 +39,12 @@ class HomeScreen extends ConsumerWidget {
         child: CustomScrollView(
           slivers: [
             const SliverToBoxAdapter(child: HomeHeader()),
-            if (ref.watch(festivalProvider) case final festival?)
-              SliverToBoxAdapter(child: _FestiveStrip(text: festival.greeting?.trim().isNotEmpty == true ? festival.greeting!.trim() : festival.subline, emoji: festival.emoji)),
+            if (festival != null)
+              SliverToBoxAdapter(
+                child: festival.pack != null
+                    ? FestiveRibbon(pack: festival.pack!, text: festival.greeting?.trim().isNotEmpty == true ? festival.greeting!.trim() : festival.subline)
+                    : _FestiveStrip(text: festival.greeting?.trim().isNotEmpty == true ? festival.greeting!.trim() : festival.subline, emoji: festival.emoji),
+              ),
             if (paused != null)
               SliverToBoxAdapter(
                 child: Container(
@@ -98,7 +105,7 @@ class HomeScreen extends ConsumerWidget {
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
-      ),
+      )),
       bottomNavigationBar: const CartBar(),
     );
   }
@@ -158,16 +165,6 @@ class _HeroBanner {
   final String route;
 }
 
-/// Banners that lead the carousel while a festival theme is on.
-const _festivalBanners = {
-  'diwali': [
-    _HeroBanner('DIWALI SPECIAL', 'Sweets, dry fruits\n& gift packs', 'Make the festival sweeter', 'Festive picks', 'Shop Diwali', Icons.card_giftcard_rounded,
-        [Color(0xFFFFF0D9), Color(0xFFFFD69E)], '/categories'),
-    _HeroBanner('LIGHT UP YOUR HOME', 'Oil, ghee &\npooja essentials', 'Deepam oil, camphor & agarbatti', 'For your Lakshmi pooja', 'Shop Now',
-        Icons.local_fire_department_rounded, [Color(0xFFFFE8D6), Color(0xFFFFC7A1)], '/categories'),
-  ],
-};
-
 const _banners = [
   _HeroBanner('FRESH DEALS', 'Freshness\nat your doorstep', 'Farm fresh fruits & vegetables', 'Picked daily in Trichy', 'Shop Now', Icons.eco_rounded,
       [Color(0xFFE3F4E6), Color(0xFFC9EBD0)], '/categories'),
@@ -196,18 +193,23 @@ class _HeroCarouselState extends ConsumerState<_HeroCarousel> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final banners = [...?_festivalBanners[ref.watch(festivalProvider)?.preset], ..._banners];
+    final festive = ref.watch(festivalProvider)?.pack?.banners ?? const <FestivalBanner>[];
+    final banners = _banners;
     return Column(
       children: [
         const SizedBox(height: 14),
         SizedBox(
           // Sized for 2-line titles at large accessibility font sizes (no overflow on small phones).
           height: 176,
-          child: PageView.builder(
+          // Marketing art has a fixed height: cap text growth so large accessibility sizes still fit.
+          child: MediaQuery.withClampedTextScaling(maxScaleFactor: 1.1, child: PageView.builder(
             controller: _controller,
-            itemCount: banners.length,
+            itemCount: festive.length + banners.length,
             itemBuilder: (context, i) {
-              final b = banners[i];
+              if (i < festive.length) {
+                return Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: FestiveBannerCard(festive[i]));
+              }
+              final b = banners[i - festive.length];
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: InkWell(
@@ -263,12 +265,12 @@ class _HeroCarouselState extends ConsumerState<_HeroCarousel> {
                 ),
               );
             },
-          ),
+          )),
         ),
         const SizedBox(height: 10),
         SmoothPageIndicator(
           controller: _controller,
-          count: banners.length,
+          count: festive.length + banners.length,
           effect: ExpandingDotsEffect(dotHeight: 6, dotWidth: 6, activeDotColor: AppColors.brand700, dotColor: AppColors.line),
         ),
       ],

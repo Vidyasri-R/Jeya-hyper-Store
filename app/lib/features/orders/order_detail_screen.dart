@@ -90,6 +90,7 @@ class _Body extends ConsumerWidget {
             child: const Text('Keep order'),
           ),
           FilledButton(
+            clipBehavior: Clip.antiAlias,
             style: FilledButton.styleFrom(backgroundColor: AppColors.offerRed),
             onPressed: () => Navigator.pop(c, true),
             child: const Text('Cancel order'),

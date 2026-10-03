@@ -68,7 +68,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             builder: (c) => AlertDialog(
               title: const Text('Price updated'),
               content: Text('Prices or delivery charges changed. Your new total is ${formatRupees(e.details['total'] as String? ?? quote.total)}. Please review and place the order again.'),
-              actions: [FilledButton(onPressed: () => Navigator.pop(c), child: const Text('Review'))],
+              actions: [FilledButton(clipBehavior: Clip.antiAlias, onPressed: () => Navigator.pop(c), child: const Text('Review'))],
             ),
           );
         case 'stock_changed' || 'cart_needs_review':
@@ -112,7 +112,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               const SizedBox(height: 6),
               Text('Your items are held for a few minutes. You can try paying again.', textAlign: TextAlign.center, style: Theme.of(c).textTheme.bodySmall),
               const SizedBox(height: 18),
-              FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Try again')),
+              FilledButton(clipBehavior: Clip.antiAlias, onPressed: () => Navigator.pop(c, true), child: const Text('Try again')),
               const SizedBox(height: 8),
               OutlinedButton(onPressed: () => Navigator.pop(c, false), child: const Text('View order')),
             ]),
@@ -193,6 +193,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 ]),
               ),
               FilledButton(
+                clipBehavior: Clip.antiAlias,
                 onPressed: q.canPlaceOrder && !_placing ? () => _place(address, q) : null,
                 style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 28)),
                 child: _placing

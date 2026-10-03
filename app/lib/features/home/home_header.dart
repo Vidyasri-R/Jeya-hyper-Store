@@ -6,7 +6,7 @@ import '../../core/theme.dart';
 import '../../state/providers.dart';
 import '../../widgets/festive_decor.dart';
 
-/// Green hero header from the design: brand, deliver-to, greeting and search.
+/// Hero header: brand, deliver-to, greeting and search; dressed in festival art when a theme is on.
 class HomeHeader extends ConsumerWidget {
   const HomeHeader({super.key});
 
@@ -23,37 +23,38 @@ class HomeHeader extends ConsumerWidget {
     final auth = ref.watch(authProvider);
     final address = ref.watch(selectedAddressProvider);
     final firstName = auth is SignedIn ? auth.user.name?.split(' ').first : null;
-    final festival = ref.watch(festivalProvider);
-    final diwali = festival?.isDiwali ?? false;
+    final pack = ref.watch(festivalProvider)?.pack;
     final topInset = MediaQuery.paddingOf(context).top;
 
     return Container(
       decoration: BoxDecoration(
-        gradient: AppColors.headerGradient,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(26)),
+        gradient: pack == null ? AppColors.headerGradient : null,
+        color: pack == null ? null : AppColors.brand900,
+        image: pack == null ? null : DecorationImage(image: AssetImage(pack.headerBackground), fit: BoxFit.cover, alignment: Alignment.topCenter),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(26)),
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [
-          Positioned(right: -40, top: -30, child: _Glow(size: 200)),
-          Positioned(right: 60, bottom: -60, child: _Glow(size: 140)),
-          if (diwali) ...[
-            Positioned(left: 0, right: 0, top: topInset + 2, height: 34, child: const DiwaliLights()),
-            Positioned(
-              right: 16,
-              top: topInset + 92,
-              child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: const [Diya(size: 30), SizedBox(width: 4), Diya(size: 42), SizedBox(width: 4), Diya(size: 30)]),
-            ),
-          ] else
+          if (pack == null) ...[
+            Positioned(right: -40, top: -30, child: _Glow(size: 200)),
+            Positioned(right: 60, bottom: -60, child: _Glow(size: 140)),
             Positioned(
               right: -6,
               top: 64,
               child: Opacity(opacity: 0.16, child: Image.asset('assets/brand/logo_mark.png', height: 150, color: Colors.white, colorBlendMode: BlendMode.srcIn)),
             ),
+          ] else ...[
+            const Positioned.fill(child: Twinkles()),
+            Positioned(left: 0, right: 0, top: topInset, height: 44, child: Thoranam(pack: pack)),
+            // Sits just above the search bar, which tucks over the rangoli's front edge.
+            Positioned(right: 4, bottom: 60, child: DiyaCluster(pack: pack, width: 132)),
+          ],
           SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
+              // Festive: room under the thoranam so it never crosses the store name.
+              padding: EdgeInsets.fromLTRB(16, pack == null ? 10 : 42, 16, 18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -65,14 +66,26 @@ class HomeHeader extends ConsumerWidget {
                         child: Image.asset('assets/brand/logo_mark.png', height: 30),
                       ),
                       const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Jeya Hyper Store', style: text.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w800, height: 1.1)),
-                          Text('Your neighbourhood supermarket', style: text.labelSmall?.copyWith(color: Colors.white70)),
-                        ],
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Jeya Hyper Store',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: text.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w800, height: 1.1),
+                            ),
+                            Text(
+                              'Your neighbourhood supermarket',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: text.labelSmall?.copyWith(color: Colors.white70),
+                            ),
+                          ],
+                        ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 8),
                       InkWell(
                         onTap: () => context.go('/profile'),
                         borderRadius: BorderRadius.circular(20),
@@ -93,10 +106,10 @@ class HomeHeader extends ConsumerWidget {
                       const Icon(Icons.location_on_rounded, color: Colors.white, size: 18),
                       const SizedBox(width: 4),
                       Text('Deliver to ', style: text.labelMedium?.copyWith(color: Colors.white70)),
-                      ConstrainedBox(
-                        constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.5),
+                      Flexible(
                         child: Text(
                           address == null ? 'Add delivery address' : '${address.title} – ${address.line1}',
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: text.labelLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
                         ),
@@ -105,15 +118,36 @@ class HomeHeader extends ConsumerWidget {
                     ]),
                   ),
                   const SizedBox(height: 14),
-                  Text(
-                    diwali
-                        ? (firstName != null ? 'Happy Diwali, $firstName!' : 'Happy Diwali!')
-                        : (firstName != null ? '${_greeting().replaceAll('!', '')}, $firstName!' : _greeting()),
-                    style: text.headlineSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
-                  ),
-                  Text(
-                    diwali ? 'What can we get you for the festival?' : 'What are you looking for today?',
-                    style: text.bodyMedium?.copyWith(color: diwali ? AppColors.festiveAccent : Colors.white.withValues(alpha: 0.92)),
+                  Padding(
+                    // Festive: keep the greeting clear of the diyas on the right.
+                    padding: EdgeInsets.only(right: pack == null ? 0 : 124),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            pack != null
+                                ? (firstName != null ? '${pack.greeting}, $firstName!' : '${pack.greeting}!')
+                                : (firstName != null ? '${_greeting().replaceAll('!', '')}, $firstName!' : _greeting()),
+                            maxLines: 1,
+                            style: text.headlineSmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              shadows: pack == null ? null : const [Shadow(color: Color(0x99000000), blurRadius: 8, offset: Offset(0, 1))],
+                            ),
+                          ),
+                        ),
+                        Text(
+                          pack?.question ?? 'What are you looking for today?',
+                          style: text.bodyMedium?.copyWith(
+                            color: pack != null ? AppColors.festiveAccent : Colors.white.withValues(alpha: 0.92),
+                            fontWeight: pack != null ? FontWeight.w600 : null,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 14),
                   Material(

@@ -43,23 +43,34 @@ class AppShell extends ConsumerWidget {
       );
     }
 
+    final pack = ref.watch(festivalProvider)?.pack;
+    final tabs = SafeArea(
+      top: false,
+      child: Row(children: [
+        item(0, Icons.home_outlined, Icons.home_rounded, 'Home'),
+        item(1, Icons.grid_view_outlined, Icons.grid_view_rounded, 'Categories'),
+        item(2, Icons.shopping_cart_outlined, Icons.shopping_cart_rounded, 'Cart', badge: count),
+        item(3, Icons.inventory_2_outlined, Icons.inventory_2_rounded, 'Orders'),
+        item(4, Icons.person_outline_rounded, Icons.person_rounded, 'Profile'),
+      ]),
+    );
     return Scaffold(
       body: shell,
       bottomNavigationBar: DecoratedBox(
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          border: Border(top: BorderSide(color: AppColors.line)),
+        decoration: BoxDecoration(
+          color: pack == null ? AppColors.surface : AppColors.brandTint,
+          border: pack == null ? const Border(top: BorderSide(color: AppColors.line)) : null,
         ),
-        child: SafeArea(
-          top: false,
-          child: Row(children: [
-            item(0, Icons.home_outlined, Icons.home_rounded, 'Home'),
-            item(1, Icons.grid_view_outlined, Icons.grid_view_rounded, 'Categories'),
-            item(2, Icons.shopping_cart_outlined, Icons.shopping_cart_rounded, 'Cart', badge: count),
-            item(3, Icons.inventory_2_outlined, Icons.inventory_2_rounded, 'Orders'),
-            item(4, Icons.person_outline_rounded, Icons.person_rounded, 'Profile'),
-          ]),
-        ),
+        child: pack == null
+            ? tabs
+            : Column(mainAxisSize: MainAxisSize.min, children: [
+                // Festival edge: gold scallops on maroon.
+                DecoratedBox(
+                  decoration: BoxDecoration(image: DecorationImage(image: pack.navBorder, repeat: ImageRepeat.repeatX, alignment: Alignment.topLeft)),
+                  child: const SizedBox(height: 10, width: double.infinity),
+                ),
+                tabs,
+              ]),
       ),
     );
   }

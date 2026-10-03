@@ -5,6 +5,7 @@ import 'package:shimmer/shimmer.dart';
 
 import '../core/api/api_client.dart';
 import '../core/money.dart';
+import '../core/festival_pack.dart';
 import '../core/theme.dart';
 import '../state/providers.dart';
 
@@ -23,6 +24,10 @@ class SectionHeader extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          if (Festive.pack case final pack?) ...[
+            Padding(padding: const EdgeInsets.only(bottom: 2), child: Image.asset(pack.sectionIcon, width: 28, height: 28)),
+            const SizedBox(width: 6),
+          ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -85,6 +90,7 @@ class CartBar extends ConsumerWidget {
                   ),
                 ),
                 FilledButton(
+                  clipBehavior: Clip.antiAlias,
                   onPressed: () => context.go('/cart'),
                   style: FilledButton.styleFrom(minimumSize: const Size(0, 48), padding: const EdgeInsets.symmetric(horizontal: 22)),
                   child: const Row(children: [Text('View Cart'), SizedBox(width: 6), Icon(Icons.arrow_forward, size: 18)]),
@@ -150,7 +156,7 @@ class EmptyState extends StatelessWidget {
             const SizedBox(height: 18),
             Text(title, style: text.titleMedium, textAlign: TextAlign.center),
             if (message != null) ...[const SizedBox(height: 6), Text(message!, style: text.bodySmall, textAlign: TextAlign.center)],
-            if (action != null) ...[const SizedBox(height: 20), FilledButton(onPressed: onAction, child: Text(action!))],
+            if (action != null) ...[const SizedBox(height: 20), FilledButton(clipBehavior: Clip.antiAlias, onPressed: onAction, child: Text(action!))],
           ],
         ),
       ),

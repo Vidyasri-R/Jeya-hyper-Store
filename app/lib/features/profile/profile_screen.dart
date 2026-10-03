@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/festival_pack.dart';
 import '../../core/theme.dart';
 import '../../state/providers.dart';
 
@@ -19,7 +20,7 @@ class ProfileScreen extends ConsumerWidget {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
-          FilledButton(style: FilledButton.styleFrom(backgroundColor: AppColors.offerRed), onPressed: () => Navigator.pop(c, true), child: const Text('Delete account')),
+          FilledButton(clipBehavior: Clip.antiAlias, style: FilledButton.styleFrom(backgroundColor: AppColors.offerRed), onPressed: () => Navigator.pop(c, true), child: const Text('Delete account')),
         ],
       ),
     );
@@ -48,7 +49,7 @@ class ProfileScreen extends ConsumerWidget {
           const SizedBox(height: 20),
           Text('Login to see your orders, saved addresses and more.', textAlign: TextAlign.center, style: text.bodyMedium),
           const SizedBox(height: 16),
-          FilledButton(onPressed: () => context.push('/login'), child: const Text('Login / Sign up')),
+          FilledButton(clipBehavior: Clip.antiAlias, onPressed: () => context.push('/login'), child: const Text('Login / Sign up')),
           const SizedBox(height: 24),
           _Tile(icon: Icons.support_agent_rounded, title: 'Help & Support', onTap: () => context.push('/help')),
           _Tile(icon: Icons.info_outline_rounded, title: 'About Jeya Hyper Store', onTap: () => context.push('/about')),
@@ -64,7 +65,14 @@ class ProfileScreen extends ConsumerWidget {
         padding: EdgeInsets.zero,
         children: [
           Container(
-            decoration: BoxDecoration(gradient: AppColors.headerGradient, borderRadius: BorderRadius.vertical(bottom: Radius.circular(26))),
+            decoration: BoxDecoration(
+              gradient: Festive.pack == null ? AppColors.headerGradient : null,
+              color: Festive.pack == null ? null : AppColors.brand900,
+              image: Festive.pack == null
+                  ? null
+                  : DecorationImage(image: AssetImage(Festive.pack!.headerBackground), fit: BoxFit.cover, alignment: const Alignment(0, -0.2)),
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(26)),
+            ),
             child: SafeArea(
               bottom: false,
               child: Padding(

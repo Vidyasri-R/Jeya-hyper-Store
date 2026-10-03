@@ -1,3 +1,4 @@
+import 'festival_pack.dart';
 import 'theme.dart';
 
 /// Admin → Store settings → App theme (public config `app.theme`):
@@ -13,18 +14,21 @@ class FestivalTheme {
 
   BrandPalette get palette => Palettes.byId(preset);
 
+  /// Artwork for this festival (null if this build has none for it).
+  FestivalPack? get pack => FestivalPacks.byId(preset);
+
   bool get isDiwali => preset == 'diwali';
 
   /// Greeting strip on Home.
   String get headline => (greeting != null && greeting!.trim().isNotEmpty) ? greeting!.trim() : _defaultGreeting;
 
   String get _defaultGreeting => switch (preset) {
-    'diwali' => 'Happy Diwali from Jeya Hyper Store!',
+    'diwali' => 'Happy Deepavali from Jeya Hyper Store!',
     _ => '',
   };
 
   String get subline => switch (preset) {
-    'diwali' => 'Sweets, dry fruits, gifts & pooja essentials',
+    'diwali' => 'Sweets, savouries, gifts & pooja essentials',
     _ => '',
   };
 

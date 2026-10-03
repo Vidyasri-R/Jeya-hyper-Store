@@ -110,8 +110,12 @@ final publicConfigProvider = FutureProvider<Map<String, dynamic>>((ref) => ref.w
 /// Re-checks festival start/end times during long sessions.
 final _themeClockProvider = StreamProvider<DateTime>((ref) => Stream.periodic(const Duration(minutes: 10), (_) => DateTime.now()));
 
+/// Build-time preview of a festival look (screenshots, trying a new preset): `--dart-define=PREVIEW_THEME=diwali`.
+const _previewTheme = String.fromEnvironment('PREVIEW_THEME');
+
 /// The festival theme in effect now (Admin → Store settings → App theme), or null for the everyday look.
 final festivalProvider = Provider<FestivalTheme?>((ref) {
+  if (_previewTheme.isNotEmpty) return FestivalTheme(preset: _previewTheme);
   ref.watch(_themeClockProvider);
   return FestivalTheme.activeFrom(ref.watch(publicConfigProvider).valueOrNull?['app.theme'], DateTime.now());
 });

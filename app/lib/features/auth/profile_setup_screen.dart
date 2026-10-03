@@ -61,6 +61,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             ),
             const SizedBox(height: 20),
             FilledButton(
+              clipBehavior: Clip.antiAlias,
               onPressed: _busy ? null : _save,
               child: _busy
                   ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))

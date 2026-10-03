@@ -70,6 +70,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/brand/
+    - assets/themes/diwali/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

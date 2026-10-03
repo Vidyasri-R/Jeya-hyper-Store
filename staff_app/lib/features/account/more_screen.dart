@@ -79,7 +79,7 @@ class MoreScreen extends ConsumerWidget {
                         : null,
                   ),
                   tile(Icons.badge_outlined, 'Staff accounts', 'Add people, reset passwords, disable', () => context.go('/more/staff')),
-                  tile(Icons.storefront_outlined, 'Store settings', 'Delivery fees, payments, contact, maintenance', () => context.go('/more/settings')),
+                  tile(Icons.storefront_outlined, 'Store settings', 'Festival theme, delivery fees, payments, contact', () => context.go('/more/settings')),
                 ],
               ),
             ),

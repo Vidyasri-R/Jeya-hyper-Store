@@ -56,7 +56,7 @@ class CartScreen extends ConsumerWidget {
                     content: const Text('All items will be removed from your cart.'),
                     actions: [
                       TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
-                      FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Clear')),
+                      FilledButton(clipBehavior: Clip.antiAlias, onPressed: () => Navigator.pop(c, true), child: const Text('Clear')),
                     ],
                   ),
                 );
@@ -278,9 +278,10 @@ class _CheckoutBar extends ConsumerWidget {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
         child: Material(
-          color: AppColors.brand700,
+          color: Colors.transparent,
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          child: InkWell(
+          // Festive texture during festivals, plain brand colour otherwise.
+          child: Ink(decoration: AppDecor.brandFill(radius: AppRadius.lg, edge: false), child: InkWell(
             borderRadius: BorderRadius.circular(AppRadius.lg),
             onTap: cart.hasIssues
                 ? () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fix the highlighted items first')))
@@ -298,7 +299,7 @@ class _CheckoutBar extends ConsumerWidget {
                 const Icon(Icons.arrow_forward_rounded, color: Colors.white),
               ]),
             ),
-          ),
+          )),
         ),
       ),
     );

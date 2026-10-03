@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'festival_pack.dart';
+
 /// One festival-able colour family. `AppColors.brand*` read the active palette, so a festival
 /// theme (Admin → Store settings → App theme) recolours every button, chip and header at once.
 class BrandPalette {
@@ -98,6 +100,35 @@ abstract final class AppColors {
       LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: palette.header);
 }
 
+/// Brand fills that dress up for festivals (gradient + gold sparkle texture + gold edge).
+abstract final class AppDecor {
+  static BoxDecoration brandFill({double radius = 0, bool pressed = false, bool edge = true}) {
+    final pack = Festive.pack;
+    final r = radius > 0 ? BorderRadius.circular(radius) : null;
+    if (pack == null) return BoxDecoration(color: pressed ? AppColors.brand800 : AppColors.brand700, borderRadius: r);
+    return BoxDecoration(
+      borderRadius: r,
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: pressed ? [AppColors.brand900, AppColors.brand800] : [AppColors.brand800, AppColors.brand700, AppColors.brand600],
+      ),
+      image: DecorationImage(image: pack.buttonTexture, repeat: ImageRepeat.repeat, alignment: Alignment.topLeft),
+      border: edge ? Border.all(color: AppColors.festiveAccent.withValues(alpha: 0.55), width: 0.8) : null,
+    );
+  }
+
+  /// Light catching the top edge of a festive button.
+  static const gloss = BoxDecoration(
+    gradient: LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0x38FFFFFF), Color(0x00FFFFFF)],
+      stops: [0, 0.5],
+    ),
+  );
+}
+
 abstract final class AppRadius {
   static const sm = 8.0;
   static const md = 12.0;
@@ -147,6 +178,16 @@ ThemeData buildTheme() {
         minimumSize: const Size(64, 52),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
         textStyle: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        // Festivals: sparkle-textured gradient with a soft top gloss. Buttons pass
+        // clipBehavior: Clip.antiAlias so their own rounded shape clips it.
+        backgroundBuilder: Festive.pack == null
+            ? null
+            : (context, states, child) => states.contains(WidgetState.disabled)
+                ? child ?? const SizedBox.shrink()
+                : DecoratedBox(
+                    decoration: AppDecor.brandFill(pressed: states.contains(WidgetState.pressed), edge: false),
+                    child: DecoratedBox(decoration: AppDecor.gloss, child: child),
+                  ),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(

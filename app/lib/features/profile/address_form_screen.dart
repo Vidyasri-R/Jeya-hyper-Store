@@ -249,6 +249,7 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
                     right: 12,
                     bottom: 12,
                     child: FilledButton.icon(
+                      clipBehavior: Clip.antiAlias,
                       onPressed: _locating ? null : () => _useCurrentLocation(),
                       style: FilledButton.styleFrom(
                         minimumSize: const Size(0, 40),
@@ -381,6 +382,7 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
           child: FilledButton(
+            clipBehavior: Clip.antiAlias,
             onPressed: _saving ? null : _save,
             child: _saving
                 ? const SizedBox(

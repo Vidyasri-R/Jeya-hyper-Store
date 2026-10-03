@@ -27,7 +27,7 @@ class SplashScreen extends ConsumerWidget {
                 const SizedBox(height: 4),
                 Text('Check your internet connection.', style: text.bodySmall),
                 const SizedBox(height: 16),
-                FilledButton(onPressed: () => ref.read(authProvider.notifier).retry(), child: const Text('Try again')),
+                FilledButton(clipBehavior: Clip.antiAlias, onPressed: () => ref.read(authProvider.notifier).retry(), child: const Text('Try again')),
               ] else
                 SizedBox(width: 26, height: 26, child: CircularProgressIndicator(strokeWidth: 2.6, color: AppColors.brand700)),
             ],

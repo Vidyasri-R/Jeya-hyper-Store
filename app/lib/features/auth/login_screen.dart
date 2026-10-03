@@ -89,6 +89,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
             const SizedBox(height: 20),
             FilledButton(
+              clipBehavior: Clip.antiAlias,
               onPressed: _valid && !_busy ? _continue : null,
               child: _busy
                   ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))

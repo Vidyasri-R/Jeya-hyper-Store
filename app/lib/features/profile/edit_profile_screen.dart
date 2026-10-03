@@ -80,6 +80,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
           child: FilledButton(
+            clipBehavior: Clip.antiAlias,
             onPressed: _saving ? null : _save,
             child: _saving ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white)) : const Text('Save'),
           ),
