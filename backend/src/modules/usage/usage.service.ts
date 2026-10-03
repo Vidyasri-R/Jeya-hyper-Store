@@ -1,4 +1,4 @@
-import { env } from '../../config/env';
+import { env, isProduction } from '../../config/env';
 import { logger } from '../../config/logger';
 import { db } from '../../db/client';
 import type { AdminAlert, AlertLevel } from '../../db/schema';
@@ -151,8 +151,9 @@ export const usageService = {
     const now = new Date();
     const month = istMonth(now);
     const limits = await usageLimits();
-    // Fold not-yet-flushed traffic in, so the screen is current to the second.
-    await usageService.flushTraffic().catch((error: unknown) => logger.warn({ err: error }, 'usage flush before report failed'));
+    // Fold not-yet-flushed traffic in, so the screen is current to the second (deployed server
+    // only: a laptop running the API against the same database must not add its traffic).
+    if (isProduction) await usageService.flushTraffic().catch((error: unknown) => logger.warn({ err: error }, 'usage flush before report failed'));
     const [rows, sizes, fees, syncRows, openAlerts, tables, backups] = await Promise.all([
       usageRepository.range(db, month.firstDay, month.lastDay),
       usageRepository.latestSizes(db),

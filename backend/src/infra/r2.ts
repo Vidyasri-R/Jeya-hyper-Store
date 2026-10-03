@@ -47,6 +47,8 @@ const client = config
       endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
       credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey },
       maxAttempts: 3,
+      // Fail instead of hanging forever on a stalled connection (the SDK has no timeout by default).
+      requestHandler: { connectionTimeout: 5_000, requestTimeout: 60_000 },
       // R2 doesn't support the newer default checksum headers on every operation.
       requestChecksumCalculation: 'WHEN_REQUIRED',
       responseChecksumValidation: 'WHEN_REQUIRED',

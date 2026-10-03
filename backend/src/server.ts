@@ -1,3 +1,4 @@
+import { setDefaultResultOrder } from 'node:dns';
 import { createApp } from './app';
 import { env, isProduction } from './config/env';
 import { logger } from './config/logger';
@@ -8,6 +9,10 @@ import { syncScheduler } from './modules/sync/sync.scheduler';
 import { usageScheduler } from './modules/usage/usage.scheduler';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
+
+// Render has no IPv6 egress, but some services we call (Cloudflare R2) resolve to IPv6 too —
+// prefer IPv4 so outbound connections never sit on an unreachable address.
+setDefaultResultOrder('ipv4first');
 
 const server = createApp().listen(env.PORT, () => {
   logger.info({ port: env.PORT, env: env.NODE_ENV }, '🚀 Jeya API listening');
