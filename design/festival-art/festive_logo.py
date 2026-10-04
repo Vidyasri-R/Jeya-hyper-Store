@@ -1,7 +1,8 @@
 """Festival app icons: the everyday Jeya icon, untouched, with the festival's thoranam hung across
 its top — mango leaves and marigolds (Deepavali), aavaram poo (Pongal), a pine garland with
 baubles (Christmas & New Year), roses with little hearts (Valentine's Day), a mango-leaf
-fringe with malli, kanakambaram and konrai bunches (Tamil New Year).
+fringe with malli, kanakambaram and konrai bunches (Tamil New Year), little lanterns, stars and
+crescents on a gold chain (Eid).
 
 Writes app/branding/app_icon/<festival>/ (Android launcher mipmaps + iOS AppIcon), next to the
 everyday set in app/branding/app_icon/standard/. Switch the app between them with
@@ -23,6 +24,7 @@ from pongal_art import aavaram, poolai
 from christmas_art import bauble, bow, pine_branch, warm_light
 from valentine_art import heart, rose, rose_leaf
 from puthandu_art import kanakambaram, konrai_cluster, malli
+from eid_art import gold_crescent, lantern, star5
 
 APP = '../../app'
 ANDROID_RES = f'{APP}/android/app/src/main/res'
@@ -105,6 +107,22 @@ def garland(festival):
         for t in (0.22, 0.78):
             x, y, _ = _rope(t)
             front.append(konrai_cluster(s, x, y + 6, 46, scale=0.95))
+    elif festival == 'eid':
+        for i in range(41):
+            x, y, _ = _rope(i / 40)
+            mid.append(f'<circle cx="{f(x)}" cy="{f(y)}" r="3.4" fill="{["#FFE7A0", "#E0A82E"][i % 2]}"/>')
+        # lanterns only at the ends, short drops over the logo so the peacock stays clear
+        for i, (t, drop, kind) in enumerate([(0.08, 20, 'lantern'), (0.22, 8, 'crescent'), (0.36, 4, 'star'), (0.5, 2, 'star'),
+                                             (0.64, 4, 'star'), (0.78, 8, 'crescent'), (0.92, 20, 'lantern')]):
+            x, y, _ = _rope(t)
+            back.append(f'<line x1="{f(x)}" y1="{f(y)}" x2="{f(x)}" y2="{f(y + drop)}" stroke="#C98A12" stroke-width="1.6"/>')
+            if kind == 'lantern':
+                svg, _ = lantern(s, x, y + drop - 2, 50, 'ruby' if i == 0 else 'teal', glow=False)
+                front.append(svg)
+            elif kind == 'star':
+                front.append(star5(s, x, y + drop + 8, 9 if i == 3 else 10))
+            else:
+                front.append(gold_crescent(s, x, y + drop + 9, 10, rot=-30))
     else:
         raise ValueError(festival)
     s.add(''.join(back) + ''.join(mid) + ''.join(front))
@@ -167,7 +185,7 @@ def icon_sets(festival):
     print(festival, 'icon set written')
 
 
-FESTIVALS = ('diwali', 'pongal', 'christmas', 'valentine', 'puthandu')
+FESTIVALS = ('diwali', 'pongal', 'christmas', 'valentine', 'puthandu', 'eid')
 
 if __name__ == '__main__':
     for festival in FESTIVALS:

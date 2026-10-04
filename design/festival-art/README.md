@@ -31,6 +31,11 @@ python3 puthandu_art.py    # Tamil New Year: peacock-teal silk, mango-leaf thora
 python3 puthandu_more.py   # mangoes / banana-leaf feast / pooja & kani banners, mango-butta tile, mango icon, flower petals
 node render.mjs --dir out/puthandu
 cp out/puthandu/webp/*.webp ../../app/assets/themes/puthandu/   # has its own flame.webp (glow kept inside the image)
+
+python3 eid_art.py         # Eid (Ramzan & Bakrid): violet night, gold star patterns, lantern garland, lanterns + dates hero, crescent halo
+python3 eid_more.py        # sheer khurma / biryani / iftar banners, star tile, lantern icon, stars & crescents
+node render.mjs --dir out/eid
+cp out/eid/webp/*.webp ../../app/assets/themes/eid/   # own flame.webp, like puthandu
 ```
 
 How the app uses them: `app/lib/core/festival_pack.dart` (asset names, banner copy, flame

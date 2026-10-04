@@ -284,12 +284,51 @@ abstract final class FestivalPacks {
     ],
   );
 
+  /// Eid (Ramzan & Bakrid): a violet night with gold star patterns, lanterns, a crescent, dates and the feast.
+  static const eid = FestivalPack(
+    id: 'eid',
+    dir: 'assets/themes/eid',
+    greeting: 'Eid Mubarak',
+    question: 'Feast essentials, delivered',
+    heroAspect: 480 / 300,
+    flames: [(0.3667, 0.6499, 0.1754), (0.875, 0.7585, 0.1127)],
+    halo: 'crescent',
+    banners: [
+      FestivalBanner(
+        image: 'assets/themes/eid/banner_sweets.webp',
+        tag: 'EID SPECIAL',
+        title: 'Sheer khurma\n& sweets',
+        subtitle: 'Semiya, dates & dry fruits',
+        cta: 'Shop sweets',
+        route: '/search?q=sweets',
+      ),
+      FestivalBanner(
+        image: 'assets/themes/eid/banner_biryani.webp',
+        tag: 'EID FEAST',
+        title: 'Biryani\nessentials',
+        subtitle: 'Basmati, spices & ghee',
+        cta: 'Shop now',
+        route: '/search?q=rice',
+        dark: true,
+      ),
+      FestivalBanner(
+        image: 'assets/themes/eid/banner_iftar.webp',
+        tag: 'IFTAR TREATS',
+        title: 'Dates, fruits\n& drinks',
+        subtitle: 'For Ramzan evenings',
+        cta: 'Explore',
+        route: '/categories',
+      ),
+    ],
+  );
+
   static FestivalPack? byId(String? id) => switch (id) {
     'diwali' => diwali,
     'pongal' => pongal,
     'christmas' => christmas,
     'valentine' => valentine,
     'puthandu' => puthandu,
+    'eid' => eid,
     _ => null,
   };
 }

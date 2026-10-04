@@ -45,6 +45,13 @@ void main() {
       expect(t?.pack?.haloImage, 'assets/themes/puthandu/lotus.webp');
     });
 
+    test('Eid has its own look', () {
+      final t = FestivalTheme.activeFrom(theme(preset: 'eid'), now);
+      expect(t?.palette, same(Palettes.eid));
+      expect(t?.pack?.greeting, 'Eid Mubarak');
+      expect(t?.pack?.haloImage, 'assets/themes/eid/crescent.webp');
+    });
+
     test('Pongal has its own look', () {
       final t = FestivalTheme.activeFrom(theme(preset: 'pongal'), now);
       expect(t?.palette, same(Palettes.pongal));

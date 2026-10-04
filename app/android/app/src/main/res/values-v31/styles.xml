@@ -26,4 +26,8 @@
         <item name="android:windowSplashScreenBackground">#FF07404A</item>
         <item name="android:windowSplashScreenIconBackgroundColor">@android:color/white</item>
     </style>
+    <style name="EidSplashTheme" parent="LaunchTheme">
+        <item name="android:windowSplashScreenBackground">#FF26103F</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/white</item>
+    </style>
 </resources>

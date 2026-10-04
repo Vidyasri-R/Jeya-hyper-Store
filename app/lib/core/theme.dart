@@ -121,12 +121,28 @@ abstract final class Palettes {
     accent: Color(0xFFFFD54F),
   );
 
+  /// Eid (Ramzan & Bakrid): a violet night with lantern gold.
+  static const eid = BrandPalette(
+    id: 'eid',
+    b900: Color(0xFF2A1048),
+    b800: Color(0xFF3D1A66),
+    b700: Color(0xFF5B2A93),
+    b600: Color(0xFF7038AE),
+    b500: Color(0xFF8A4FC8),
+    b100: Color(0xFFEBDDF7),
+    b50: Color(0xFFF6EEFB),
+    tint: Color(0xFFFBF7FE),
+    header: [Color(0xFF26103F), Color(0xFF52288A)],
+    accent: Color(0xFFFFD54F),
+  );
+
   static BrandPalette byId(String? id) => switch (id) {
     'diwali' => diwali,
     'pongal' => pongal,
     'christmas' => christmas,
     'valentine' => valentine,
     'puthandu' => puthandu,
+    'eid' => eid,
     _ => standard,
   };
 }
