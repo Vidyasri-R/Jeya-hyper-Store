@@ -166,6 +166,21 @@ abstract final class Palettes {
     accent: Color(0xFFFFD54F),
   );
 
+  /// Navaratri & Ayudha Pooja: plum and rani-pink silk with temple gold.
+  static const navaratri = BrandPalette(
+    id: 'navaratri',
+    b900: Color(0xFF4A0E3C),
+    b800: Color(0xFF6E1650),
+    b700: Color(0xFFA1246F),
+    b600: Color(0xFFB83A86),
+    b500: Color(0xFFCC5C9C),
+    b100: Color(0xFFF8DDEE),
+    b50: Color(0xFFFCEFF7),
+    tint: Color(0xFFFFF8FC),
+    header: [Color(0xFF4A0E3C), Color(0xFF8E1F66)],
+    accent: Color(0xFFFFD54F),
+  );
+
   static BrandPalette byId(String? id) => switch (id) {
     'diwali' => diwali,
     'pongal' => pongal,
@@ -175,6 +190,7 @@ abstract final class Palettes {
     'eid' => eid,
     'national' => national,
     'vinayagar' => vinayagar,
+    'navaratri' => navaratri,
     _ => standard,
   };
 }

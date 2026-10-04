@@ -66,6 +66,13 @@ void main() {
       expect(t?.pack?.haloImage, 'assets/themes/vinayagar/kudai.webp');
     });
 
+    test('Navaratri has its own look', () {
+      final t = FestivalTheme.activeFrom(theme(preset: 'navaratri'), now);
+      expect(t?.palette, same(Palettes.navaratri));
+      expect(t?.pack?.greeting, 'Happy Navaratri');
+      expect(t?.pack?.haloImage, 'assets/themes/navaratri/kalasam.webp');
+    });
+
     test('Pongal has its own look', () {
       final t = FestivalTheme.activeFrom(theme(preset: 'pongal'), now);
       expect(t?.palette, same(Palettes.pongal));

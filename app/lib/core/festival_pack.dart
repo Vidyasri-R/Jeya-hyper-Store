@@ -399,6 +399,44 @@ abstract final class FestivalPacks {
     ],
   );
 
+  /// Navaratri & Ayudha Pooja: a golu of silk steps, dolls, the kalasam and lamps; sundal, pori-kadalai and thamboolam.
+  static const navaratri = FestivalPack(
+    id: 'navaratri',
+    dir: 'assets/themes/navaratri',
+    greeting: 'Happy Navaratri',
+    question: 'Golu & pooja needs, delivered',
+    heroAspect: 480 / 300,
+    flames: [(0.2292, 0.7767, 0.0833), (0.8125, 0.7767, 0.0833)],
+    halo: 'kalasam',
+    banners: [
+      FestivalBanner(
+        image: 'assets/themes/navaratri/banner_sundal.webp',
+        tag: 'NAVARATRI SPECIAL',
+        title: 'Sundal\nessentials',
+        subtitle: 'Chana, peas & coconut',
+        cta: 'Shop now',
+        route: '/search?q=chana',
+      ),
+      FestivalBanner(
+        image: 'assets/themes/navaratri/banner_ayudha.webp',
+        tag: 'AYUDHA POOJA',
+        title: 'Pori, kadalai\n& pooja',
+        subtitle: 'Puffed rice, gram & jaggery',
+        cta: 'Shop now',
+        route: '/search?q=jaggery',
+        dark: true,
+      ),
+      FestivalBanner(
+        image: 'assets/themes/navaratri/banner_thamboolam.webp',
+        tag: 'THAMBOOLAM',
+        title: 'Thamboolam\n& gifts',
+        subtitle: 'Betel, fruits & kumkum',
+        cta: 'Explore',
+        route: '/categories',
+      ),
+    ],
+  );
+
   static FestivalPack? byId(String? id) => switch (id) {
     'diwali' => diwali,
     'pongal' => pongal,
@@ -408,6 +446,7 @@ abstract final class FestivalPacks {
     'eid' => eid,
     'national' => national,
     'vinayagar' => vinayagar,
+    'navaratri' => navaratri,
     _ => null,
   };
 }

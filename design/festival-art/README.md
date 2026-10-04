@@ -46,6 +46,11 @@ python3 vinayagar_art.py   # Vinayagar Chathurthi: vermilion glow, erukku + mari
 python3 vinayagar_more.py  # kozhukattai / pooja / fruits banners, erukku tile, kozhukattai icon, flower petals
 node render.mjs --dir out/vinayagar
 cp out/vinayagar/webp/*.webp ../../app/assets/themes/vinayagar/
+
+python3 navaratri_art.py   # Navaratri & Ayudha Pooja: plum silk, pennant thoranam, golu hero (dolls, kalasam, lamps), kalasam halo, lamp-lit steps
+python3 navaratri_more.py  # sundal / Ayudha Pooja (pori, ash gourd) / thamboolam banners, kolam tile, kalasam icon, petals
+node render.mjs --dir out/navaratri
+cp out/navaratri/webp/*.webp ../../app/assets/themes/navaratri/
 ```
 
 How the app uses them: `app/lib/core/festival_pack.dart` (asset names, banner copy, flame

@@ -8,6 +8,7 @@
 #   tool/app_icon.sh eid       # … with little lanterns, stars and crescents on a gold chain
 #   tool/app_icon.sh national  # … with tricolour bunting and rosettes
 #   tool/app_icon.sh vinayagar # … with erukkam poo, marigolds and arugampul
+#   tool/app_icon.sh navaratri # … with silk pennants and marigolds
 #   tool/app_icon.sh standard   # everyday icon
 # Phones get the new icon with the next app update (Android only changes an icon in place
 # through an update; swapping it from inside the app removes it from many home screens).
@@ -17,7 +18,7 @@ cd "$(dirname "$0")/.."
 name="${1:-}"
 src="branding/app_icon/$name"
 if [ -z "$name" ] || [ ! -d "$src" ]; then
-  echo "usage: tool/app_icon.sh standard|diwali|pongal|christmas|valentine|puthandu|eid|national|vinayagar" >&2
+  echo "usage: tool/app_icon.sh standard|diwali|pongal|christmas|valentine|puthandu|eid|national|vinayagar|navaratri" >&2
   exit 1
 fi
 for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do

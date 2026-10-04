@@ -521,6 +521,7 @@ class _ThemeCardState extends State<_ThemeCard> {
     ('eid', 'Eid', '🌙', [Color(0xFF3D1A66), Color(0xFF8A4FC8), Color(0xFFFFD54F)]),
     ('national', 'Jan 26 / Aug 15', '🇮🇳', [Color(0xFF0B1E4F), Color(0xFFFF9933), Color(0xFF138808)]),
     ('vinayagar', 'Vinayagar', '🐘', [Color(0xFF6E1A04), Color(0xFFC43A0E), Color(0xFFFFD54F)]),
+    ('navaratri', 'Navaratri', '🎎', [Color(0xFF4A0E3C), Color(0xFFA1246F), Color(0xFFFFD54F)]),
   ];
 
   late String _preset = (widget.value['preset'] as String?) ?? 'standard';

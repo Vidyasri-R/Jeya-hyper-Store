@@ -38,4 +38,8 @@
         <item name="android:windowSplashScreenBackground">#FF6E1A04</item>
         <item name="android:windowSplashScreenIconBackgroundColor">@android:color/white</item>
     </style>
+    <style name="NavaratriSplashTheme" parent="LaunchTheme">
+        <item name="android:windowSplashScreenBackground">#FF4A0E3C</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/white</item>
+    </style>
 </resources>
