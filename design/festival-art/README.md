@@ -71,3 +71,7 @@ Adding a festival (e.g. Christmas): draw its pack with the same file names into
 App icon: the in-app logo never changes; for a festival, switch the home-screen icon with
 `app/tool/app_icon.sh diwali` before building the release, and `app/tool/app_icon.sh standard`
 for the update after it.
+
+Wiring a new pack into the apps and backend (palette, pack, Android splash, icon tool, backend preset,
+staff chip, tests, this README) is one command once its art is rendered: write a spec like
+`packs/karthigai.json` and run `python3 wire_pack.py packs/<id>.json`.

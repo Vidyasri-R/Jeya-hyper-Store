@@ -1,0 +1,40 @@
+{
+ "id": "karthigai",
+ "Name": "Karthigai",
+ "palette_doc": "Karthigai Deepam: a dusk from indigo to ember, lamp-gold accents.",
+ "palette": {
+  "b900": "#4A1A0A",
+  "b800": "#7A2C10",
+  "b700": "#B8411A",
+  "b600": "#D05A2A",
+  "b500": "#E8763C",
+  "b100": "#FCE2D2",
+  "b50": "#FFF1E8",
+  "tint": "#FFF8F3",
+  "header": [
+   "#1E1340",
+   "#8A3410"
+  ],
+  "accent": "#FFC14D"
+ },
+ "pack_doc": "Karthigai Deepam: a dusk sky with the hill and its Maha Deepam, rows of agal lamps, pori urundai and appam.",
+ "pack_dart": "FestivalPack(\n    id: 'karthigai',\n    dir: 'assets/themes/karthigai',\n    greeting: 'Happy Karthigai Deepam',\n    question: 'Lamps & sweets, delivered',\n    heroAspect: 480 / 300,\n    flames: [(0.1458, 0.7867, 0.0975), (0.3125, 0.84, 0.105), (0.6875, 0.84, 0.105), (0.8542, 0.7867, 0.0975), (0.5, 0.8733, 0.1125)],\n    halo: 'deepam',\n    banners: [\n      FestivalBanner(\n        image: 'assets/themes/karthigai/banner_sweets.webp',\n        tag: 'KARTHIGAI SPECIAL',\n        title: 'Pori urundai\\n& appam',\n        subtitle: 'Puffed rice, jaggery & ghee',\n        cta: 'Shop now',\n        route: '/search?q=jaggery',\n      ),\n      FestivalBanner(\n        image: 'assets/themes/karthigai/banner_lamps.webp',\n        tag: 'LIGHT EVERY STEP',\n        title: 'Agal lamps\\n& oil',\n        subtitle: 'Clay lamps, wicks & ghee',\n        cta: 'Shop now',\n        route: '/search?q=oil',\n        dark: true,\n      ),\n      FestivalBanner(\n        image: 'assets/themes/karthigai/banner_kolam.webp',\n        tag: 'FESTIVE KOLAM',\n        title: 'Kolam colours\\n& flowers',\n        subtitle: 'Rangoli powder, flowers & more',\n        cta: 'Explore',\n        route: '/categories',\n      ),\n    ],\n  )",
+ "android_bg": "#FF1E1340",
+ "chip": [
+  "Karthigai Deepam",
+  "🔥",
+  [
+   "#1E1340",
+   "#B8411A",
+   "#FFC14D"
+  ]
+ ],
+ "icon_comment": "with jasmine, marigolds and lit hanging lamps",
+ "readme": [
+  "python3 karthigai_art.py   # Karthigai Deepam: indigo-to-ember dusk, hill + Maha Deepam, jasmine thoranam with hanging lamps, agal lamps hero, flame halo",
+  "python3 karthigai_more.py  # pori urundai & appam / lamp-lit steps / kolam banners, flame tile, agal icon, petals",
+  "node render.mjs --dir out/karthigai",
+  "cp out/karthigai/webp/*.webp ../../app/assets/themes/karthigai/"
+ ],
+ "test_dart": "    test('Karthigai Deepam has its own look', () {\n      final t = FestivalTheme.activeFrom(theme(preset: 'karthigai'), now);\n      expect(t?.palette, same(Palettes.karthigai));\n      expect(t?.pack?.greeting, 'Happy Karthigai Deepam');\n      expect(t?.pack?.flames, hasLength(5));\n    });"
+}
