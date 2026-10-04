@@ -112,49 +112,6 @@ const C: CategoryFixture[] = [
     ],
   },
 
-  // ── Fresh ──
-  { id: 'MOCK-C-FRESH', name: 'Fruits & Vegetables', parent: null, hsn: '', gst: 0, items: [] },
-  {
-    id: 'MOCK-C-VEG',
-    name: 'Fresh Vegetables',
-    parent: 'MOCK-C-FRESH',
-    hsn: '0709',
-    gst: 0,
-    items: [
-      ['Tomato', null, [['per kg', 32, 0]], 'KG', true],
-      ['Onion (Big)', null, [['per kg', 42, 0]], 'KG', true],
-      ['Small Onion (Shallots)', null, [['per kg', 78, 0]], 'KG', true],
-      ['Potato', null, [['per kg', 38, 0]], 'KG', true],
-      ['Carrot (Ooty)', null, [['per kg', 64, 0]], 'KG', true],
-      ['Beans', null, [['per kg', 70, 0]], 'KG', true],
-      ['Brinjal', null, [['per kg', 48, 0]], 'KG', true],
-      ['Ladies Finger (Vendakkai)', null, [['per kg', 56, 0]], 'KG', true],
-      ['Drumstick', null, [['per kg', 90, 0]], 'KG', true],
-      ['Green Chilli', null, [['per kg', 80, 0]], 'KG', true],
-      ['Curry Leaves', null, [['1 bunch', 10, 0]], 'NOS'],
-      ['Coriander Leaves', null, [['1 bunch', 15, 0]], 'NOS'],
-      ['Ginger', null, [['per kg', 120, 0]], 'KG', true],
-      ['Garlic', null, [['per kg', 180, 0]], 'KG', true],
-    ],
-  },
-  {
-    id: 'MOCK-C-FRUIT',
-    name: 'Fresh Fruits',
-    parent: 'MOCK-C-FRESH',
-    hsn: '0803',
-    gst: 0,
-    items: [
-      ['Banana (Poovan)', null, [['per dozen', 60, 0]], 'NOS'],
-      ['Banana (Nendran)', null, [['per kg', 72, 0]], 'KG', true],
-      ['Apple (Shimla)', null, [['per kg', 180, 0]], 'KG', true],
-      ['Orange (Nagpur)', null, [['per kg', 110, 0]], 'KG', true],
-      ['Pomegranate', null, [['per kg', 200, 0]], 'KG', true],
-      ['Papaya', null, [['per kg', 45, 0]], 'KG', true],
-      ['Watermelon', null, [['per kg', 28, 0]], 'KG', true],
-      ['Sweet Lime (Mosambi)', null, [['per kg', 85, 0]], 'KG', true],
-    ],
-  },
-
   // ── Dairy & Bakery ──
   {
     id: 'MOCK-C-DAIRY',

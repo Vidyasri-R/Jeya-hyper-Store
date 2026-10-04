@@ -98,7 +98,7 @@ describe('POS item validation', () => {
   });
   it('mock catalogue is fully valid', () => {
     const { items } = buildMockCatalog();
-    expect(items.length).toBeGreaterThan(150);
+    expect(items.length).toBeGreaterThan(120);
     for (const item of items) expect(posItemSchema.safeParse(item).success, item.externalId).toBe(true);
   });
 });

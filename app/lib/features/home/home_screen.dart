@@ -165,7 +165,7 @@ List<_HeroBanner> _everydayBanners(StoreRules rules) {
   final free = rules.freeAbovePaise;
   final minimum = rules.minOrderPaise > 0 ? ' · min. order ${formatPaise(rules.minOrderPaise)}' : '';
   return [
-    const _HeroBanner('FRESH DEALS', 'Freshness\nat your doorstep', 'Farm fresh fruits & vegetables', 'Picked daily in Trichy', 'Shop Now', Icons.eco_rounded,
+    const _HeroBanner('DAILY ESSENTIALS', 'Groceries\nat your doorstep', 'Rice, dal, oil & daily needs', 'From our Trichy store', 'Shop Now', Icons.shopping_basket_rounded,
         [Color(0xFFE3F4E6), Color(0xFFC9EBD0)], '/categories'),
     // {speed} → the store's delivery promise, e.g. "Next-day delivery".
     _HeroBanner(

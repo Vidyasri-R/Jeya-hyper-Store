@@ -24,11 +24,11 @@ options arrive.
 
 **Short description** [80]
 
-> Groceries, fruits, vegetables & daily needs from Jeya Hyper Store, Trichy.
+> Groceries, staples, household & daily needs from Jeya Hyper Store, Trichy.
 
 **Full description** [4000]
 
-> Jeya Hyper Store is your neighbourhood supermarket in Tiruchirappalli (Trichy), now on your phone. Order groceries, fruits and vegetables, dairy, snacks, beverages, household and personal-care products from our store at Somarasampettai and get them delivered to your door.
+> Jeya Hyper Store is your neighbourhood supermarket in Tiruchirappalli (Trichy), now on your phone. Order groceries and staples, dairy, snacks, beverages, household and personal-care products from our store at Somarasampettai and get them delivered to your door.
 >
 > WHY SHOP WITH US
 > • Our own store, our own delivery team: orders are packed at Jeya Hyper Store, Vayalur Main Road, and delivered by our staff.
@@ -65,13 +65,13 @@ options arrive.
 
 **Promotional text** [170] (can change any time without review)
 
-> Fresh fruits, vegetables, groceries and daily needs from Jeya Hyper Store, Somarasampettai, delivered to your door in Trichy.
+> Groceries, staples, household and daily needs from Jeya Hyper Store, Somarasampettai, delivered to your door in Trichy.
 
 **Description** [4000]: same as the Play full description above.
 
 **Keywords** [100] (no spaces after commas; the app name is indexed already)
 
-> grocery,supermarket,trichy,tiruchirappalli,vegetables,fruits,delivery,kirana,daily needs,rice,dal
+> grocery,supermarket,trichy,tiruchirappalli,staples,kirana,delivery,daily needs,rice,dal,household
 
 **Screenshots**: iPhone 6.9" (1320 × 2868) only. The first iOS release is iPhone-only, so no iPad
 screenshots are needed. To make once product photos are in.
