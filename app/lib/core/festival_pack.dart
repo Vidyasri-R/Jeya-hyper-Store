@@ -322,6 +322,45 @@ abstract final class FestivalPacks {
     ],
   );
 
+  /// Independence & Republic Day: tricolour bunting, balloons, a kite and tiranga sweets under fireworks; the greeting follows the date.
+  static const national = FestivalPack(
+    id: 'national',
+    dir: 'assets/themes/national',
+    greeting: 'Happy Independence Day',
+    greetingsFrom: [(1, 1, 'Happy Republic Day'), (6, 1, 'Happy Independence Day')],
+    question: 'Holiday treats, delivered',
+    heroAspect: 480 / 300,
+    flames: [],
+    halo: 'sunburst',
+    banners: [
+      FestivalBanner(
+        image: 'assets/themes/national/banner_sweets.webp',
+        tag: 'TIRANGA SPECIAL',
+        title: 'Tricolour\nsweets',
+        subtitle: 'Barfi, laddu & more',
+        cta: 'Shop sweets',
+        route: '/search?q=sweets',
+      ),
+      FestivalBanner(
+        image: 'assets/themes/national/banner_snacks.webp',
+        tag: 'HOLIDAY SNACKS',
+        title: 'Snacks &\ncold drinks',
+        subtitle: 'For the long weekend',
+        cta: 'Shop now',
+        route: '/search?q=chips',
+        dark: true,
+      ),
+      FestivalBanner(
+        image: 'assets/themes/national/banner_desi.webp',
+        tag: 'PROUDLY INDIAN',
+        title: 'Desi brands,\ndelivered',
+        subtitle: 'Made-in-India favourites',
+        cta: 'Explore',
+        route: '/categories',
+      ),
+    ],
+  );
+
   static FestivalPack? byId(String? id) => switch (id) {
     'diwali' => diwali,
     'pongal' => pongal,
@@ -329,6 +368,7 @@ abstract final class FestivalPacks {
     'valentine' => valentine,
     'puthandu' => puthandu,
     'eid' => eid,
+    'national' => national,
     _ => null,
   };
 }

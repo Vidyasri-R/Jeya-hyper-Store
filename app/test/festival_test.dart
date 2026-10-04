@@ -52,6 +52,13 @@ void main() {
       expect(t?.pack?.haloImage, 'assets/themes/eid/crescent.webp');
     });
 
+    test('Independence & Republic Day greets by the date', () {
+      final t = FestivalTheme.activeFrom(theme(preset: 'national'), now);
+      expect(t?.palette, same(Palettes.national));
+      expect(t?.pack?.greetingOn(DateTime(2027, 1, 26)), 'Happy Republic Day');
+      expect(t?.pack?.greetingOn(DateTime(2026, 8, 15)), 'Happy Independence Day');
+    });
+
     test('Pongal has its own look', () {
       final t = FestivalTheme.activeFrom(theme(preset: 'pongal'), now);
       expect(t?.palette, same(Palettes.pongal));

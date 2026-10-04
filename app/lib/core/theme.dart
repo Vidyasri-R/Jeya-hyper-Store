@@ -136,6 +136,21 @@ abstract final class Palettes {
     accent: Color(0xFFFFD54F),
   );
 
+  /// Independence & Republic Day: navy with saffron (tricolour art; no flag or chakra in commercial use).
+  static const national = BrandPalette(
+    id: 'national',
+    b900: Color(0xFF0C1D4A),
+    b800: Color(0xFF152B66),
+    b700: Color(0xFF1F3C88),
+    b600: Color(0xFF2B4FA8),
+    b500: Color(0xFF3D63C2),
+    b100: Color(0xFFDCE5F7),
+    b50: Color(0xFFEEF2FB),
+    tint: Color(0xFFF7F9FD),
+    header: [Color(0xFF0B1E4F), Color(0xFF1E3F8F)],
+    accent: Color(0xFFFF9933),
+  );
+
   static BrandPalette byId(String? id) => switch (id) {
     'diwali' => diwali,
     'pongal' => pongal,
@@ -143,6 +158,7 @@ abstract final class Palettes {
     'valentine' => valentine,
     'puthandu' => puthandu,
     'eid' => eid,
+    'national' => national,
     _ => standard,
   };
 }

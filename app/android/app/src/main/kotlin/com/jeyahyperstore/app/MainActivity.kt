@@ -23,6 +23,7 @@ class MainActivity : FlutterActivity() {
                     "valentine" -> R.style.ValentineSplashTheme
                     "puthandu" -> R.style.PuthanduSplashTheme
                     "eid" -> R.style.EidSplashTheme
+                    "national" -> R.style.NationalSplashTheme
                     else -> Resources.ID_NULL
                 }
                 splashScreen.setSplashScreenTheme(theme)

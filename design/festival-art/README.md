@@ -36,6 +36,11 @@ python3 eid_art.py         # Eid (Ramzan & Bakrid): violet night, gold star patt
 python3 eid_more.py        # sheer khurma / biryani / iftar banners, star tile, lantern icon, stars & crescents
 node render.mjs --dir out/eid
 cp out/eid/webp/*.webp ../../app/assets/themes/eid/   # own flame.webp, like puthandu
+
+python3 national_art.py    # Independence & Republic Day: navy fireworks, tricolour bunting, balloons/kite/barfi hero, sun halo (no flag or chakra)
+python3 national_more.py   # tricolour sweets / holiday snacks / desi brands banners, confetti tile, rosette icon, ribbons & marigold
+node render.mjs --dir out/national
+cp out/national/webp/*.webp ../../app/assets/themes/national/
 ```
 
 How the app uses them: `app/lib/core/festival_pack.dart` (asset names, banner copy, flame

@@ -2,7 +2,7 @@
 its top — mango leaves and marigolds (Deepavali), aavaram poo (Pongal), a pine garland with
 baubles (Christmas & New Year), roses with little hearts (Valentine's Day), a mango-leaf
 fringe with malli, kanakambaram and konrai bunches (Tamil New Year), little lanterns, stars and
-crescents on a gold chain (Eid).
+crescents on a gold chain (Eid), tricolour bunting with rosettes (Independence & Republic Day).
 
 Writes app/branding/app_icon/<festival>/ (Android launcher mipmaps + iOS AppIcon), next to the
 everyday set in app/branding/app_icon/standard/. Switch the app between them with
@@ -25,6 +25,7 @@ from christmas_art import bauble, bow, pine_branch, warm_light
 from valentine_art import heart, rose, rose_leaf
 from puthandu_art import kanakambaram, konrai_cluster, malli
 from eid_art import gold_crescent, lantern, star5
+from national_art import TRI, pennant, rosette as tri_rosette
 
 APP = '../../app'
 ANDROID_RES = f'{APP}/android/app/src/main/res'
@@ -123,6 +124,16 @@ def garland(festival):
                 front.append(star5(s, x, y + drop + 8, 9 if i == 3 else 10))
             else:
                 front.append(gold_crescent(s, x, y + drop + 9, 10, rot=-30))
+    elif festival == 'national':
+        mid.append(_rope_path('#9AA6BF', 3))
+        for i in range(13):
+            t = 0.04 + i * 0.077
+            x, y, ang = _rope(t)
+            small = 0.38 < t < 0.62           # keep the middle short, over the peacock's crest
+            front.append(pennant(s, x, y, 20 if small else 24, 22 if small else 30, TRI[i % 3], angle=ang))
+        for t in (0.06, 0.94):
+            x, y, _ = _rope(t)
+            front.append(tri_rosette(s, x, y + 6, 15))
     else:
         raise ValueError(festival)
     s.add(''.join(back) + ''.join(mid) + ''.join(front))
@@ -185,7 +196,7 @@ def icon_sets(festival):
     print(festival, 'icon set written')
 
 
-FESTIVALS = ('diwali', 'pongal', 'christmas', 'valentine', 'puthandu', 'eid')
+FESTIVALS = ('diwali', 'pongal', 'christmas', 'valentine', 'puthandu', 'eid', 'national')
 
 if __name__ == '__main__':
     for festival in FESTIVALS:
