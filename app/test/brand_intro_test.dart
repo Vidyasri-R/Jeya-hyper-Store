@@ -13,7 +13,7 @@ Future<void> _pumpIntro(WidgetTester tester, {required VoidCallback onDone, bool
 }
 
 void main() {
-  testWidgets('the peacock flies in, becomes the logo, then lets the app go on', (tester) async {
+  testWidgets('the logo blooms in, then lets the app go on', (tester) async {
     var done = 0;
     await _pumpIntro(tester, onDone: () => done++);
     await tester.runAsync(() async {
@@ -30,8 +30,8 @@ void main() {
       }
     }
 
-    await play(1200);
-    expect(done, 0, reason: 'still landing');
+    await play(900);
+    expect(done, 0, reason: 'feathers still opening');
     await play(BrandIntro.duration.inMilliseconds);
     expect(done, 1);
     expect(tester.takeException(), isNull);

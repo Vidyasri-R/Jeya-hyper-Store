@@ -2,16 +2,14 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import 'brand_intro_bird.dart';
 import 'brand_intro_parts.dart';
 
-/// The store's logo arriving on the splash: a peacock swoops in with a sparkle trail, wings beating
-/// and its train streaming behind, pulls up, turns to face you in a flash of light and is the "J";
-/// its feathers fan out into the logo, a shine runs across it and the wordmark rises in.
+/// The store's logo arriving on the splash: the J opens out in a flash of warm light with a ring
+/// round it, the peacock's feathers fan up from behind it into the crown (the crest feather rising
+/// last), a shine runs across the mark and the wordmark rises in.
 ///
-/// The bird in flight is drawn for the intro (design/brand-intro/flying_peacock.py); the train, the
-/// J and the wordmark are the logo's own pieces (split_logo.py), so the last frame is exactly
-/// logo_full.png. Turned off with the system's reduce-motion setting.
+/// Built from the logo's own pieces (assets/brand/intro/, cut by design/brand-intro/split_logo.py),
+/// so the last frame is exactly logo_full.png. Turned off with the system's reduce-motion setting.
 class BrandIntro extends StatefulWidget {
   const BrandIntro({super.key, required this.width, this.onDone});
 
@@ -20,15 +18,13 @@ class BrandIntro extends StatefulWidget {
   /// Called once the logo is complete (straight away when animations are off).
   final VoidCallback? onDone;
 
-  static const duration = Duration(milliseconds: 2800);
+  static const duration = Duration(milliseconds: 1900);
 
   @override
   State<BrandIntro> createState() => BrandIntroState();
 }
 
 class BrandIntroState extends State<BrandIntro> with SingleTickerProviderStateMixin {
-  static final _assets = [for (final piece in [...BrandIntroParts.all, BrandIntroBird.body, BrandIntroBird.wing]) piece.asset];
-
   late final _clock = AnimationController(vsync: this, duration: BrandIntro.duration)
     ..addStatusListener((status) {
       if (status == AnimationStatus.completed) _finish();
@@ -46,8 +42,8 @@ class BrandIntroState extends State<BrandIntro> with SingleTickerProviderStateMi
       WidgetsBinding.instance.addPostFrameCallback((_) => _finish());
       return;
     }
-    // Decode every piece first so nothing pops in mid-flight.
-    Future.wait([for (final asset in _assets) precacheImage(AssetImage(asset), context)]).whenComplete(() {
+    // Decode every piece first so nothing pops in.
+    Future.wait([for (final piece in BrandIntroParts.all) precacheImage(AssetImage(piece.asset), context)]).whenComplete(() {
       if (mounted && !_done) _clock.forward();
     });
   }
@@ -73,67 +69,65 @@ class BrandIntroState extends State<BrandIntro> with SingleTickerProviderStateMi
   @override
   Widget build(BuildContext context) {
     final k = widget.width / BrandIntroParts.size.width;
-    final swoop = _Swoop(MediaQuery.sizeOf(context), widget.width);
     return SizedBox.fromSize(
       size: BrandIntroParts.size * k,
       child: AnimatedBuilder(
         animation: _clock,
-        builder: (context, _) => _frame(_clock.value * BrandIntro.duration.inMilliseconds, k, swoop),
+        builder: (context, _) => _frame(_clock.value * BrandIntro.duration.inMilliseconds, k),
       ),
     );
   }
 
-  Widget _frame(double ms, double k, _Swoop swoop) {
-    final pivot = BrandIntroParts.pivot * k; // the bird's rump, where its train hangs (behind the J)
+  Widget _frame(double ms, double k) {
+    final pivot = BrandIntroParts.pivot * k; // where the feathers fan from (behind the J)
 
-    // Flight: fast in, gliding to a stop; the nose follows the climb, then it pulls up to stand.
-    final fly = Curves.easeOutCubic.transform(_span(ms, 0, 1150));
-    final at = swoop.at(fly);
-    final slope = swoop.slope(fly);
-    final land = Curves.easeInOutCubic.transform(_span(ms, 760, 1150));
-    final pitch = slope.distance == 0 ? 0.0 : slope.dy / slope.distance * 26;
-    final heading = (72 + pitch) * (1 - land);
-    final scale = 0.62 + 0.38 * fly + math.sin(math.pi * _span(ms, 1160, 1480)) * 0.05;
-    final bird = _about(pivot, rotate: heading, scale: scale, then: at);
-
-    // The turn: the peacock goes edge-on in a flash of light and opens out again as the J, facing you.
-    final turnOut = Curves.easeIn.transform(_span(ms, 1040, 1160));
-    final turnIn = Curves.easeOutCubic.transform(_span(ms, 1160, 1320));
-    final flash = math.sin(math.pi * _span(ms, 990, 1380));
-    final ripple = 1 - land;
+    // The J opens out in a flash of light, its feathers hanging closed behind it.
+    final appear = Curves.easeOut.transform(_span(ms, 0, 160));
+    final opening = Curves.easeOutCubic.transform(_span(ms, 40, 260));
+    final flash = math.sin(math.pi * _span(ms, 0, 420));
 
     final layers = <Widget>[];
     for (final (i, piece) in BrandIntroParts.feathers.indexed) {
       if (i == 4) continue; // the crest feather rises on its own, below
-      // Train: every feather points back (down from the rump), close together and layered from just
-      // behind the rump, the longest in the middle; then fans out to its place in the logo.
-      final trainAngle = 180 + (i - 4) * 3.5;
-      final trainReach = 100.0 + 30 * (4 - (i - 4).abs());
-      final turn = piece.angle <= 0 ? trainAngle - (piece.angle + 360) : trainAngle - piece.angle;
+      // Closed: every feather points down from the pivot, close together and layered, the longest in
+      // the middle; then they fan up to their places in the logo, centre ones a beat later.
+      final closedAngle = 180 + (i - 4) * 3.5;
+      final closedReach = 100.0 + 30 * (4 - (i - 4).abs());
+      final turn = piece.angle <= 0 ? closedAngle - (piece.angle + 360) : closedAngle - piece.angle;
       final lag = (4 - (i - 4).abs()) * 35.0;
-      final open = Curves.easeOutBack.transform(_span(ms, 1220 + lag, 1860 + lag));
-      final wave = 5 * ripple * math.sin(ms / 1000 * math.pi * 2 * 1.7 + i * 0.6);
-      final out = (trainReach - piece.reach) * (1 - open);
+      final open = Curves.easeOutBack.transform(_span(ms, 220 + lag, 860 + lag));
+      final sway = 4 * (1 - open) * math.sin(ms / 1000 * math.pi * 2 * 1.7 + i * 0.6);
+      final along = (closedReach - piece.reach) * (1 - open);
       final dir = Offset(math.sin(piece.angle * math.pi / 180), -math.cos(piece.angle * math.pi / 180));
-      layers.add(_piece(piece, k, transform: _about(pivot, rotate: turn * (1 - open) + wave, scale: 0.82 + 0.18 * open, before: dir * out * k)));
-    }
-    final rise = Curves.easeOutBack.transform(_span(ms, 1500, 2060));
-    layers.add(_piece(BrandIntroParts.feathers[4], k, transform: _about(pivot, scale: 0.25 + 0.75 * rise), opacity: (rise * 2).clamp(0.0, 1.0)));
-    if (turnOut < 1) layers.add(_squash(pivot.dx, 1 - 0.92 * turnOut, flash, _peacock(ms, k)));
-    if (turnIn > 0) {
-      layers.add(_squash(
-        pivot.dx,
-        0.08 + 0.92 * turnIn,
-        flash,
-        Stack(
-          clipBehavior: Clip.none,
-          children: [_piece(BrandIntroParts.wingLeft, k), _piece(BrandIntroParts.wingRight, k), _piece(BrandIntroParts.body, k), _piece(BrandIntroParts.head, k)],
-        ),
+      layers.add(_piece(
+        piece,
+        k,
+        transform: _about(pivot, rotate: turn * (1 - open) + sway, scale: 0.82 + 0.18 * open, before: dir * along * k),
+        opacity: appear,
       ));
     }
+    final rise = Curves.easeOutBack.transform(_span(ms, 520, 1080));
+    layers.add(_piece(BrandIntroParts.feathers[4], k, transform: _about(pivot, scale: 0.25 + 0.75 * rise), opacity: (rise * 2).clamp(0.0, 1.0)));
+    layers.add(Positioned.fill(
+      child: Opacity(
+        opacity: appear,
+        child: Transform(
+          transform: Matrix4.translationValues(pivot.dx, 0, 0)
+            ..multiply(Matrix4.diagonal3Values(0.08 + 0.92 * opening, 1, 1))
+            ..multiply(Matrix4.translationValues(-pivot.dx, 0, 0)),
+          child: _lit(
+            flash,
+            Stack(
+              clipBehavior: Clip.none,
+              children: [_piece(BrandIntroParts.wingLeft, k), _piece(BrandIntroParts.wingRight, k), _piece(BrandIntroParts.body, k), _piece(BrandIntroParts.head, k)],
+            ),
+          ),
+        ),
+      ),
+    ));
 
     Widget mark = Stack(clipBehavior: Clip.none, children: layers);
-    final shine = _span(ms, 1850, 2400);
+    final shine = _span(ms, 880, 1430);
     if (shine > 0 && shine < 1) {
       final s = shine * 1.6 - 0.3;
       mark = ShaderMask(
@@ -148,13 +142,13 @@ class BrandIntroState extends State<BrandIntro> with SingleTickerProviderStateMi
       );
     }
 
-    final word = Curves.easeOutCubic.transform(_span(ms, 1950, 2500));
-    final store = Curves.easeOutCubic.transform(_span(ms, 2200, 2750));
+    final word = Curves.easeOutCubic.transform(_span(ms, 980, 1530));
+    final store = Curves.easeOutCubic.transform(_span(ms, 1230, 1780));
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        Positioned.fill(child: CustomPaint(painter: _Sparkles(ms: ms, swoop: swoop, pivot: pivot))),
-        Positioned.fill(child: Transform(transform: bird, child: mark)),
+        Positioned.fill(child: CustomPaint(painter: _Glow(ms: ms, centre: pivot))),
+        Positioned.fill(child: mark),
         if (word > 0)
           _place(
             BrandIntroParts.wordTop,
@@ -171,41 +165,10 @@ class BrandIntroState extends State<BrandIntro> with SingleTickerProviderStateMi
     );
   }
 
-  /// The peacock in flight, head-up in the logo's frame (the flight turns it on its side): its wings
-  /// beat over the back on the upstroke and under the belly on the downstroke, folding as it lands.
-  static Widget _peacock(double ms, double k) {
-    final fold = Curves.easeOut.transform(_span(ms, 880, 1100));
-    final phi = (75 * math.sin(ms / 1000 * math.pi * 2 * 3.4) + 15) * (1 - fold) + 8 * fold;
-    var span = math.sin(phi * math.pi / 180); // the wing seen from the side: + over the back, − under the belly
-    if (span.abs() < 0.03) span = span.isNegative ? -0.03 : 0.03;
-    final wing = BrandIntroBird.wing;
-    final root = wing.hinge * k;
-    final sweep = -22 * span.sign * math.pi / 180; // wing tips swept back towards the tail, up or down
-    Matrix4 beat(Offset to, double size) => Matrix4.translationValues(to.dx, to.dy, 0)
-      ..multiply(Matrix4.rotationZ(sweep))
-      ..multiply(Matrix4.diagonal3Values(span * size, size * (0.9 + 0.1 * span.abs()), 1))
-      ..multiply(Matrix4.translationValues(-root.dx, -root.dy, 0));
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        _piece(wing, k, transform: beat(root + const Offset(-6, -12) * k, 0.9), shade: const Color(0x70061433)), // far wing
-        _piece(BrandIntroBird.body, k),
-        _piece(wing, k, transform: beat(root, 1)),
-      ],
-    );
-  }
-
-  /// Squeezes a logo-sized [child] towards the vertical line at [x] (the bird turning), lit by [flash].
-  static Widget _squash(double x, double sx, double flash, Widget child) => Positioned.fill(
-    child: Transform(
-      transform: Matrix4.translationValues(x, 0, 0)
-        ..multiply(Matrix4.diagonal3Values(sx, 1, 1))
-        ..multiply(Matrix4.translationValues(-x, 0, 0)),
-      child: flash > 0.01
-          ? ColorFiltered(colorFilter: ColorFilter.mode(const Color(0xFFFFF3C4).withValues(alpha: 0.75 * flash), BlendMode.srcATop), child: child)
-          : child,
-    ),
-  );
+  /// Washes [child] towards warm white by [flash] (0–1).
+  static Widget _lit(double flash, Widget child) => flash > 0.01
+      ? ColorFiltered(colorFilter: ColorFilter.mode(const Color(0xFFFFF3C4).withValues(alpha: 0.75 * flash), BlendMode.srcATop), child: child)
+      : child;
 
   static Widget _image(BrandPiece piece) => Image.asset(piece.asset, fit: BoxFit.fill, filterQuality: FilterQuality.medium, gaplessPlayback: true);
 
@@ -215,22 +178,19 @@ class BrandIntroState extends State<BrandIntro> with SingleTickerProviderStateMi
   }
 
   /// A piece in its place in the logo, moved by [transform] (in the logo's coordinates).
-  static Widget _piece(BrandPiece piece, double k, {Matrix4? transform, double opacity = 1, Color? shade}) {
-    Widget image = _image(piece);
-    if (shade != null) image = ColorFiltered(colorFilter: ColorFilter.mode(shade, BlendMode.srcATop), child: image);
-    if (transform == null) return _place(piece, k, image);
-    // Transform a logo-sized layer so pivots and hinges stay in the logo's coordinates.
-    Widget layer = Transform(
-      transform: transform,
-      child: Stack(clipBehavior: Clip.none, children: [_place(piece, k, image)]),
-    );
+  static Widget _piece(BrandPiece piece, double k, {Matrix4? transform, double opacity = 1}) {
+    final image = _image(piece);
+    if (transform == null && opacity >= 1) return _place(piece, k, image);
+    // Transform a logo-sized layer so the pivot stays in the logo's coordinates.
+    Widget layer = Stack(clipBehavior: Clip.none, children: [_place(piece, k, image)]);
+    if (transform != null) layer = Transform(transform: transform, child: layer);
     if (opacity < 1) layer = Opacity(opacity: opacity, child: layer);
     return Positioned.fill(child: layer);
   }
 
-  /// Turn/scale about [centre], after moving the piece by [before]; then move everything by [then].
-  static Matrix4 _about(Offset centre, {double rotate = 0, double scale = 1, Offset before = Offset.zero, Offset then = Offset.zero}) =>
-      Matrix4.translationValues(then.dx + centre.dx, then.dy + centre.dy, 0)
+  /// Turn/scale about [centre], after moving the piece by [before].
+  static Matrix4 _about(Offset centre, {double rotate = 0, double scale = 1, Offset before = Offset.zero}) =>
+      Matrix4.translationValues(centre.dx, centre.dy, 0)
         ..multiply(Matrix4.rotationZ(rotate * math.pi / 180))
         ..multiply(Matrix4.diagonal3Values(scale, scale, 1))
         ..multiply(Matrix4.translationValues(before.dx - centre.dx, before.dy - centre.dy, 0));
@@ -239,87 +199,37 @@ class BrandIntroState extends State<BrandIntro> with SingleTickerProviderStateMi
 /// 0 → 1 as [ms] runs from [from] to [to].
 double _span(double ms, double from, double to) => ((ms - from) / (to - from)).clamp(0.0, 1.0);
 
-/// The flight: from off the screen bottom-left, up over the logo's left, curling up into place.
-class _Swoop {
-  _Swoop(Size screen, double width)
-    : p0 = Offset(-screen.width * 0.5 - width * 0.9, screen.height * 0.36),
-      p1 = Offset(-screen.width * 0.5, -screen.height * 0.28),
-      p2 = Offset(-screen.width * 0.04, screen.height * 0.1);
-
-  final Offset p0, p1, p2;
-  static const p3 = Offset.zero;
-
-  Offset at(double t) {
-    final u = 1 - t;
-    return p0 * (u * u * u) + p1 * (3 * u * u * t) + p2 * (3 * u * t * t) + p3 * (t * t * t);
-  }
-
-  Offset slope(double t) {
-    final u = 1 - t;
-    return (p1 - p0) * (3 * u * u) + (p2 - p1) * (6 * u * t) + (p3 - p2) * (3 * t * t);
-  }
-}
-
-/// Glittering trail behind the bird in flight, and a soft ring of light where it lands.
-class _Sparkles extends CustomPainter {
-  _Sparkles({required this.ms, required this.swoop, required this.pivot});
+/// A soft glow and a ring of light spreading from behind the J as it opens.
+class _Glow extends CustomPainter {
+  _Glow({required this.ms, required this.centre});
 
   final double ms;
-  final _Swoop swoop;
-  final Offset pivot;
-
-  static const _colours = [Color(0xFFFFD54F), Color(0xFF2EA65A), Color(0xFF4F86E8), Color(0xFFFFF3C4)];
+  final Offset centre;
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (ms <= 0) return;
-    final glow = Paint()..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
-    final haze = Paint()..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
-    final dot = Paint();
-    final rnd = math.Random(11);
-    final fade = 1 - _span(ms, 1100, 1600);
-    Offset? trailAt(double when) => when < 0 || when > 1150 ? null : swoop.at(Curves.easeOutCubic.transform(when / 1150)) + pivot;
-    // a soft golden comet tail along the path…
-    for (var j = 0; j < 16 && fade > 0; j++) {
-      final at = trailAt(ms - 20 - j * 18);
-      if (at == null) continue;
-      canvas.drawCircle(at, 14 * (1 - j / 16) + 4, haze..color = const Color(0xFFFFD54F).withValues(alpha: 0.28 * (1 - j / 16) * fade));
-    }
-    // …glittering with gold, green and blue sparks that drift apart as they age
-    for (var j = 0; j < 44 && fade > 0; j++) {
-      final jitter = Offset(rnd.nextDouble() - 0.5, rnd.nextDouble() - 0.5);
-      final at = trailAt(ms - 26 - j * 13);
-      if (at == null) continue;
-      final age = j / 44;
-      final spark = at + jitter * (10 + 52 * age);
-      final r = 1.6 + 4.4 * (1 - age);
-      final colour = _colours[j % _colours.length];
-      canvas.drawCircle(spark, r * 2.2, glow..color = colour.withValues(alpha: 0.7 * (1 - age) * fade));
-      canvas.drawCircle(spark, r * 0.75, dot..color = Colors.white.withValues(alpha: (1 - age) * fade));
-    }
-    final ring = _span(ms, 1150, 1700);
-    if (ring > 0 && ring < 1) {
-      final e = Curves.easeOutCubic.transform(ring);
-      canvas.drawCircle(
-        pivot,
-        24 + size.width * 0.6 * e,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3.2 * (1 - e)
-          ..color = const Color(0xFFFFD54F).withValues(alpha: 0.7 * (1 - e)),
-      );
-      canvas.drawCircle(
-        pivot,
-        size.width * 0.32,
-        Paint()
-          ..color = const Color(0xFFFFE082).withValues(alpha: 0.22 * (1 - e))
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 26),
-      );
-    }
+    final t = _span(ms, 60, 640);
+    if (t <= 0 || t >= 1) return;
+    final e = Curves.easeOutCubic.transform(t);
+    canvas.drawCircle(
+      centre,
+      size.width * 0.32,
+      Paint()
+        ..color = const Color(0xFFFFE082).withValues(alpha: 0.26 * (1 - e))
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 26),
+    );
+    canvas.drawCircle(
+      centre,
+      24 + size.width * 0.6 * e,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3.2 * (1 - e)
+        ..color = const Color(0xFFFFD54F).withValues(alpha: 0.7 * (1 - e)),
+    );
   }
 
   @override
-  bool shouldRepaint(_Sparkles old) => old.ms != ms;
+  bool shouldRepaint(_Glow old) => old.ms != ms;
 }
 
 /// Reveals its child outwards from the middle (the wordmark's rules drawing out).
