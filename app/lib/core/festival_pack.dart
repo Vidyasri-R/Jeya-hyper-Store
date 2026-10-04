@@ -361,6 +361,44 @@ abstract final class FestivalPacks {
     ],
   );
 
+  /// Vinayagar Chathurthi (the festival's symbols, not the deity): kozhukattai, erukkam poo, arugampul and a ceremonial kudai.
+  static const vinayagar = FestivalPack(
+    id: 'vinayagar',
+    dir: 'assets/themes/vinayagar',
+    greeting: 'Happy Vinayagar Chathurthi',
+    question: 'Pooja & sweets, delivered',
+    heroAspect: 480 / 300,
+    flames: [(0.1333, 0.7667, 0.1292), (0.875, 0.78, 0.1208)],
+    halo: 'kudai',
+    banners: [
+      FestivalBanner(
+        image: 'assets/themes/vinayagar/banner_kozhukattai.webp',
+        tag: 'KOZHUKATTAI SPECIAL',
+        title: 'Kozhukattai\nessentials',
+        subtitle: 'Rice flour, jaggery & coconut',
+        cta: 'Shop now',
+        route: '/search?q=jaggery',
+      ),
+      FestivalBanner(
+        image: 'assets/themes/vinayagar/banner_pooja.webp',
+        tag: 'POOJA NEEDS',
+        title: 'Flowers &\npooja items',
+        subtitle: 'Erukku malai, camphor & more',
+        cta: 'Shop now',
+        route: '/search?q=camphor',
+        dark: true,
+      ),
+      FestivalBanner(
+        image: 'assets/themes/vinayagar/banner_fruits.webp',
+        tag: 'FESTIVE FRUITS',
+        title: 'Fruits &\nsugarcane',
+        subtitle: 'Banana, apple & more',
+        cta: 'Explore',
+        route: '/search?q=banana',
+      ),
+    ],
+  );
+
   static FestivalPack? byId(String? id) => switch (id) {
     'diwali' => diwali,
     'pongal' => pongal,
@@ -369,6 +407,7 @@ abstract final class FestivalPacks {
     'puthandu' => puthandu,
     'eid' => eid,
     'national' => national,
+    'vinayagar' => vinayagar,
     _ => null,
   };
 }

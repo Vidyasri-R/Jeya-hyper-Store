@@ -59,6 +59,13 @@ void main() {
       expect(t?.pack?.greetingOn(DateTime(2026, 8, 15)), 'Happy Independence Day');
     });
 
+    test('Vinayagar Chathurthi has its own look', () {
+      final t = FestivalTheme.activeFrom(theme(preset: 'vinayagar'), now);
+      expect(t?.palette, same(Palettes.vinayagar));
+      expect(t?.pack?.greeting, 'Happy Vinayagar Chathurthi');
+      expect(t?.pack?.haloImage, 'assets/themes/vinayagar/kudai.webp');
+    });
+
     test('Pongal has its own look', () {
       final t = FestivalTheme.activeFrom(theme(preset: 'pongal'), now);
       expect(t?.palette, same(Palettes.pongal));

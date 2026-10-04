@@ -78,6 +78,7 @@ flutter:
     - assets/themes/puthandu/
     - assets/themes/eid/
     - assets/themes/national/
+    - assets/themes/vinayagar/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

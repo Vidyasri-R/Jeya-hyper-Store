@@ -41,6 +41,11 @@ python3 national_art.py    # Independence & Republic Day: navy fireworks, tricol
 python3 national_more.py   # tricolour sweets / holiday snacks / desi brands banners, confetti tile, rosette icon, ribbons & marigold
 node render.mjs --dir out/national
 cp out/national/webp/*.webp ../../app/assets/themes/national/
+
+python3 vinayagar_art.py   # Vinayagar Chathurthi: vermilion glow, erukku + marigold thoranam, kozhukattai under a kudai hero, kudai halo (no deity)
+python3 vinayagar_more.py  # kozhukattai / pooja / fruits banners, erukku tile, kozhukattai icon, flower petals
+node render.mjs --dir out/vinayagar
+cp out/vinayagar/webp/*.webp ../../app/assets/themes/vinayagar/
 ```
 
 How the app uses them: `app/lib/core/festival_pack.dart` (asset names, banner copy, flame

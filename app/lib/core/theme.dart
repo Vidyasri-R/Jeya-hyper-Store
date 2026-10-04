@@ -151,6 +151,21 @@ abstract final class Palettes {
     accent: Color(0xFFFF9933),
   );
 
+  /// Vinayagar Chathurthi: vermilion and turmeric gold.
+  static const vinayagar = BrandPalette(
+    id: 'vinayagar',
+    b900: Color(0xFF5A1804),
+    b800: Color(0xFF8A2A08),
+    b700: Color(0xFFC43A0E),
+    b600: Color(0xFFDE5A1E),
+    b500: Color(0xFFF07A35),
+    b100: Color(0xFFFDE3D3),
+    b50: Color(0xFFFFF2EA),
+    tint: Color(0xFFFFF8F3),
+    header: [Color(0xFF6E1A04), Color(0xFFC2410C)],
+    accent: Color(0xFFFFD54F),
+  );
+
   static BrandPalette byId(String? id) => switch (id) {
     'diwali' => diwali,
     'pongal' => pongal,
@@ -159,6 +174,7 @@ abstract final class Palettes {
     'puthandu' => puthandu,
     'eid' => eid,
     'national' => national,
+    'vinayagar' => vinayagar,
     _ => standard,
   };
 }
