@@ -181,6 +181,21 @@ abstract final class Palettes {
     accent: Color(0xFFFFD54F),
   );
 
+  /// Karthigai Deepam: a dusk from indigo to ember, lamp-gold accents.
+  static const karthigai = BrandPalette(
+    id: 'karthigai',
+    b900: Color(0xFF4A1A0A),
+    b800: Color(0xFF7A2C10),
+    b700: Color(0xFFB8411A),
+    b600: Color(0xFFD05A2A),
+    b500: Color(0xFFE8763C),
+    b100: Color(0xFFFCE2D2),
+    b50: Color(0xFFFFF1E8),
+    tint: Color(0xFFFFF8F3),
+    header: [Color(0xFF1E1340), Color(0xFF8A3410)],
+    accent: Color(0xFFFFC14D),
+  );
+
   static BrandPalette byId(String? id) => switch (id) {
     'diwali' => diwali,
     'pongal' => pongal,
@@ -191,6 +206,7 @@ abstract final class Palettes {
     'national' => national,
     'vinayagar' => vinayagar,
     'navaratri' => navaratri,
+    'karthigai' => karthigai,
     _ => standard,
   };
 }

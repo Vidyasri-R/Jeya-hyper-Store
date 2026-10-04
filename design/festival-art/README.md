@@ -51,6 +51,11 @@ python3 navaratri_art.py   # Navaratri & Ayudha Pooja: plum silk, pennant thoran
 python3 navaratri_more.py  # sundal / Ayudha Pooja (pori, ash gourd) / thamboolam banners, kolam tile, kalasam icon, petals
 node render.mjs --dir out/navaratri
 cp out/navaratri/webp/*.webp ../../app/assets/themes/navaratri/
+
+python3 karthigai_art.py   # Karthigai Deepam: indigo-to-ember dusk, hill + Maha Deepam, jasmine thoranam with hanging lamps, agal lamps hero, flame halo
+python3 karthigai_more.py  # pori urundai & appam / lamp-lit steps / kolam banners, flame tile, agal icon, petals
+node render.mjs --dir out/karthigai
+cp out/karthigai/webp/*.webp ../../app/assets/themes/karthigai/
 ```
 
 How the app uses them: `app/lib/core/festival_pack.dart` (asset names, banner copy, flame

@@ -42,4 +42,8 @@
         <item name="android:windowSplashScreenBackground">#FF4A0E3C</item>
         <item name="android:windowSplashScreenIconBackgroundColor">@android:color/white</item>
     </style>
+    <style name="KarthigaiSplashTheme" parent="LaunchTheme">
+        <item name="android:windowSplashScreenBackground">#FF1E1340</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/white</item>
+    </style>
 </resources>

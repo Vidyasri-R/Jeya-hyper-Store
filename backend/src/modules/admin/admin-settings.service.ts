@@ -56,7 +56,7 @@ const SETTINGS = {
     schema: z
       .object({
         /** Festival look of the customer app; presets are designed into the app. */
-        preset: z.enum(['standard', 'diwali', 'pongal', 'christmas', 'valentine', 'puthandu', 'eid', 'national', 'vinayagar', 'navaratri']),
+        preset: z.enum(['standard', 'diwali', 'pongal', 'christmas', 'valentine', 'puthandu', 'eid', 'national', 'vinayagar', 'navaratri', 'karthigai']),
         /** Shown from/until (ISO times); null = no limit on that side. */
         startsAt: z.iso.datetime({ offset: true }).nullable(),
         endsAt: z.iso.datetime({ offset: true }).nullable(),

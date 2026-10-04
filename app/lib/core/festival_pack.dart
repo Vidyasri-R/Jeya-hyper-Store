@@ -437,6 +437,44 @@ abstract final class FestivalPacks {
     ],
   );
 
+  /// Karthigai Deepam: a dusk sky with the hill and its Maha Deepam, rows of agal lamps, pori urundai and appam.
+  static const karthigai = FestivalPack(
+    id: 'karthigai',
+    dir: 'assets/themes/karthigai',
+    greeting: 'Happy Karthigai Deepam',
+    question: 'Lamps & sweets, delivered',
+    heroAspect: 480 / 300,
+    flames: [(0.1458, 0.7867, 0.0975), (0.3125, 0.84, 0.105), (0.6875, 0.84, 0.105), (0.8542, 0.7867, 0.0975), (0.5, 0.8733, 0.1125)],
+    halo: 'deepam',
+    banners: [
+      FestivalBanner(
+        image: 'assets/themes/karthigai/banner_sweets.webp',
+        tag: 'KARTHIGAI SPECIAL',
+        title: 'Pori urundai\n& appam',
+        subtitle: 'Puffed rice, jaggery & ghee',
+        cta: 'Shop now',
+        route: '/search?q=jaggery',
+      ),
+      FestivalBanner(
+        image: 'assets/themes/karthigai/banner_lamps.webp',
+        tag: 'LIGHT EVERY STEP',
+        title: 'Agal lamps\n& oil',
+        subtitle: 'Clay lamps, wicks & ghee',
+        cta: 'Shop now',
+        route: '/search?q=oil',
+        dark: true,
+      ),
+      FestivalBanner(
+        image: 'assets/themes/karthigai/banner_kolam.webp',
+        tag: 'FESTIVE KOLAM',
+        title: 'Kolam colours\n& flowers',
+        subtitle: 'Kolam powder & flowers',
+        cta: 'Explore',
+        route: '/categories',
+      ),
+    ],
+  );
+
   static FestivalPack? byId(String? id) => switch (id) {
     'diwali' => diwali,
     'pongal' => pongal,
@@ -447,6 +485,7 @@ abstract final class FestivalPacks {
     'national' => national,
     'vinayagar' => vinayagar,
     'navaratri' => navaratri,
+    'karthigai' => karthigai,
     _ => null,
   };
 }

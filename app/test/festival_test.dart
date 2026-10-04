@@ -73,6 +73,13 @@ void main() {
       expect(t?.pack?.haloImage, 'assets/themes/navaratri/kalasam.webp');
     });
 
+    test('Karthigai Deepam has its own look', () {
+      final t = FestivalTheme.activeFrom(theme(preset: 'karthigai'), now);
+      expect(t?.palette, same(Palettes.karthigai));
+      expect(t?.pack?.greeting, 'Happy Karthigai Deepam');
+      expect(t?.pack?.flames, hasLength(5));
+    });
+
     test('Pongal has its own look', () {
       final t = FestivalTheme.activeFrom(theme(preset: 'pongal'), now);
       expect(t?.palette, same(Palettes.pongal));

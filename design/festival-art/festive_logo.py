@@ -3,7 +3,8 @@ its top — mango leaves and marigolds (Deepavali), aavaram poo (Pongal), a pine
 baubles (Christmas & New Year), roses with little hearts (Valentine's Day), a mango-leaf
 fringe with malli, kanakambaram and konrai bunches (Tamil New Year), little lanterns, stars and
 crescents on a gold chain (Eid), tricolour bunting with rosettes (Independence & Republic Day), erukkam poo and
-marigolds with arugampul (Vinayagar Chathurthi), silk pennants with marigolds (Navaratri).
+marigolds with arugampul (Vinayagar Chathurthi), silk pennants with marigolds (Navaratri), jasmine and marigolds with lit hanging
+lamps (Karthigai Deepam).
 
 Writes app/branding/app_icon/<festival>/ (Android launcher mipmaps + iOS AppIcon), next to the
 everyday set in app/branding/app_icon/standard/. Switch the app between them with
@@ -19,7 +20,7 @@ import subprocess
 
 from PIL import Image
 
-from svgkit import SVG, f, marigold, mango_leaf
+from svgkit import SVG, f, flame, marigold, mango_leaf
 from header_art import bell
 from pongal_art import aavaram, poolai
 from christmas_art import bauble, bow, pine_branch, warm_light
@@ -29,6 +30,8 @@ from eid_art import gold_crescent, lantern, star5
 from national_art import TRI, pennant, rosette as tri_rosette
 from vinayagar_art import arugampul, erukku
 from navaratri_art import SILKS, pennant as silk_pennant
+from karthigai_art import thoonga_vilakku
+from puthandu_art import malli as malli_flower
 
 APP = '../../app'
 ANDROID_RES = f'{APP}/android/app/src/main/res'
@@ -155,6 +158,17 @@ def garland(festival):
         for t in (0.06, 0.94):
             x, y, _ = _rope(t)
             front.append(marigold(s, x, y + 4, 15, 'orange'))
+    elif festival == 'karthigai':
+        mid.append(_rope_path())
+        for i in range(17):
+            t = 0.04 + i * 0.058
+            x, y, ang = _rope(t)
+            front.append(marigold(s, x, y, 13, 'orange' if i % 2 else 'yellow') if i % 3 == 0 else malli_flower(s, x, y, 9, rot=rnd.uniform(0, 60)))
+        for t in (0.07, 0.93):   # lit hanging lamps at the ends, clear of the peacock
+            x, y, _ = _rope(t)
+            svg, wick = thoonga_vilakku(s, x, y + 2, 34)
+            back.append(svg)
+            back.append(flame(s, wick[0], wick[1], 9, 22))
     else:
         raise ValueError(festival)
     s.add(''.join(back) + ''.join(mid) + ''.join(front))
@@ -217,7 +231,7 @@ def icon_sets(festival):
     print(festival, 'icon set written')
 
 
-FESTIVALS = ('diwali', 'pongal', 'christmas', 'valentine', 'puthandu', 'eid', 'national', 'vinayagar', 'navaratri')
+FESTIVALS = ('diwali', 'pongal', 'christmas', 'valentine', 'puthandu', 'eid', 'national', 'vinayagar', 'navaratri', 'karthigai')
 
 if __name__ == '__main__':
     for festival in FESTIVALS:
