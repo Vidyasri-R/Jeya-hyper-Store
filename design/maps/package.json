@@ -1,0 +1,11 @@
+{
+  "name": "jeya-map-tiles",
+  "private": true,
+  "description": "Renders the Trichy delivery-area map (OSM via Protomaps) to raster tiles for Cloudflare R2.",
+  "type": "module",
+  "dependencies": {
+    "@maplibre/maplibre-gl-native": "^6.0.0",
+    "@protomaps/basemaps": "^5.0.0",
+    "pmtiles": "^4.0.0"
+  }
+}

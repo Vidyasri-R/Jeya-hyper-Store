@@ -180,6 +180,37 @@ class StoreRules {
 
 final storeRulesProvider = Provider<StoreRules>((ref) => StoreRules.from(_settings(ref)));
 
+/// The address map: our own Trichy-area tiles on R2 (design/maps — no map API, no key, no fee),
+/// read from `map.tiles` so the tiles can move to the custom domain without an app update.
+class MapTiles {
+  const MapTiles({required this.url, this.minZoom = 11, this.maxNativeZoom = 16, this.bounds});
+
+  final String url;
+  final double minZoom;
+  final int maxNativeZoom;
+
+  /// West, south, east, north — the map can't be panned away from the area the tiles cover.
+  final List<double>? bounds;
+
+  static const fallback = MapTiles(
+    url: 'https://pub-8bf43ee4c62945148a4996353f48a051.r2.dev/maps/trichy/v1/{z}/{x}/{y}.webp',
+    bounds: [78.5, 10.68, 78.8, 10.95],
+  );
+
+  static MapTiles from(Object? raw) {
+    if (raw is! Map || raw['url'] is! String) return fallback;
+    final b = raw['bounds'];
+    return MapTiles(
+      url: raw['url'] as String,
+      minZoom: (raw['minZoom'] as num?)?.toDouble() ?? fallback.minZoom,
+      maxNativeZoom: (raw['maxNativeZoom'] as num?)?.toInt() ?? fallback.maxNativeZoom,
+      bounds: b is List && b.length == 4 && b.every((v) => v is num) ? [for (final v in b) (v as num).toDouble()] : fallback.bounds,
+    );
+  }
+}
+
+final mapTilesProvider = Provider<MapTiles>((ref) => MapTiles.from(_settings(ref)?['map.tiles']));
+
 /// Admin → Store settings → Pause orders. Null when orders are open.
 final storePausedMessageProvider = FutureProvider<String?>((ref) async {
   final config = await ref.watch(publicConfigProvider.future);

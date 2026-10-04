@@ -186,6 +186,7 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final tiles = ref.watch(mapTilesProvider);
     final text = Theme.of(context).textTheme;
     final e = _estimate;
     final serviceable = e?['serviceable'] == true;
@@ -211,6 +212,14 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
                     options: MapOptions(
                       initialCenter: _pin,
                       initialZoom: 16,
+                      minZoom: tiles.minZoom,
+                      maxZoom: 19,
+                      backgroundColor: const Color(0xFFE3DFDA),
+                      cameraConstraint: tiles.bounds == null
+                          ? const CameraConstraint.unconstrained()
+                          : CameraConstraint.containCenter(
+                              bounds: LatLngBounds(LatLng(tiles.bounds![1], tiles.bounds![0]), LatLng(tiles.bounds![3], tiles.bounds![2])),
+                            ),
                       interactionOptions: const InteractionOptions(
                         flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
                       ),
@@ -222,13 +231,16 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
                     ),
                     children: [
                       TileLayer(
-                        urlTemplate:
-                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        urlTemplate: tiles.url,
+                        minNativeZoom: tiles.minZoom.toInt(),
+                        maxNativeZoom: tiles.maxNativeZoom,
+                        maxZoom: 19,
                         userAgentPackageName: 'com.jeyahyperstore.app',
                       ),
                       const RichAttributionWidget(
                         attributions: [
                           TextSourceAttribution('OpenStreetMap contributors'),
+                          TextSourceAttribution('Protomaps'),
                         ],
                       ),
                     ],

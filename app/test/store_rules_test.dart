@@ -69,4 +69,20 @@ void main() {
     expect(find.text('7 AM – 10 PM'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  group('address map tiles', () {
+    test('come from map.tiles, so they can move to the custom domain without an update', () {
+      final t = MapTiles.from({'url': 'https://maps.example.in/trichy/v2/{z}/{x}/{y}.webp', 'minZoom': 12, 'maxNativeZoom': 15, 'bounds': [78.4, 10.6, 78.9, 11.0]});
+      expect(t.url, 'https://maps.example.in/trichy/v2/{z}/{x}/{y}.webp');
+      expect(t.minZoom, 12);
+      expect(t.maxNativeZoom, 15);
+      expect(t.bounds, [78.4, 10.6, 78.9, 11.0]);
+    });
+
+    test('fall back to our own R2 tiles when the setting is missing or broken', () {
+      expect(MapTiles.from(null).url, MapTiles.fallback.url);
+      expect(MapTiles.from({'url': 42}).url, contains('/maps/trichy/'));
+      expect(MapTiles.from({'url': 'https://x/{z}/{x}/{y}.webp', 'bounds': [1, 2]}).bounds, MapTiles.fallback.bounds);
+    });
+  });
 }

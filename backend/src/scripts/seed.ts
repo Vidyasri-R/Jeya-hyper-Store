@@ -5,6 +5,7 @@
  * changed later in the dashboard/admin, so it's safe to run on every deploy.
  */
 import { sql } from 'drizzle-orm';
+import { env } from '../config/env';
 import { closeDb, db } from '../db/client';
 import { appConfig, serviceablePincodes } from '../db/schema';
 import { CONFIG_KEYS } from '../modules/app-config/app-config.service';
@@ -47,6 +48,18 @@ const defaults: (typeof appConfig.$inferInsert)[] = [
     isPublic: true,
     description: 'Store contact details shown in the app.',
   },
+  // Our own Trichy-area map tiles on R2 (design/maps): no map API, no key, no fee. Point url at the
+  // custom domain once it is live — the app reads this, so no app update is needed.
+  ...(env.R2_PUBLIC_BASE_URL
+    ? [
+        {
+          key: CONFIG_KEYS.MAP_TILES,
+          value: { url: `${env.R2_PUBLIC_BASE_URL}/maps/trichy/v1/{z}/{x}/{y}.webp`, minZoom: 11, maxNativeZoom: 16, bounds: [78.5, 10.68, 78.8, 10.95] },
+          isPublic: true,
+          description: 'Address-map tiles (url template, zooms, west/south/east/north bounds).',
+        },
+      ]
+    : []),
 ];
 
 /**
