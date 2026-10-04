@@ -58,8 +58,6 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
@@ -67,6 +65,29 @@
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tez</string>
+		<string>phonepe</string>
+		<string>paytmmp</string>
+		<string>credpay</string>
+		<string>bhim</string>
+		<string>amazonpay</string>
+		<string>mobikwik</string>
+		<string>in.fampay.app</string>
+		<string>navi</string>
+		<string>kiwi</string>
+		<string>payzapp</string>
+		<string>jupiter</string>
+		<string>sbiyono</string>
+		<string>myjio</string>
+		<string>slice-upi</string>
+		<string>bobupi</string>
+		<string>kotakbank</string>
+		<string>whatsapp</string>
 	</array>
 </dict>
 </plist>
