@@ -2,14 +2,16 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'brand_intro_bird.dart';
 import 'brand_intro_parts.dart';
 
-/// The store's logo arriving on the splash: the peacock swoops in with a sparkle trail (its nine
-/// feathers trailing as a train, wings beating), lands upright as the "J", fans its feathers out
-/// into the logo, a shine runs across it and the wordmark rises in.
+/// The store's logo arriving on the splash: a peacock swoops in with a sparkle trail, wings beating
+/// and its train streaming behind, pulls up, turns to face you in a flash of light and is the "J";
+/// its feathers fan out into the logo, a shine runs across it and the wordmark rises in.
 ///
-/// Built from the logo's own pieces (assets/brand/intro/, cut by design/brand-intro/split_logo.py),
-/// so the last frame is exactly logo_full.png. Turned off with the system's reduce-motion setting.
+/// The bird in flight is drawn for the intro (design/brand-intro/flying_peacock.py); the train, the
+/// J and the wordmark are the logo's own pieces (split_logo.py), so the last frame is exactly
+/// logo_full.png. Turned off with the system's reduce-motion setting.
 class BrandIntro extends StatefulWidget {
   const BrandIntro({super.key, required this.width, this.onDone});
 
@@ -25,6 +27,8 @@ class BrandIntro extends StatefulWidget {
 }
 
 class BrandIntroState extends State<BrandIntro> with SingleTickerProviderStateMixin {
+  static final _assets = [for (final piece in [...BrandIntroParts.all, BrandIntroBird.body, BrandIntroBird.wing]) piece.asset];
+
   late final _clock = AnimationController(vsync: this, duration: BrandIntro.duration)
     ..addStatusListener((status) {
       if (status == AnimationStatus.completed) _finish();
@@ -43,7 +47,7 @@ class BrandIntroState extends State<BrandIntro> with SingleTickerProviderStateMi
       return;
     }
     // Decode every piece first so nothing pops in mid-flight.
-    Future.wait([for (final piece in BrandIntroParts.all) precacheImage(AssetImage(piece.asset), context)]).whenComplete(() {
+    Future.wait([for (final asset in _assets) precacheImage(AssetImage(asset), context)]).whenComplete(() {
       if (mounted && !_done) _clock.forward();
     });
   }
@@ -80,48 +84,55 @@ class BrandIntroState extends State<BrandIntro> with SingleTickerProviderStateMi
   }
 
   Widget _frame(double ms, double k, _Swoop swoop) {
-    final pivot = BrandIntroParts.pivot * k; // the bird turns about the point behind the J
+    final pivot = BrandIntroParts.pivot * k; // the bird's rump, where its train hangs (behind the J)
 
-    // Flight: fast in, gliding to a stop; nose follows the climb, then pulls up to stand as the J.
+    // Flight: fast in, gliding to a stop; the nose follows the climb, then it pulls up to stand.
     final fly = Curves.easeOutCubic.transform(_span(ms, 0, 1150));
     final at = swoop.at(fly);
     final slope = swoop.slope(fly);
-    final land = Curves.easeInOutCubic.transform(_span(ms, 820, 1250));
+    final land = Curves.easeInOutCubic.transform(_span(ms, 760, 1150));
     final pitch = slope.distance == 0 ? 0.0 : slope.dy / slope.distance * 26;
     final heading = (72 + pitch) * (1 - land);
-    final scale = 0.62 + 0.38 * fly + math.sin(math.pi * _span(ms, 1150, 1480)) * 0.05;
+    final scale = 0.62 + 0.38 * fly + math.sin(math.pi * _span(ms, 1160, 1480)) * 0.05;
     final bird = _about(pivot, rotate: heading, scale: scale, then: at);
 
-    final beat = 30 * (1 - Curves.easeOut.transform(_span(ms, 900, 1250))) * math.sin(ms / 1000 * math.pi * 2 * 3.1);
-    final wingSize = 1 + 0.4 * (1 - land);
+    // The turn: the peacock goes edge-on in a flash of light and opens out again as the J, facing you.
+    final turnOut = Curves.easeIn.transform(_span(ms, 1040, 1160));
+    final turnIn = Curves.easeOutCubic.transform(_span(ms, 1160, 1320));
+    final flash = math.sin(math.pi * _span(ms, 990, 1380));
     final ripple = 1 - land;
 
-    final feathers = <Widget>[];
+    final layers = <Widget>[];
     for (final (i, piece) in BrandIntroParts.feathers.indexed) {
       if (i == 4) continue; // the crest feather rises on its own, below
-      // Train: every feather points back (down from the pivot), a little spread; fans out to its place.
-      final trainAngle = 180 + (i - 4) * 5.0;
+      // Train: every feather points back (down from the rump), close together and layered from just
+      // behind the rump, the longest in the middle; then fans out to its place in the logo.
+      final trainAngle = 180 + (i - 4) * 3.5;
+      final trainReach = 100.0 + 30 * (4 - (i - 4).abs());
       final turn = piece.angle <= 0 ? trainAngle - (piece.angle + 360) : trainAngle - piece.angle;
       final lag = (4 - (i - 4).abs()) * 35.0;
-      final open = Curves.easeOutBack.transform(_span(ms, 1180 + lag, 1820 + lag));
+      final open = Curves.easeOutBack.transform(_span(ms, 1220 + lag, 1860 + lag));
       final wave = 5 * ripple * math.sin(ms / 1000 * math.pi * 2 * 1.7 + i * 0.6);
-      final out = 70 * (1 - open);
+      final out = (trainReach - piece.reach) * (1 - open);
       final dir = Offset(math.sin(piece.angle * math.pi / 180), -math.cos(piece.angle * math.pi / 180));
-      feathers.add(_piece(piece, k, _about(pivot, rotate: turn * (1 - open) + wave, scale: 0.82 + 0.18 * open, before: dir * out * k)));
+      layers.add(_piece(piece, k, transform: _about(pivot, rotate: turn * (1 - open) + wave, scale: 0.82 + 0.18 * open, before: dir * out * k)));
     }
-    final rise = Curves.easeOutBack.transform(_span(ms, 1480, 2050));
-    final crest = BrandIntroParts.feathers[4];
-    feathers.add(_piece(crest, k, _about(pivot, scale: 0.25 + 0.75 * rise), (rise * 2).clamp(0.0, 1.0)));
+    final rise = Curves.easeOutBack.transform(_span(ms, 1500, 2060));
+    layers.add(_piece(BrandIntroParts.feathers[4], k, transform: _about(pivot, scale: 0.25 + 0.75 * rise), opacity: (rise * 2).clamp(0.0, 1.0)));
+    if (turnOut < 1) layers.add(_squash(pivot.dx, 1 - 0.92 * turnOut, flash, _peacock(ms, k)));
+    if (turnIn > 0) {
+      layers.add(_squash(
+        pivot.dx,
+        0.08 + 0.92 * turnIn,
+        flash,
+        Stack(
+          clipBehavior: Clip.none,
+          children: [_piece(BrandIntroParts.wingLeft, k), _piece(BrandIntroParts.wingRight, k), _piece(BrandIntroParts.body, k), _piece(BrandIntroParts.head, k)],
+        ),
+      ));
+    }
 
-    final wings = [
-      _piece(BrandIntroParts.wingLeft, k, _about(BrandIntroParts.wingLeft.hinge * k, rotate: beat, scale: wingSize)),
-      _piece(BrandIntroParts.wingRight, k, _about(BrandIntroParts.wingRight.hinge * k, rotate: -beat, scale: wingSize)),
-    ];
-
-    Widget mark = Stack(
-      clipBehavior: Clip.none,
-      children: [...feathers, ...wings, _piece(BrandIntroParts.body, k), _piece(BrandIntroParts.head, k)],
-    );
+    Widget mark = Stack(clipBehavior: Clip.none, children: layers);
     final shine = _span(ms, 1850, 2400);
     if (shine > 0 && shine < 1) {
       final s = shine * 1.6 - 0.3;
@@ -160,6 +171,42 @@ class BrandIntroState extends State<BrandIntro> with SingleTickerProviderStateMi
     );
   }
 
+  /// The peacock in flight, head-up in the logo's frame (the flight turns it on its side): its wings
+  /// beat over the back on the upstroke and under the belly on the downstroke, folding as it lands.
+  static Widget _peacock(double ms, double k) {
+    final fold = Curves.easeOut.transform(_span(ms, 880, 1100));
+    final phi = (75 * math.sin(ms / 1000 * math.pi * 2 * 3.4) + 15) * (1 - fold) + 8 * fold;
+    var span = math.sin(phi * math.pi / 180); // the wing seen from the side: + over the back, − under the belly
+    if (span.abs() < 0.03) span = span.isNegative ? -0.03 : 0.03;
+    final wing = BrandIntroBird.wing;
+    final root = wing.hinge * k;
+    final sweep = -22 * span.sign * math.pi / 180; // wing tips swept back towards the tail, up or down
+    Matrix4 beat(Offset to, double size) => Matrix4.translationValues(to.dx, to.dy, 0)
+      ..multiply(Matrix4.rotationZ(sweep))
+      ..multiply(Matrix4.diagonal3Values(span * size, size * (0.9 + 0.1 * span.abs()), 1))
+      ..multiply(Matrix4.translationValues(-root.dx, -root.dy, 0));
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        _piece(wing, k, transform: beat(root + const Offset(-6, -12) * k, 0.9), shade: const Color(0x70061433)), // far wing
+        _piece(BrandIntroBird.body, k),
+        _piece(wing, k, transform: beat(root, 1)),
+      ],
+    );
+  }
+
+  /// Squeezes a logo-sized [child] towards the vertical line at [x] (the bird turning), lit by [flash].
+  static Widget _squash(double x, double sx, double flash, Widget child) => Positioned.fill(
+    child: Transform(
+      transform: Matrix4.translationValues(x, 0, 0)
+        ..multiply(Matrix4.diagonal3Values(sx, 1, 1))
+        ..multiply(Matrix4.translationValues(-x, 0, 0)),
+      child: flash > 0.01
+          ? ColorFiltered(colorFilter: ColorFilter.mode(const Color(0xFFFFF3C4).withValues(alpha: 0.75 * flash), BlendMode.srcATop), child: child)
+          : child,
+    ),
+  );
+
   static Widget _image(BrandPiece piece) => Image.asset(piece.asset, fit: BoxFit.fill, filterQuality: FilterQuality.medium, gaplessPlayback: true);
 
   static Widget _place(BrandPiece piece, double k, Widget child) {
@@ -168,8 +215,9 @@ class BrandIntroState extends State<BrandIntro> with SingleTickerProviderStateMi
   }
 
   /// A piece in its place in the logo, moved by [transform] (in the logo's coordinates).
-  static Widget _piece(BrandPiece piece, double k, [Matrix4? transform, double opacity = 1]) {
-    final image = _image(piece);
+  static Widget _piece(BrandPiece piece, double k, {Matrix4? transform, double opacity = 1, Color? shade}) {
+    Widget image = _image(piece);
+    if (shade != null) image = ColorFiltered(colorFilter: ColorFilter.mode(shade, BlendMode.srcATop), child: image);
     if (transform == null) return _place(piece, k, image);
     // Transform a logo-sized layer so pivots and hinges stay in the logo's coordinates.
     Widget layer = Transform(
