@@ -2,7 +2,7 @@
 import math
 
 from svgkit import *
-from banners import brass_plate
+from banners import brass_plate, giftbox
 from pongal_more import banana_bunch, jaggery
 from puthandu_art import betel, kanakambaram, lotus_kolam, malli
 from puthandu_more import coconut
@@ -116,12 +116,11 @@ def banner_ayudha():
 
 
 def thamboolam_bag(s, cx, base_y, w):
-    """A cloth thamboolam bag with gold trim, betel leaves, a banana and a coconut peeking out."""
+    """A cloth thamboolam bag with gold trim and a wrapped gift peeking out."""
     h = w * 0.9
     top = base_y - h
     cloth = s.lin([(0, '#F06292'), (0.5, '#D81B60'), (1, '#880E4F')], x1=0, y1=0, x2=1, y2=1)
-    out = [betel(s, cx - w * 0.15, top + h * 0.1, w * 0.4, -20), betel(s, cx + w * 0.05, top + h * 0.08, w * 0.42, 12),
-           coconut(s, cx + w * 0.22, top + h * 0.02, w * 0.16)]
+    out = [giftbox(s, cx - w * 0.22, top - h * 0.1, w * 0.44, h * 0.3, body=('#7B1FA2', '#4A148C'))]
     out.append(f'<ellipse cx="{f(cx + 6)}" cy="{f(base_y + 4)}" rx="{f(w * 0.5)}" ry="{f(h * 0.06)}" fill="#2A0A1E" opacity="0.3" filter="{s.blur(6)}"/>')
     out.append(f'<path d="M {f(cx - w * 0.42)},{f(top + h * 0.12)} L {f(cx + w * 0.42)},{f(top + h * 0.12)} L {f(cx + w * 0.5)},{f(base_y)} L {f(cx - w * 0.5)},{f(base_y)} Z" fill="{cloth}"/>')
     out.append(f'<rect x="{f(cx - w * 0.43)}" y="{f(top + h * 0.12)}" width="{f(w * 0.86)}" height="{f(h * 0.08)}" fill="#FFD54F"/>')
@@ -148,7 +147,7 @@ def banner_thamboolam():
     s.add(thamboolam_bag(s, 800, 500, 260))
     s.add(kumkum_box(s, 620, 480, 30, '#C62828'))
     s.add(kumkum_box(s, 690, 500, 26, '#F9C02D'))
-    s.add(banana_bunch(s, 1040, 440, 88))
+    s.add(kumkum_box(s, 1040, 470, 24, '#AD1457'))
     for i, x in enumerate((960, 1000, 1040)):
         s.add(malli(s, x, 505, 9, rot=i * 20) if i % 2 else kanakambaram(s, x, 505, 10))
     for x, y, r in [(640, 130, 11), (1030, 220, 9)]:

@@ -3,7 +3,7 @@ import math
 
 from svgkit import *
 from banners import basket, brass_plate, cashew, jasmine_string, kuthuvilakku, raisin
-from pongal_more import banana_leaf, colour_bowl
+from pongal_more import banana_leaf, cardamom, colour_bowl, jaggery
 from puthandu_art import (OUT, areca, banana, banana_hand, betel, butta_field, coin, jackfruit, kanakambaram,
                           konrai, lotus_kolam, malli, mango, silk)
 
@@ -21,25 +21,25 @@ def _scatter(s, x0, x1, y0, y1, n):
 
 
 # ── Banner 1: mangoes & mukkani (light) ──
-def banner_fruits():
+def banner_payasam():
+    """Payasam essentials: vermicelli, jaggery, cashews, raisins and cardamom (no fresh fruit)."""
     s = SVG(W, H, seed=211)
     s.add(f'<rect width="{W}" height="{H}" fill="{s.lin([(0, "#FFFBEA"), (0.55, "#FFEDB8"), (1, "#FFD98A")], x1=0, y1=0, x2=1, y2=0.6)}"/>')
     s.add(f'<rect width="{W}" height="{H}" fill="{s.rad([(0, "#FFFFFF", 0.7), (1, "#FFFFFF", 0)], cx=800, cy=250, r=380, units="userSpaceOnUse")}"/>')
     s.add(lotus_kolam(s, 820, 270, 320, color='#E39A1C', opacity=0.22, stroke=2.2))
-    for x, y, L, a, tone in [(700, 300, 130, 140, 0), (760, 270, 140, 163, 1), (850, 268, 140, 194, 2), (925, 300, 126, 218, 0)]:
-        s.add(mango_leaf(s, x, y, L, 42, angle=a, tone=tone))
-    s.add(jackfruit(s, 1000, 372, 62, 80, angle=14))
-    heap = [(768, 206, 86, -10, 'yellow'), (848, 204, 86, 14, 'ripe'),
-            (728, 262, 92, -24, 'ripe'), (806, 252, 98, 2, 'ripe'), (884, 262, 92, 24, 'yellow'),
-            (690, 318, 92, -36, 'ripe'), (764, 312, 96, -12, 'yellow'), (842, 310, 96, 12, 'ripe'), (914, 318, 92, 34, 'raw')]
-    for i, (x, y, L, a, kind) in enumerate(heap):
-        s.add(mango(s, x, y, L, a, kind, leaf=i in (1, 6)))
-    s.add(basket(s, 800, 330, 330, 150))
-    s.add(banana_hand(s, 586, 470, 150))
-    s.add(_scatter(s, 960, 1060, 470, 515, 4))
+    s.add(brass_plate(s, 810, 440, 220, 52))
+    s.add(payasam(s, 800, 360, 130))
+    s.add(jaggery(s, 640, 440, 40))
+    s.add(jaggery(s, 690, 470, 30))
+    rnd = s.rnd
+    for x, y in [(930, 440), (965, 455), (1000, 440), (948, 476), (990, 478), (1030, 462)]:
+        s.add(rnd.choice([cashew, raisin, cashew])(s, x, y, 15, rnd.uniform(-60, 60)))
+    for x, y, a in [(880, 470, -20), (900, 486, 30), (860, 488, 10)]:
+        s.add(cardamom(s, x, y, 14, a))
+    s.add(_scatter(s, 600, 1060, 488, 520, 5))
     for x, y, r in [(630, 120, 12), (1030, 200, 10), (700, 70, 8), (960, 80, 11)]:
         s.add(sparkle(s, x, y, r, color='#FFFFFF', glow='#FFB300'))
-    s.save(f'{OUT}/banner_fruits.svg')
+    s.save(f'{OUT}/banner_payasam.svg')
 
 
 # ── Banner 2: the Puthandu feast on a banana leaf (dark) ──
@@ -173,15 +173,15 @@ def banner_pooja():
     s.add(lotus_kolam(s, 800, 280, 320, color='#E07B53', opacity=0.2, stroke=2.2))
     s.add(jasmine_string(s, 580, 34, 1060, 34, 44, 26))
     s.add(brass_plate(s, 770, 452, 172, 44))
-    for a, tone in [(128, 0), (152, 1), (180, 2), (208, 1), (232, 0)]:
-        s.add(mango_leaf(s, 770, 386, 128, 42, angle=a, tone=tone))
-    for x, y, L, a in [(668, 452, 92, -72), (872, 452, 92, 72), (712, 462, 84, -44), (828, 462, 84, 44)]:
-        s.add(betel(s, x, y, L, a))
-    s.add(coconut(s, 770, 384, 64))
+    for k in range(5):   # agarbatti sticks in a holder, smoke curling up
+        x = 752 + k * 9
+        s.add(f'<line x1="{x}" y1="420" x2="{x - 14 + k * 7}" y2="300" stroke="#6D3B1F" stroke-width="3" stroke-linecap="round"/>')
+        s.add(f'<path d="M{x - 14 + k * 7} 300 q -12 -24 4 -44 q 14 -18 -2 -40" fill="none" stroke="#BDBDBD" stroke-width="2.4" opacity="0.55"/>')
+    s.add('<rect x="740" y="414" width="60" height="22" rx="6" fill="#8D6E4C"/>')
+    for x, y in [(690, 448), (716, 456), (700, 432)]:   # camphor tablets
+        s.add(f'<rect x="{x - 9}" y="{y - 7}" width="18" height="14" rx="4" fill="#FAFAFA" stroke="#E0E0E0"/>')
     for x, y, r in [(704, 478, 12), (726, 486, 11), (812, 486, 11)]:
         s.add(coin(s, x, y, r))
-    s.add(areca(s, 838, 476, 11))
-    s.add(areca(s, 856, 482, 10, cut=True))
     s.add(colour_bowl(s, 620, 470, 40, '#C62828'))
     s.add(colour_bowl(s, 892, 488, 34, '#F9C02D'))
     s.add(kuthuvilakku(s, 972, 494, 270))
@@ -219,7 +219,7 @@ def petals():
 
 
 if __name__ == '__main__':
-    banner_fruits()
+    banner_payasam()
     banner_feast()
     banner_pooja()
     btn_tile()

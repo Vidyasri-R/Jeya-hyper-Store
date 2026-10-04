@@ -2,7 +2,8 @@
 import math
 
 from svgkit import *
-from banners import almond, brass_plate, cashew, pistachio, raisin
+from banners import almond, brass_plate, cashew, murukku, pistachio, raisin
+from christmas_more import chips_bowl
 from pongal_more import cardamom
 from eid_art import OUT, _pts, crescent, dates_bowl, date_fruit, gold_crescent, lantern, night, rose_milk, rosette, star5, star8, star_field, stars
 
@@ -39,7 +40,8 @@ def banner_sweets():
     svg, wick = lantern(s, 1000, 150, 250, 'violet')
     s.add(svg)
     s.add(flame(s, wick[0], wick[1], 18, 44))
-    s.add(dates_bowl(s, 660, 420, 80))
+    for x, y in [(620, 440), (650, 452), (684, 440), (640, 470), (676, 474), (708, 458)]:
+        s.add(s.rnd.choice([cashew, almond, pistachio])(s, x, y, 16, s.rnd.uniform(-60, 60)))
     s.add(sheer_khurma(s, 820, 380, 130))
     rnd = s.rnd
     for x, y in [(600, 505), (950, 505), (1010, 498), (700, 512)]:
@@ -163,10 +165,8 @@ def banner_iftar():
     s.add(svg)
     s.add(flame(s, wick[0], wick[1], 13, 32))
     s.add(brass_plate(s, 800, 450, 190, 46))
-    s.add(watermelon(s, 690, 430, 70, -8))
-    s.add(grapes(s, 905, 432, 12))
-    for x, y, a in [(760, 446, -20), (800, 440, 15), (840, 448, -5), (780, 456, 30)]:
-        s.add(date_fruit(s, x, y, 18, a))
+    s.add(murukku(s, 720, 430, 50))
+    s.add(chips_bowl(s, 870, 428, 74))
     s.add(rose_milk(s, 1000, 500, 150))
     s.add(rose_milk(s, 610, 505, 120))
     s.add(gold_crescent(s, 1000, 120, 34, rot=-24))

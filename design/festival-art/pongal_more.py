@@ -2,7 +2,7 @@
 import math
 
 from svgkit import *
-from banners import cashew, raisin, _petal
+from banners import brass_plate, cashew, laddoo, murukku, raisin, _petal
 from pongal_art import OUT, aavaram, kolam, poolai, pot, sugarcane
 
 W, H = 1080, 540
@@ -141,23 +141,24 @@ def brinjal(s, x, y, size, a):
             f'<ellipse cx="{f(size * 0.1)}" cy="{f(-size * 0.28)}" rx="{f(size * 0.45)}" ry="{f(size * 0.12)}" fill="#FFFFFF" opacity="0.25"/></g>')
 
 
-def banner_harvest():
+def banner_treats():
+    """Pongal treats from the shelf: laddoos, murukku, jaggery, cashews (the store sells no fresh produce)."""
     s = SVG(W, H, seed=73)
     s.add(f'<rect width="{W}" height="{H}" fill="{s.lin([(0, "#0F2E14"), (0.5, "#1B4D22"), (1, "#2E6B2F")], x1=0, y1=0, x2=1, y2=0.8)}"/>')
-    s.add(f'<rect width="{W}" height="{H}" fill="{s.rad([(0, "#FFD54F", 0.32), (1, "#FFD54F", 0)], cx=820, cy=200, r=380, units="userSpaceOnUse")}"/>')
+    s.add(f'<rect width="{W}" height="{H}" fill="{s.rad([(0, "#FFD54F", 0.32), (1, "#FFD54F", 0)], cx=820, cy=220, r=380, units="userSpaceOnUse")}"/>')
     s.add(kolam(s, 820, 250, 280, color='#FFFFFF', opacity=0.12, stroke=2.4, rings=3))
-    # a standing bundle: canes close at the foot, fanning a little towards the leaves, tied in the middle
-    for k, (x, a) in enumerate([(712, -7), (734, -2.5), (756, 2.5), (778, 7)]):
-        s.add(sugarcane(s, x, 525, 470, a, width=22, leaf_scale=0.62))
-    s.add('<rect x="696" y="330" width="98" height="15" rx="7" fill="#C9A26A"/><rect x="696" y="336" width="98" height="3" fill="#8D6E4C" opacity="0.6"/>')
-    s.add(turmeric_plant(s, 930, 470, 160))
-    s.add(pumpkin(s, 620, 470, 62))
-    s.add(banana_bunch(s, 1000, 420, 120))
-    s.add(brinjal(s, 860, 500, 34, -20))
-    s.add(brinjal(s, 905, 515, 30, 25))
+    s.add(brass_plate(s, 800, 430, 230, 56))
+    for x, y, r in [(730, 392, 40), (810, 386, 42), (890, 394, 40), (770, 340, 38), (850, 338, 38), (810, 292, 36)]:
+        s.add(laddoo(s, x, y, r))
+    s.add(murukku(s, 640, 452, 58))
+    s.add(murukku(s, 990, 452, 54, turns=3.0))
+    s.add(jaggery(s, 1000, 360, 34))
+    rnd = s.rnd
+    for x, y in [(600, 505), (660, 515), (940, 512), (1010, 505), (1050, 515)]:
+        s.add(rnd.choice([cashew, raisin])(s, x, y, 15, rnd.uniform(-60, 60)))
     for x, y, r in [(600, 120, 10), (1040, 130, 9), (950, 70, 11)]:
         s.add(sparkle(s, x, y, r))
-    s.save(f'{OUT}/banner_harvest.svg')
+    s.save(f'{OUT}/banner_treats.svg')
 
 
 def colour_bowl(s, cx, cy, rx, colour):
@@ -238,7 +239,7 @@ def petals():
 
 if __name__ == '__main__':
     banner_essentials()
-    banner_harvest()
+    banner_treats()
     banner_kolam()
     btn_tile()
     section_icon()

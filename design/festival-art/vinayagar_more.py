@@ -2,9 +2,11 @@
 import math
 
 from svgkit import *
-from banners import basket, brass_plate, jasmine_string, kuthuvilakku
+from banners import basket, brass_plate, jasmine_string, kuthuvilakku, laddoo
+from karthigai_art import pori_urundai
 from pongal_art import sugarcane
 from pongal_more import banana_bunch, banana_leaf, jaggery
+from christmas_more import flour_sack
 from vinayagar_art import OUT, arugampul, erukku, kozhukattai, kudai, warm
 
 W, H = 1080, 540
@@ -46,9 +48,8 @@ def banner_kozhukattai():
     heap = [(720, 410, 62, False, -6), (790, 416, 66, True, 4), (860, 412, 62, False, 6), (752, 360, 60, False, -3), (826, 356, 60, True, 4), (790, 306, 58, False, 0)]
     for x, y, sz, fried, a in heap:
         s.add(kozhukattai(s, x, y, sz, fried, a))
-    s.add(coconut_half(s, 990, 440, 52))
+    s.add(flour_sack(s, 990, 500, 110))
     s.add(jaggery(s, 640, 462, 40))
-    s.add(grated_coconut(s, 960, 500, 44))
     for x, y, r in [(640, 120, 11), (1030, 200, 10), (700, 70, 8)]:
         s.add(sparkle(s, x, y, r, color='#FFFFFF', glow='#FFB300'))
     s.save(f'{OUT}/banner_kozhukattai.svg')
@@ -89,21 +90,21 @@ def apple(s, cx, cy, r):
             f'<ellipse cx="{f(cx - r * 0.4)}" cy="{f(cy - r * 0.25)}" rx="{f(r * 0.18)}" ry="{f(r * 0.28)}" fill="#FFFFFF" opacity="0.35"/>')
 
 
-def banner_fruits():
+def banner_sweets():
+    """Prasadam sweets: laddoos, pori urundai and jaggery on a brass plate (no fruit or sugarcane)."""
     s = SVG(W, H, seed=517)
     s.add(f'<rect width="{W}" height="{H}" fill="{s.lin([(0, "#F6FBF2"), (0.55, "#E8F5DC"), (1, "#D3EBC0")], x1=0, y1=0, x2=1, y2=0.6)}"/>')
     s.add(f'<rect width="{W}" height="{H}" fill="{s.rad([(0, "#FFFFFF", 0.7), (1, "#FFFFFF", 0)], cx=800, cy=260, r=380, units="userSpaceOnUse")}"/>')
     s.add(mandala(s, 820, 270, 320, color='#7CB342', opacity=0.18, stroke=2.2, fill_opacity=0.04))
-    s.add(sugarcane(s, 690, 520, 400, -6, width=26, leaf_scale=0.8))
-    s.add(sugarcane(s, 1010, 520, 400, 12, width=24, leaf_scale=0.8))
-    s.add(banana_bunch(s, 700, 300, 120))
-    for (x, y, r) in [(760, 300, 30), (830, 296, 32), (900, 302, 30), (795, 262, 28), (865, 260, 28)]:
-        s.add(apple(s, x, y, r) if (x // 10) % 2 else wood_apple(s, x, y, r))
-    s.add(basket(s, 820, 310, 300, 160))
-    s.add(erukku_garland(s, 680, 960, 330, 18, 10))
+    s.add(brass_plate(s, 810, 430, 230, 56))
+    for x, y, r in [(730, 392, 40), (810, 386, 42), (890, 394, 40), (770, 340, 38), (850, 338, 38), (810, 292, 36)]:
+        s.add(laddoo(s, x, y, r))
+    for x, y, r in [(640, 452, 34), (990, 452, 32), (1030, 486, 26)]:
+        s.add(pori_urundai(s, x, y, r))
+    s.add(jaggery(s, 600, 500, 30))
     for x, y, r in [(640, 120, 10), (1030, 150, 9)]:
         s.add(sparkle(s, x, y, r, color='#FFFFFF', glow='#7CB342'))
-    s.save(f'{OUT}/banner_fruits.svg')
+    s.save(f'{OUT}/banner_sweets.svg')
 
 
 def btn_tile():
@@ -143,7 +144,7 @@ def petals():
 if __name__ == '__main__':
     banner_kozhukattai()
     banner_pooja()
-    banner_fruits()
+    banner_sweets()
     btn_tile()
     section_icon()
     petals()
