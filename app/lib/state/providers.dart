@@ -193,7 +193,7 @@ class MapTiles {
   final List<double>? bounds;
 
   static const fallback = MapTiles(
-    url: 'https://pub-8bf43ee4c62945148a4996353f48a051.r2.dev/maps/trichy/v1/{z}/{x}/{y}.webp',
+    url: 'https://cdn.jeyahyperstore.in/maps/trichy/v1/{z}/{x}/{y}.webp',
     bounds: [78.5, 10.68, 78.8, 10.95],
   );
 
