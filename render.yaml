@@ -16,6 +16,8 @@ services:
     buildCommand: npm ci --include=dev && npm run build && npm prune --omit=dev && npm run db:migrate:prod && npm run db:seed:prod
     startCommand: npm start
     healthCheckPath: /health
+    domains:
+      - api.jeyahyperstore.in
     envVars:
       - key: NODE_VERSION
         value: "22"
@@ -26,7 +28,7 @@ services:
       # Browsers may call the API only from these sites: the Jeya Staff web app on Cloudflare Pages.
       # (The mobile apps don't send an Origin header, so they're unaffected.)
       - key: CORS_ORIGINS
-        value: https://jeya-staff.pages.dev
+        value: https://jeya-staff.pages.dev,https://staff.jeyahyperstore.in,https://jeyahyperstore.in,https://www.jeyahyperstore.in
       - key: DB_POOL_MAX
         value: "10"
 
