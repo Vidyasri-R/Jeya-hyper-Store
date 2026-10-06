@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../core/api/api_client.dart';
@@ -8,6 +7,7 @@ import '../core/money.dart';
 import '../core/festival_pack.dart';
 import '../core/theme.dart';
 import '../state/providers.dart';
+import '../core/navigation.dart';
 
 class SectionHeader extends StatelessWidget {
   const SectionHeader({super.key, required this.title, this.subtitle, this.onSeeAll, this.padding = const EdgeInsets.fromLTRB(16, 20, 8, 10)});
@@ -91,7 +91,7 @@ class CartBar extends ConsumerWidget {
                 ),
                 FilledButton(
                   clipBehavior: Clip.antiAlias,
-                  onPressed: () => context.go('/cart'),
+                  onPressed: () => openCart(context),
                   style: FilledButton.styleFrom(minimumSize: const Size(0, 48), padding: const EdgeInsets.symmetric(horizontal: 22)),
                   child: const Row(children: [Text('View Cart'), SizedBox(width: 6), Icon(Icons.arrow_forward, size: 18)]),
                 ),

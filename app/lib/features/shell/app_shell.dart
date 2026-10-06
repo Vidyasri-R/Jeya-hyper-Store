@@ -1,16 +1,50 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme.dart';
 import '../../state/providers.dart';
 
-class AppShell extends ConsumerWidget {
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key, required this.shell});
   final StatefulNavigationShell shell;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<AppShell> {
+  Timer? _exitWindow; // running = one more back press closes the app
+
+  @override
+  void dispose() {
+    _exitWindow?.cancel();
+    super.dispose();
+  }
+
+  /// System back on a tab: other tabs go to Home; on Home, a second press within 2 s closes the app.
+  void _onBack() {
+    final shell = widget.shell;
+    if (shell.currentIndex != 0) {
+      shell.goBranch(0);
+      return;
+    }
+    if (_exitWindow?.isActive ?? false) {
+      SystemNavigator.pop();
+      return;
+    }
+    _exitWindow = Timer(const Duration(seconds: 2), () {});
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(content: Text('Press back again to exit'), duration: Duration(seconds: 2)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final shell = widget.shell;
     final count = ref.watch(cartCountProvider);
     final text = Theme.of(context).textTheme;
 
@@ -43,7 +77,12 @@ class AppShell extends ConsumerWidget {
       );
     }
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _onBack();
+      },
+      child: Scaffold(
       body: shell,
       bottomNavigationBar: DecoratedBox(
         decoration: const BoxDecoration(
@@ -60,6 +99,7 @@ class AppShell extends ConsumerWidget {
             item(4, Icons.person_outline_rounded, Icons.person_rounded, 'Profile'),
           ]),
         ),
+      ),
       ),
     );
   }

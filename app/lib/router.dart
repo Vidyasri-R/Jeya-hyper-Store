@@ -24,7 +24,7 @@ import 'features/shell/splash_screen.dart';
 import 'state/providers.dart';
 
 /// Screens that need a signed-in user. Browsing works without login (App Store guideline 5.1.1).
-const _protected = ['/cart', '/checkout', '/orders', '/order/', '/addresses', '/address', '/profile/edit', '/order-success'];
+const _protected = ['/cart', '/bag', '/checkout', '/orders', '/order/', '/addresses', '/address', '/profile/edit', '/order-success'];
 
 final routerProvider = Provider<GoRouter>((ref) {
   final auth = ref.read(authProvider.notifier);
@@ -61,6 +61,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/search', builder: (_, s) => SearchScreen(initialQuery: s.uri.queryParameters['q'])),
       GoRoute(path: '/product/:slug', builder: (_, s) => ProductDetailScreen(slug: s.pathParameters['slug']!)),
+      GoRoute(path: '/bag', builder: (_, _) => const CartScreen()),
       GoRoute(path: '/checkout', builder: (_, _) => const CheckoutScreen()),
       GoRoute(path: '/order-success/:id', builder: (_, s) => OrderSuccessScreen(orderId: s.pathParameters['id']!)),
       GoRoute(path: '/order/:id', builder: (_, s) => OrderDetailScreen(orderId: s.pathParameters['id']!)),

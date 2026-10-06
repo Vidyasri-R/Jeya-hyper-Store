@@ -12,6 +12,7 @@ import '../../widgets/common.dart';
 import '../../widgets/festive_decor.dart';
 import '../../widgets/product_card.dart';
 import 'home_header.dart';
+import '../../core/navigation.dart';
 
 final _homeProductsProvider = FutureProvider<List<Product>>(
   (ref) async => (await ref.watch(repositoryProvider).products(sort: 'popular', inStock: true, limit: 40)).items,
@@ -229,7 +230,7 @@ class _HeroCarouselState extends ConsumerState<_HeroCarousel> {
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: InkWell(
-                  onTap: () => context.go(b.route),
+                  onTap: () => openRoute(context, b.route),
                   borderRadius: BorderRadius.circular(AppRadius.xl),
                   child: Container(
                     decoration: BoxDecoration(

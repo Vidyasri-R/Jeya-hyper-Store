@@ -1,10 +1,10 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import '../core/festival_pack.dart';
 import '../core/theme.dart';
+import '../core/navigation.dart';
 
 bool _still(BuildContext context) => MediaQuery.maybeDisableAnimationsOf(context) ?? false;
 
@@ -306,7 +306,7 @@ class FestiveBannerCard extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final dark = banner.dark;
     final radius = BorderRadius.circular(AppRadius.xl);
-    void open() => banner.route.startsWith('/search') ? context.push(banner.route) : context.go(banner.route);
+    void open() => openRoute(context, banner.route);
     return Material(
       color: Colors.transparent,
       child: Ink(

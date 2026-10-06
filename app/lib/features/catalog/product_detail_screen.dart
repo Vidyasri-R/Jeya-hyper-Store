@@ -9,6 +9,7 @@ import '../../widgets/add_to_cart.dart';
 import '../../widgets/common.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/product_image.dart';
+import '../../core/navigation.dart';
 
 final _relatedProvider = FutureProvider.family<List<Product>, ({String category, int exclude})>((ref, arg) async {
   final page = await ref.watch(repositoryProvider).products(category: arg.category, inStock: true, limit: 12);
@@ -53,7 +54,7 @@ class _Detail extends ConsumerWidget {
             leading: _RoundIcon(icon: Icons.arrow_back_rounded, onTap: () => context.pop()),
             actions: [
               _RoundIcon(icon: Icons.search_rounded, onTap: () => context.push('/search')),
-              _RoundIcon(icon: Icons.shopping_cart_outlined, onTap: () => context.go('/cart')),
+              _RoundIcon(icon: Icons.shopping_cart_outlined, onTap: () => openCart(context)),
               const SizedBox(width: 8),
             ],
             flexibleSpace: FlexibleSpaceBar(
