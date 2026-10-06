@@ -248,6 +248,9 @@ abstract final class Palettes {
   };
 }
 
+/// The current button colour as `#RRGGBB` (Razorpay's checkout theme).
+String brandHex() => '#${(AppColors.brand700.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';
+
 /// App colours. `brand*` follow the active festival palette; everything else is fixed.
 abstract final class AppColors {
   static BrandPalette palette = Palettes.standard;

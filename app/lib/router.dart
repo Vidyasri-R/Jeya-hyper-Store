@@ -34,8 +34,13 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final s = ref.read(authProvider);
       final loc = state.matchedLocation;
-      if (s is AuthUnknown || s is AuthOffline) return loc == '/splash' ? null : '/splash';
-      if (loc == '/splash') return splashIntroDone.value ? '/home' : null; // let the logo intro finish
+      // Keep where the visitor was going (a shared product link, a refreshed web page) across the splash.
+      if (s is AuthUnknown || s is AuthOffline) return loc == '/splash' ? null : '/splash?to=${Uri.encodeComponent(state.uri.toString())}';
+      if (loc == '/splash') {
+        if (!splashIntroDone.value) return null; // let the logo intro finish
+        final to = state.uri.queryParameters['to'];
+        return to != null && to.startsWith('/') && !to.startsWith('/splash') ? to : '/home';
+      }
       final signedIn = s is SignedIn;
       if (!signedIn && _protected.any(loc.startsWith)) return '/login?from=${Uri.encodeComponent(state.uri.toString())}';
       if (signedIn && (loc == '/login' || loc == '/otp')) return state.uri.queryParameters['from'] ?? '/home';

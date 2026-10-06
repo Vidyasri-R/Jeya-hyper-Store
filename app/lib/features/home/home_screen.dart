@@ -200,7 +200,10 @@ class _HeroCarousel extends ConsumerStatefulWidget {
 }
 
 class _HeroCarouselState extends ConsumerState<_HeroCarousel> {
-  final _controller = PageController(viewportFraction: 0.92);
+  // Phones peek at the next banner; wide screens show two or three side by side.
+  late final _controller = PageController(viewportFraction: _fraction(MediaQuery.sizeOf(context).width));
+
+  static double _fraction(double width) => width >= 1100 ? 0.34 : (width >= 700 ? 0.5 : 0.92);
 
   @override
   void dispose() {
@@ -223,6 +226,7 @@ class _HeroCarouselState extends ConsumerState<_HeroCarousel> {
           // Marketing art has a fixed height: cap text growth so large accessibility sizes still fit.
           child: MediaQuery.withClampedTextScaling(maxScaleFactor: 1.1, child: PageView.builder(
             controller: _controller,
+            padEnds: _controller.viewportFraction > 0.9, // wide: start at the left edge
             itemCount: festive.length + store.length + banners.length,
             itemBuilder: (context, i) {
               if (i < festive.length) {
@@ -306,7 +310,7 @@ class _ProductRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardWidth = (MediaQuery.sizeOf(context).width - 48) / 2.6;
+    final cardWidth = ((MediaQuery.sizeOf(context).width - 48) / 2.6).clamp(0.0, 200.0);
     return SizedBox(
       height: cardWidth + 132,
       child: ListView.separated(

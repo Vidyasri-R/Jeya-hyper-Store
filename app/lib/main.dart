@@ -1,18 +1,26 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 
 import 'core/config_cache.dart';
 import 'core/festival_pack.dart';
 import 'core/theme.dart';
 import 'state/providers.dart';
 import 'router.dart';
+import 'widgets/web_frame.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  // Phones stay portrait; tablets and browsers turn freely (the wide layout takes over at 900 px).
+  final view = WidgetsBinding.instance.platformDispatcher.views.first;
+  if (!kIsWeb && view.physicalSize.shortestSide / view.devicePixelRatio < 600) {
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  }
+  usePathUrlStrategy(); // web: jeyahyperstore.in/product/… instead of /#/product/…
   // Read while Android's launch splash is still up, so the first frame already has the store's settings.
   final savedConfig = await ConfigCache.read();
   runApp(ProviderScope(overrides: [savedConfigProvider.overrideWithValue(savedConfig)], child: const JeyaApp()));
@@ -100,7 +108,7 @@ class _JeyaAppState extends ConsumerState<JeyaApp> with WidgetsBindingObserver {
       builder: (context, child) => MediaQuery(
         // Respect accessibility text size, but cap it so grids don't break.
         data: MediaQuery.of(context).copyWith(textScaler: MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.25)),
-        child: child!,
+        child: WebFrame(child: child!),
       ),
     );
   }

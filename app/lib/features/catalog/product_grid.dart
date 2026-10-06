@@ -44,7 +44,8 @@ class ProductGrid extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
               sliver: SliverLayoutBuilder(
                 builder: (context, constraints) {
-                  final columns = constraints.crossAxisExtent > 520 ? 3 : 2;
+                  // 2 on phones, then a column per ~200 px (up to 6 on a laptop).
+                  final columns = constraints.crossAxisExtent > 520 ? (constraints.crossAxisExtent / 200).floor().clamp(3, 6) : 2;
                   final colWidth = (constraints.crossAxisExtent - 10 * (columns - 1)) / columns;
                   return SliverGrid(
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(

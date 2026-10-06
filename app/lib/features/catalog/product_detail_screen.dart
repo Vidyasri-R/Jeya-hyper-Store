@@ -9,6 +9,7 @@ import '../../widgets/add_to_cart.dart';
 import '../../widgets/common.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/product_image.dart';
+import '../../core/layout.dart';
 import '../../core/navigation.dart';
 
 final _relatedProvider = FutureProvider.family<List<Product>, ({String category, int exclude})>((ref, arg) async {
@@ -43,32 +44,7 @@ class _Detail extends ConsumerWidget {
     final related = leaf == null ? null : ref.watch(_relatedProvider((category: leaf.slug, exclude: p.id)));
     final width = MediaQuery.sizeOf(context).width;
 
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            pinned: true,
-            expandedHeight: width * 0.92,
-            backgroundColor: AppColors.surface,
-            leading: _RoundIcon(icon: Icons.arrow_back_rounded, onTap: () => context.pop()),
-            actions: [
-              _RoundIcon(icon: Icons.search_rounded, onTap: () => context.push('/search')),
-              _RoundIcon(icon: Icons.shopping_cart_outlined, onTap: () => openCart(context)),
-              const SizedBox(width: 8),
-            ],
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                color: AppColors.brandTint,
-                padding: EdgeInsets.fromLTRB(32, MediaQuery.paddingOf(context).top + 56, 32, 24),
-                child: Hero(tag: 'p${p.id}', child: ProductImage(url: p.imageUrl, name: p.name, radius: AppRadius.lg)),
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Column(
+    final details = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (p.breadcrumb.isNotEmpty)
@@ -99,7 +75,40 @@ class _Detail extends ConsumerWidget {
                     Text(p.description!, style: text.bodyMedium?.copyWith(color: AppColors.inkMuted, height: 1.45)),
                   ],
                 ],
+              );
+    final wide = isWideLayout(context);
+    final railWidth = ((width - 48) / 2.6).clamp(0.0, 200.0);
+
+    if (wide) {
+      return _WideProductPage(product: p, details: details, related: related, railWidth: railWidth);
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            pinned: true,
+            expandedHeight: width * 0.92,
+            backgroundColor: AppColors.surface,
+            leading: _RoundIcon(icon: Icons.arrow_back_rounded, onTap: () => context.pop()),
+            actions: [
+              _RoundIcon(icon: Icons.search_rounded, onTap: () => context.push('/search')),
+              _RoundIcon(icon: Icons.shopping_cart_outlined, onTap: () => openCart(context)),
+              const SizedBox(width: 8),
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                color: AppColors.brandTint,
+                padding: EdgeInsets.fromLTRB(32, MediaQuery.paddingOf(context).top + 56, 32, 24),
+                child: Hero(tag: 'p${p.id}', child: ProductImage(url: p.imageUrl, name: p.name, radius: AppRadius.lg)),
               ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: details,
             ),
           ),
           if (related != null)
@@ -110,13 +119,13 @@ class _Detail extends ConsumerWidget {
                       const SliverToBoxAdapter(child: SectionHeader(title: 'You might also need')),
                       SliverToBoxAdapter(
                         child: SizedBox(
-                          height: (width - 48) / 2.6 + 132,
+                          height: railWidth + 132,
                           child: ListView.separated(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             scrollDirection: Axis.horizontal,
                             itemCount: items.length,
                             separatorBuilder: (_, _) => const SizedBox(width: 10),
-                            itemBuilder: (_, i) => ProductCard(product: items[i], width: (width - 48) / 2.6),
+                            itemBuilder: (_, i) => ProductCard(product: items[i], width: railWidth),
                           ),
                         ),
                       ),
@@ -206,4 +215,67 @@ class _RoundIcon extends StatelessWidget {
           child: InkWell(customBorder: const CircleBorder(), onTap: onTap, child: Padding(padding: const EdgeInsets.all(8), child: Icon(icon, size: 20))),
         ),
       );
+}
+
+/// Laptop / landscape tablet: photo on the left, details and the add button on the right.
+class _WideProductPage extends StatelessWidget {
+  const _WideProductPage({required this.product, required this.details, required this.related, required this.railWidth});
+  final Product product;
+  final Widget details;
+  final AsyncValue<List<Product>>? related;
+  final double railWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = product;
+    final items = related?.valueOrNull ?? const <Product>[];
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        leading: context.canPop() ? IconButton(icon: const Icon(Icons.arrow_back_rounded), tooltip: 'Back', onPressed: () => context.pop()) : null,
+        title: Text(p.breadcrumb.isEmpty ? '' : p.breadcrumb.last.name),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 40),
+        children: [
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(
+              flex: 5,
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: Container(
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(color: AppColors.brandTint, borderRadius: BorderRadius.circular(AppRadius.xl)),
+                  child: Hero(tag: 'p${p.id}', child: ProductImage(url: p.imageUrl, name: p.name, radius: AppRadius.lg)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 32),
+            Expanded(
+              flex: 6,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                details,
+                const SizedBox(height: 20),
+                Align(alignment: Alignment.centerLeft, child: SizedBox(width: 320, child: AddToCartControl(product: p, height: 52, big: true))),
+              ]),
+            ),
+          ]),
+          if (items.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            const SectionHeader(title: 'You might also need'),
+            SizedBox(
+              height: railWidth + 132,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: items.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 10),
+                itemBuilder: (_, i) => ProductCard(product: items[i], width: railWidth),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }

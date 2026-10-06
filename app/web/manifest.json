@@ -3,10 +3,9 @@
     "short_name": "Jeya",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#FFFFFF",
+    "theme_color": "#1B7A3E",
+    "description": "Groceries & daily needs from Jeya Hyper Store, Trichy",
     "prefer_related_applications": false,
     "icons": [
         {

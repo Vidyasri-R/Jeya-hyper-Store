@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/layout.dart';
 import '../../core/theme.dart';
 import '../../state/providers.dart';
 
@@ -84,7 +85,7 @@ class _AppShellState extends ConsumerState<AppShell> {
       },
       child: Scaffold(
       body: shell,
-      bottomNavigationBar: DecoratedBox(
+      bottomNavigationBar: isWideLayout(context) ? null : DecoratedBox(
         decoration: const BoxDecoration(
           color: AppColors.surface,
           border: Border(top: BorderSide(color: AppColors.line)),

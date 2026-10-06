@@ -11,3 +11,4 @@ dist/
 # Cloudflare wrangler local cache
 .wrangler/
 
+/build/

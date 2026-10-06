@@ -182,11 +182,12 @@ class ShimmerBox extends StatelessWidget {
       );
 }
 
-/// Grid delegate shared by every product grid (2 columns phones, 3 on wide screens).
+/// Grid delegate shared by every product grid: 2 columns on phones, 3 on tablets, up to 6 on
+/// a laptop (cards stay about 190–260 px wide).
 SliverGridDelegate productGridDelegate(BuildContext context, {double extraHeight = 0}) {
   // Full-width grids (16px page padding each side).
   final width = MediaQuery.sizeOf(context).width - 32;
-  final columns = width > 560 ? 3 : 2;
+  final columns = width > 560 ? (width / 200).floor().clamp(3, 6) : 2;
   final colWidth = (width - 10 * (columns - 1)) / columns;
   return SliverGridDelegateWithFixedCrossAxisCount(
     crossAxisCount: columns,
