@@ -6,6 +6,7 @@ import '../core/festival.dart';
 import '../core/api/api_client.dart';
 import '../core/api/token_store.dart';
 import '../core/money.dart';
+import '../core/store_banner.dart';
 import '../core/theme.dart';
 import '../data/models.dart';
 import '../data/repository.dart';
@@ -139,6 +140,13 @@ final brandPaletteProvider = Provider<BrandPalette>((ref) {
   final raw = _settings(ref)?['app.brand'];
   final color = Palettes.parseHex(raw is Map ? raw['color'] : null);
   return color == null ? Palettes.standard : Palettes.fromColor(color);
+});
+
+/// Home banners from Admin → Home banners (public config `home.banners`), active right now.
+/// Empty = the app's built-in everyday banners.
+final storeBannersProvider = Provider<List<StoreBanner>>((ref) {
+  ref.watch(_themeClockProvider);
+  return StoreBanner.activeFrom(_settings(ref)?['home.banners'], DateTime.now());
 });
 
 /// How fast the store delivers — Admin → Store settings → Deliver within (delivery.rules.deliveryDays).

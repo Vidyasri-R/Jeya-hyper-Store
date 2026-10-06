@@ -8,6 +8,7 @@ import { optionalPhone, username } from '../staff/staff.schemas';
 import { backupService } from '../backup/backup.service';
 import { catalogSyncService } from '../sync/catalog-sync.service';
 import { usageService } from '../usage/usage.service';
+import { adminBannersService } from './admin-banners';
 import { adminDashboardService } from './admin-dashboard.service';
 import { adminProductsService } from './admin-products.service';
 import { adminSettingsService } from './admin-settings.service';
@@ -110,6 +111,14 @@ adminRouter.put(
     res.json(await adminProductsService.setImage(id, req.body));
   },
 );
+
+/** Body = the banner image bytes; cropped to 2:1 and stored on R2. Saved into a banner via PUT /settings/home.banners. */
+adminRouter.put('/banners/image', uploadLimiter, express.raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: '8mb' }), async (req, res) => {
+  if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+    throw new AppError('BAD_REQUEST', 'Send the image as the request body (JPG, PNG or WebP)', { reason: 'image_missing' });
+  }
+  res.json(await adminBannersService.uploadImage(req.body));
+});
 
 adminRouter.delete('/products/:id/image', async (req, res) => {
   const { id } = parseParams(productParams, req);

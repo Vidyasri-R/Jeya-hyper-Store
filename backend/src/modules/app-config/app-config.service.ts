@@ -12,6 +12,7 @@ export const CONFIG_KEYS = {
   DELIVERY_RULES: 'delivery.rules',
   APP_THEME: 'app.theme',
   APP_BRAND: 'app.brand',
+  HOME_BANNERS: 'home.banners',
   MAP_TILES: 'map.tiles',
   USAGE_LIMITS: 'usage.limits',
   USAGE_NOTIFY: 'usage.notify',

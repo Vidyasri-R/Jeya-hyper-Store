@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -247,4 +249,12 @@ class _ActionSheetState extends State<_ActionSheet> {
       ),
     ),
   );
+}
+
+/// The content type of a picked photo (JPG, PNG or WebP), or null for anything else.
+String? imageTypeOf(Uint8List bytes) {
+  if (bytes.length > 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF) return 'image/jpeg';
+  if (bytes.length > 4 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) return 'image/png';
+  if (bytes.length > 12 && String.fromCharCodes(bytes.sublist(0, 4)) == 'RIFF' && String.fromCharCodes(bytes.sublist(8, 12)) == 'WEBP') return 'image/webp';
+  return null;
 }

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { AppError } from '../../common/errors';
 import { normalizeIndianMobile } from '../../common/phone';
 import { appConfigService, CONFIG_KEYS } from '../app-config/app-config.service';
+import { adminBannersService, bannersSchema, type Banner } from './admin-banners';
 import { DEFAULT_DELIVERY_RULES, deliveryRulesSchema } from '../delivery/delivery.service';
 import { DEFAULT_USAGE_LIMITS, usageLimitsSchema } from '../usage/usage.limits';
 
@@ -79,6 +80,12 @@ const SETTINGS = {
     isPublic: true,
     description: 'Everyday brand colour of the customer app (festival themes take over on their dates).',
   },
+  [CONFIG_KEYS.HOME_BANNERS]: {
+    schema: bannersSchema,
+    fallback: [],
+    isPublic: true,
+    description: 'Home-screen banners (image or text, link to a search/category/product, order and dates).',
+  },
   [CONFIG_KEYS.MAINTENANCE]: {
     schema: z.object({ enabled: z.boolean(), message: z.string().trim().max(200) }).strict(),
     fallback: { enabled: false, message: '' },
@@ -123,7 +130,9 @@ export const adminSettingsService = {
     if (!(key in SETTINGS)) throw new AppError('NOT_FOUND', `Unknown setting ${key}`);
     const setting = SETTINGS[key as SettingKey];
     const parsed = (setting.schema as z.ZodType).parse(value);
+    const previous = key === CONFIG_KEYS.HOME_BANNERS ? await appConfigService.getRaw(key) : undefined;
     await appConfigService.set(key, parsed, { isPublic: setting.isPublic, description: setting.description });
+    if (key === CONFIG_KEYS.HOME_BANNERS) await adminBannersService.removeUnusedImages(previous, parsed as Banner[]);
     return parsed;
   },
 };

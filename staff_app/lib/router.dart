@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'features/account/more_screen.dart';
+import 'features/admin/banners_screen.dart';
 import 'features/admin/dashboard_screen.dart';
 import 'features/admin/products_screen.dart';
 import 'features/admin/settings_screen.dart';
@@ -73,6 +74,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 routes: [
                   GoRoute(path: 'staff', builder: (_, _) => const StaffAccountsScreen()),
                   GoRoute(path: 'settings', builder: (_, _) => const SettingsScreen()),
+                  GoRoute(path: 'banners', builder: (_, _) => const BannersScreen()),
                   GoRoute(path: 'usage', builder: (_, _) => const UsageScreen()),
                 ],
               ),

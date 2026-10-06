@@ -13,6 +13,7 @@ import '../../widgets/festive_decor.dart';
 import '../../widgets/product_card.dart';
 import 'home_header.dart';
 import '../../core/navigation.dart';
+import '../../widgets/store_banner_card.dart';
 
 final _homeProductsProvider = FutureProvider<List<Product>>(
   (ref) async => (await ref.watch(repositoryProvider).products(sort: 'popular', inStock: true, limit: 40)).items,
@@ -211,7 +212,8 @@ class _HeroCarouselState extends ConsumerState<_HeroCarousel> {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final festive = ref.watch(festivalProvider)?.pack?.banners ?? const <FestivalBanner>[];
-    final banners = _everydayBanners(ref.watch(storeRulesProvider));
+    final store = ref.watch(storeBannersProvider);
+    final banners = store.isEmpty ? _everydayBanners(ref.watch(storeRulesProvider)) : const <_HeroBanner>[];
     return Column(
       children: [
         const SizedBox(height: 14),
@@ -221,12 +223,15 @@ class _HeroCarouselState extends ConsumerState<_HeroCarousel> {
           // Marketing art has a fixed height: cap text growth so large accessibility sizes still fit.
           child: MediaQuery.withClampedTextScaling(maxScaleFactor: 1.1, child: PageView.builder(
             controller: _controller,
-            itemCount: festive.length + banners.length,
+            itemCount: festive.length + store.length + banners.length,
             itemBuilder: (context, i) {
               if (i < festive.length) {
                 return Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: FestiveBannerCard(festive[i]));
               }
-              final b = banners[i - festive.length];
+              if (i < festive.length + store.length) {
+                return Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: StoreBannerCard(store[i - festive.length]));
+              }
+              final b = banners[i - festive.length - store.length];
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: InkWell(
@@ -287,7 +292,7 @@ class _HeroCarouselState extends ConsumerState<_HeroCarousel> {
         const SizedBox(height: 10),
         SmoothPageIndicator(
           controller: _controller,
-          count: festive.length + banners.length,
+          count: festive.length + store.length + banners.length,
           effect: ExpandingDotsEffect(dotHeight: 6, dotWidth: 6, activeDotColor: AppColors.brand700, dotColor: AppColors.line),
         ),
       ],

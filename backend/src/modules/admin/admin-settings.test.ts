@@ -75,3 +75,52 @@ describe('brand colour setting (app.brand)', () => {
     },
   );
 });
+
+describe('home banners (home.banners)', () => {
+  beforeEach(() => stored.clear());
+  const base = process.env.R2_PUBLIC_BASE_URL ?? 'https://cdn.example.com';
+  const banner = (over: Record<string, unknown> = {}) => ({
+    id: 'banner-1',
+    active: true,
+    image: `${base}/banners/0123456789abcdef.webp`,
+    tag: 'DIWALI',
+    title: 'Sweets & snacks',
+    subtitle: 'Murukku, laddoo & more',
+    cta: 'Shop now',
+    background: '#fff4dc',
+    link: { type: 'search', value: 'sweets' },
+    startsAt: null,
+    endsAt: null,
+    ...over,
+  });
+
+  it('starts empty (the app keeps its built-in banners)', async () => {
+    expect((await adminSettingsService.all())['home.banners']).toEqual([]);
+  });
+
+  it('saves banners in order, served to the customer app', async () => {
+    const saved = await adminSettingsService.set('home.banners', [
+      banner(),
+      banner({ id: 'banner-2', image: null, tag: '  ', link: { type: 'category', value: 'staples' } }),
+      banner({ id: 'banner-3', title: null, link: { type: 'product', value: 'jeya-select-ponni-raw-rice-1-kg' } }),
+    ]);
+    expect(saved).toHaveLength(3);
+    expect(saved[0].background).toBe('#FFF4DC');
+    expect(saved[1].tag).toBeNull();
+    expect(stored.get('home.banners')?.isPublic).toBe(true);
+  });
+
+  it.each([
+    ['no image and no title', [banner({ image: null, title: null })]],
+    ['an image from elsewhere', [banner({ image: 'https://evil.example.com/x.webp' })]],
+    ['a search with no words', [banner({ link: { type: 'search', value: ' ' } })]],
+    ['a bad category', [banner({ link: { type: 'category', value: 'Rice & Dal' } })]],
+    ['a link type we do not support', [banner({ link: { type: 'url', value: 'https://x.y' } })]],
+    ['end before start', [banner({ startsAt: '2026-10-20T00:00:00+05:30', endsAt: '2026-10-19T00:00:00+05:30' })]],
+    ['duplicate ids', [banner(), banner()]],
+    ['too many', Array.from({ length: 9 }, (_, i) => banner({ id: `banner-${i}x` }))],
+  ])('rejects %s', async (_case, value) => {
+    await expect(adminSettingsService.set('home.banners', value)).rejects.toThrow();
+    expect(stored.has('home.banners')).toBe(false);
+  });
+});

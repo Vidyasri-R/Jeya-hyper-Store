@@ -50,7 +50,7 @@ function parseCursor(raw: string): { name: string; id: number } {
 /** sharp is loaded on first use, so its native library doesn't sit in the 512 MB server's memory otherwise. */
 type Sharp = typeof import('sharp');
 let sharpModule: Promise<Sharp> | null = null;
-function loadSharp(): Promise<Sharp> {
+export function loadSharp(): Promise<Sharp> {
   sharpModule ??= import('sharp').then((module) => {
     // CommonJS interop: the function is either the module itself or its default export.
     const sharp = ((module as unknown as { default?: Sharp }).default ?? module) as Sharp;

@@ -120,6 +120,33 @@ class StaffRepository {
 
   Future<void> removePhoto(int id) => _api.delete('/admin/products/$id/image');
 
+  // ── admin: home banners ──
+  /// Uploads a banner picture (cropped to 2:1 by the server); returns its URL for the banner.
+  Future<String> uploadBannerImage(Uint8List bytes, String contentType) async =>
+      (await _api.putBytes('/admin/banners/image', bytes, contentType))['imageUrl'] as String;
+
+  /// Category picker for banner links: every category, children after their parent.
+  Future<List<({String slug, String name})>> bannerCategories() async {
+    final body = await _api.get('/categories', auth: false);
+    final out = <({String slug, String name})>[];
+    void walk(List<dynamic> list, String prefix) {
+      for (final c in list) {
+        final m = Map<String, dynamic>.from(c as Map);
+        out.add((slug: m['slug'] as String, name: '$prefix${m['name']}'));
+        walk((m['children'] as List?) ?? const [], '$prefix${m['name']} › ');
+      }
+    }
+
+    walk(body['categories'] as List, '');
+    return out;
+  }
+
+  /// Product picker for banner links (the customer app's search suggestions).
+  Future<List<({String slug, String name})>> bannerProducts(String query) async {
+    final body = await _api.get('/search/suggest', query: {'q': query}, auth: false);
+    return [for (final s in body['suggestions'] as List) (slug: (s as Map)['slug'] as String, name: s['name'] as String)];
+  }
+
   // ── admin: dashboard & usage ──
   Future<Map<String, dynamic>> dashboard(int days) => _api.get('/admin/dashboard', query: {'days': days});
 
