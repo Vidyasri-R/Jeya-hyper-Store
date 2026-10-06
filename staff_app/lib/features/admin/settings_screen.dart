@@ -7,6 +7,7 @@ import '../../core/api/api_client.dart';
 import '../../core/theme.dart';
 import '../../state/providers.dart';
 import '../../widgets/common.dart';
+import 'brand_colour_card.dart';
 
 /// Store settings the customer app reads (within a minute of saving).
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -60,6 +61,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 _StoreInfoCard(value: Map<String, dynamic>.from(s['store.info'] as Map), onSave: (v) => _save('store.info', v, 'Store details saved')),
+                const SizedBox(height: 14),
+                BrandColourCard(
+                  value: Map<String, dynamic>.from((s['app.brand'] as Map?) ?? const {'color': '#1B7A3E'}),
+                  onSave: (v) => _save('app.brand', v, 'Brand colour saved — customers see it the next time they open the app'),
+                ),
                 const SizedBox(height: 14),
                 _ThemeCard(
                   value: Map<String, dynamic>.from((s['app.theme'] as Map?) ?? const {'preset': 'standard'}),

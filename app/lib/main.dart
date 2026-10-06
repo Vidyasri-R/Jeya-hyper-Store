@@ -74,7 +74,8 @@ class _JeyaAppState extends ConsumerState<JeyaApp> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final festival = ref.watch(festivalProvider);
-    final palette = festival?.palette ?? Palettes.standard;
+    final BrandPalette brand = ref.watch(brandPaletteProvider);
+    final palette = festival?.palette ?? brand;
     final pack = festival?.pack;
     if (!identical(AppColors.palette, palette) || !identical(Festive.pack, pack)) {
       AppColors.palette = palette;

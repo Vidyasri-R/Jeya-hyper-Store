@@ -196,6 +196,43 @@ abstract final class Palettes {
     accent: Color(0xFFFFC14D),
   );
 
+  /// The everyday look from the store's chosen colour (Admin → Store settings → Brand colour).
+  /// Jeya green keeps the hand-tuned [standard]; any other colour gets its shades derived, with
+  /// the button shade darkened until white text on it passes WCAG AA (4.5:1).
+  static BrandPalette fromColor(Color seed) {
+    if (seed.toARGB32() == standard.b700.toARGB32()) return standard;
+    final hsl = HSLColor.fromColor(seed);
+    final s = hsl.saturation.clamp(0.25, 0.9);
+    var b700 = hsl.withSaturation(s);
+    while (b700.lightness > 0.08 && b700.toColor().computeLuminance() > 0.18) {
+      b700 = b700.withLightness(b700.lightness - 0.01);
+    }
+    if (b700.lightness < 0.18) b700 = b700.withLightness(0.18); // near-black picks still read as a colour
+    final l = b700.lightness;
+    Color at(double lightness, [double sat = 1]) => b700.withLightness(lightness.clamp(0.0, 1.0)).withSaturation((s * sat).clamp(0.0, 1.0)).toColor();
+    return BrandPalette(
+      id: 'brand',
+      b900: at(l * 0.58),
+      b800: at(l * 0.8),
+      b700: b700.toColor(),
+      b600: at(l + 0.07),
+      b500: at(l + 0.14),
+      b100: at(0.9, 0.55),
+      b50: at(0.95, 0.5),
+      tint: at(0.975, 0.45),
+      header: [at(l * 0.8), at(l + 0.07)],
+      accent: standard.accent,
+    );
+  }
+
+  /// Parses `#RRGGBB` (Admin → Store settings → Brand colour); null when it isn't one.
+  static Color? parseHex(Object? value) {
+    if (value is! String) return null;
+    final hex = value.trim().replaceFirst('#', '');
+    if (!RegExp(r'^[0-9a-fA-F]{6}$').hasMatch(hex)) return null;
+    return Color(int.parse('FF$hex', radix: 16));
+  }
+
   static BrandPalette byId(String? id) => switch (id) {
     'diwali' => diwali,
     'pongal' => pongal,

@@ -54,3 +54,24 @@ describe('festival theme setting (app.theme)', () => {
     expect(stored.has('app.theme')).toBe(false);
   });
 });
+
+describe('brand colour setting (app.brand)', () => {
+  beforeEach(() => stored.clear());
+
+  it('starts as the Jeya green', async () => {
+    expect((await adminSettingsService.all())['app.brand']).toEqual({ color: '#1B7A3E' });
+  });
+
+  it('saves any #RRGGBB colour, upper-cased, served to the customer app', async () => {
+    await expect(adminSettingsService.set('app.brand', { color: ' #1e4fa8 ' })).resolves.toEqual({ color: '#1E4FA8' });
+    expect(stored.get('app.brand')).toEqual({ value: { color: '#1E4FA8' }, isPublic: true });
+  });
+
+  it.each([['a name', { color: 'blue' }], ['short hex', { color: '#14f' }], ['extra keys', { color: '#1E4FA8', x: 1 }], ['nothing', {}]])(
+    'rejects %s',
+    async (_case, value) => {
+      await expect(adminSettingsService.set('app.brand', value)).rejects.toThrow();
+      expect(stored.has('app.brand')).toBe(false);
+    },
+  );
+});

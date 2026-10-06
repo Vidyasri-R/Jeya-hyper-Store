@@ -6,6 +6,7 @@ import '../core/festival.dart';
 import '../core/api/api_client.dart';
 import '../core/api/token_store.dart';
 import '../core/money.dart';
+import '../core/theme.dart';
 import '../data/models.dart';
 import '../data/repository.dart';
 
@@ -113,6 +114,9 @@ final _themeClockProvider = StreamProvider<DateTime>((ref) => Stream.periodic(co
 /// Build-time preview of a festival look (screenshots, trying a new preset): `--dart-define=PREVIEW_THEME=diwali`.
 const _previewTheme = String.fromEnvironment('PREVIEW_THEME');
 
+/// Same for the brand colour: `--dart-define=PREVIEW_BRAND=#1E4FA8`.
+const _previewBrand = String.fromEnvironment('PREVIEW_BRAND');
+
 /// The store's public settings remembered from the last run (read in main, see ConfigCache), used
 /// until the server answers — so the splash is already festive and prices/rules survive offline.
 final savedConfigProvider = Provider<Map<String, dynamic>?>((ref) => null);
@@ -125,6 +129,16 @@ final festivalProvider = Provider<FestivalTheme?>((ref) {
   if (_previewTheme.isNotEmpty) return FestivalTheme(preset: _previewTheme);
   ref.watch(_themeClockProvider);
   return FestivalTheme.activeFrom(_settings(ref)?['app.theme'], DateTime.now());
+});
+
+/// The everyday colours (Admin → Store settings → Brand colour, public config `app.brand`).
+/// Festival themes take over on their dates; see [festivalProvider].
+final brandPaletteProvider = Provider<BrandPalette>((ref) {
+  final preview = Palettes.parseHex(_previewBrand);
+  if (preview != null) return Palettes.fromColor(preview);
+  final raw = _settings(ref)?['app.brand'];
+  final color = Palettes.parseHex(raw is Map ? raw['color'] : null);
+  return color == null ? Palettes.standard : Palettes.fromColor(color);
 });
 
 /// How fast the store delivers — Admin → Store settings → Deliver within (delivery.rules.deliveryDays).

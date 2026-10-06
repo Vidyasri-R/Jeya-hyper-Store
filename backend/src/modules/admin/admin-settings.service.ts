@@ -68,6 +68,17 @@ const SETTINGS = {
     isPublic: true,
     description: 'Festival theme for the customer app (e.g. Diwali) and when it is shown.',
   },
+  [CONFIG_KEYS.APP_BRAND]: {
+    schema: z
+      .object({
+        /** Main brand colour (#RRGGBB); the app derives every shade and keeps text readable. */
+        color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, 'Use a colour like #1B7A3E').transform((v) => v.toUpperCase()),
+      })
+      .strict(),
+    fallback: { color: '#1B7A3E' },
+    isPublic: true,
+    description: 'Everyday brand colour of the customer app (festival themes take over on their dates).',
+  },
   [CONFIG_KEYS.MAINTENANCE]: {
     schema: z.object({ enabled: z.boolean(), message: z.string().trim().max(200) }).strict(),
     fallback: { enabled: false, message: '' },

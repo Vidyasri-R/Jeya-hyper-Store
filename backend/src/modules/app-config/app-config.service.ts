@@ -11,6 +11,7 @@ export const CONFIG_KEYS = {
   PAYMENT_METHODS: 'checkout.payment_methods',
   DELIVERY_RULES: 'delivery.rules',
   APP_THEME: 'app.theme',
+  APP_BRAND: 'app.brand',
   MAP_TILES: 'map.tiles',
   USAGE_LIMITS: 'usage.limits',
   USAGE_NOTIFY: 'usage.notify',
