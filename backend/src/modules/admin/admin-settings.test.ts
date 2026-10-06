@@ -99,14 +99,14 @@ describe('home banners (home.banners)', () => {
   });
 
   it('saves banners in order, served to the customer app', async () => {
-    const saved = await adminSettingsService.set('home.banners', [
+    const saved = (await adminSettingsService.set('home.banners', [
       banner(),
       banner({ id: 'banner-2', image: null, tag: '  ', link: { type: 'category', value: 'staples' } }),
       banner({ id: 'banner-3', title: null, link: { type: 'product', value: 'jeya-select-ponni-raw-rice-1-kg' } }),
-    ]);
+    ])) as Array<{ background: string | null; tag: string | null }>;
     expect(saved).toHaveLength(3);
-    expect(saved[0].background).toBe('#FFF4DC');
-    expect(saved[1].tag).toBeNull();
+    expect(saved[0]?.background).toBe('#FFF4DC');
+    expect(saved[1]?.tag).toBeNull();
     expect(stored.get('home.banners')?.isPublic).toBe(true);
   });
 
