@@ -167,8 +167,10 @@ class EmptyView extends StatelessWidget {
 }
 
 class ProductThumb extends StatelessWidget {
-  const ProductThumb({super.key, required this.url, this.size = 52});
+  const ProductThumb({super.key, required this.url, this.placeholderUrl, this.size = 52});
   final String? url;
+  /// No photo yet: the category's general photo, marked "No photo" so it is never mistaken for one.
+  final String? placeholderUrl;
   final double size;
 
   @override
@@ -183,9 +185,27 @@ class ProductThumb extends StatelessWidget {
       child: SizedBox(
         width: size,
         height: size,
-        child: url == null
-            ? placeholder
-            : CachedNetworkImage(imageUrl: url!, fit: BoxFit.contain, placeholder: (_, _) => placeholder, errorWidget: (_, _, _) => placeholder),
+        child: url != null
+            ? CachedNetworkImage(imageUrl: url!, fit: BoxFit.contain, placeholder: (_, _) => placeholder, errorWidget: (_, _, _) => placeholder)
+            : placeholderUrl == null
+                ? placeholder
+                : Stack(fit: StackFit.expand, children: [
+                    Opacity(
+                      opacity: 0.75,
+                      child: CachedNetworkImage(imageUrl: placeholderUrl!, fit: BoxFit.cover, placeholder: (_, _) => placeholder, errorWidget: (_, _, _) => placeholder),
+                    ),
+                    if (size >= 44)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          color: const Color(0xB3000000),
+                          padding: const EdgeInsets.symmetric(vertical: 1),
+                          child: const Text('No photo', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                  ]),
       ),
     );
   }

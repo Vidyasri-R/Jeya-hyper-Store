@@ -6,7 +6,7 @@ import type { DeliveryAddressSnapshot, Order, OrderItem, OrderStatus, OrderStatu
 import { addressesRepository } from '../addresses/addresses.repository';
 import { appConfigService, CONFIG_KEYS } from '../app-config/app-config.service';
 import { cartRepository } from '../cart/cart.repository';
-import { priceLine, summarize, toPublicLine, type PricedLine } from '../cart/pricing';
+import { priceLine, publicLines, summarize, toPublicLine, type PricedLine } from '../cart/pricing';
 import { deliveryRules, deliveryService, expectedDeliveryBy, type DeliveryQuote, type DeliveryTarget } from '../delivery/delivery.service';
 import { paymentsService } from '../payments/payments.service';
 import { orderEvents } from './order-events';
@@ -193,7 +193,7 @@ export const ordersService = {
     return {
       /** What checkout promises ("delivery by tomorrow"): end of that IST day. */
       expectedDeliveryBy: expectedDeliveryBy(new Date(), rules.deliveryDays),
-      items: evaluation.lines.map(toPublicLine),
+      items: await publicLines(evaluation.lines),
       totals: {
         subtotal: fromPaise(evaluation.subtotalPaise),
         mrpTotal: fromPaise(evaluation.mrpTotalPaise),

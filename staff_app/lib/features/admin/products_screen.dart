@@ -185,7 +185,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                   ),
                   child: Row(
                     children: [
-                      ProductThumb(url: p.imageUrl, size: 56),
+                      ProductThumb(url: p.imageUrl, placeholderUrl: p.placeholderImageUrl, size: 56),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(

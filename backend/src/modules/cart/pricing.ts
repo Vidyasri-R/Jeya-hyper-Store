@@ -1,5 +1,5 @@
 import { displayQty, fromPaise, includedGstPaise, lineTotalPaise, toPaise } from '../../common/money';
-import { toProductCard, type ProductCard } from '../catalog/catalog.service';
+import { toProductCard, withPlaceholders, type ProductCard } from '../catalog/catalog.service';
 import { purchaseLimits, validateQty, type PurchaseLimits } from '../catalog/purchase-rules';
 import type { CartProduct } from './cart.repository';
 
@@ -91,6 +91,13 @@ export type PublicCartLine = {
   /** What "Fix cart" would set this line to ("0" = removed). Present only when there's an issue. */
   suggestedQuantity: string | null;
 };
+
+/** Lines for the apps (cart, checkout): products without a photo get their category's photo. */
+export async function publicLines(lines: PricedLine[]): Promise<PublicCartLine[]> {
+  const items = lines.map(toPublicLine);
+  const products = await withPlaceholders(items.map((item) => item.product));
+  return items.map((item, i) => ({ ...item, product: products[i]! }));
+}
 
 export function toPublicLine(line: PricedLine): PublicCartLine {
   return {

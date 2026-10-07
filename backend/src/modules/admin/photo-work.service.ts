@@ -2,6 +2,7 @@ import { and, desc, eq, isNull, sql, type SQL } from 'drizzle-orm';
 import { AppError } from '../../common/errors';
 import { db } from '../../db/client';
 import { categories, products, staffUsers } from '../../db/schema';
+import { withPlaceholders } from '../catalog/catalog.service';
 import { adminProductColumns } from './admin-products.service';
 
 /** Active products still missing a photo. */
@@ -48,7 +49,10 @@ export const photoWorkService = {
       .limit(params.limit + 1);
     const page = rows.slice(0, params.limit);
     const last = page.at(-1);
-    return { products: page, nextCursor: rows.length > params.limit && last ? encode(last) : null };
+    return {
+      products: await withPlaceholders(page.map((p) => ({ ...p, placeholderImageUrl: null as string | null }))),
+      nextCursor: rows.length > params.limit && last ? encode(last) : null,
+    };
   },
 
   /** Totals and each person's progress. */

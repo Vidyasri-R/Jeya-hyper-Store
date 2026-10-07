@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -361,9 +360,8 @@ class _CategoryCirclesState extends State<_CategoryCircles> {
                       height: 92,
                       decoration: BoxDecoration(shape: BoxShape.circle, color: v.bg, border: Border.all(color: AppColors.line)),
                       clipBehavior: Clip.antiAlias,
-                      child: c.imageUrl != null
-                          ? CachedNetworkImage(imageUrl: c.imageUrl!, fit: BoxFit.cover)
-                          : (categoryArt(c.name) != null ? Padding(padding: const EdgeInsets.all(8), child: Image.asset(categoryArt(c.name)!, fit: BoxFit.contain)) : Icon(v.icon, color: v.fg, size: 40)),
+                      // Drawn category art (category photos are only stand-ins for products without one).
+                      child: categoryArt(c.name) != null ? Padding(padding: const EdgeInsets.all(8), child: Image.asset(categoryArt(c.name)!, fit: BoxFit.contain)) : Icon(v.icon, color: v.fg, size: 40),
                     ),
                     const SizedBox(height: 8),
                     Text(c.name, maxLines: 2, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: text.labelMedium?.copyWith(fontWeight: FontWeight.w600)),
@@ -518,9 +516,7 @@ class _CategoryArt extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(color: v.bg, borderRadius: BorderRadius.circular(16)),
       clipBehavior: Clip.antiAlias,
-      child: category.imageUrl != null
-          ? CachedNetworkImage(imageUrl: category.imageUrl!, fit: BoxFit.cover)
-          : (categoryArt(category.name) != null ? Image.asset(categoryArt(category.name)!, fit: BoxFit.contain) : Icon(v.icon, color: v.fg, size: size * 0.48)),
+      child: categoryArt(category.name) != null ? Image.asset(categoryArt(category.name)!, fit: BoxFit.contain) : Icon(v.icon, color: v.fg, size: size * 0.48),
     );
   }
 }

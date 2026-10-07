@@ -7,6 +7,7 @@ import { categories, productBarcodes, products } from '../../db/schema';
 import { r2 } from '../../infra/r2';
 import { catalogCache } from '../catalog/catalog.cache';
 import { available } from '../catalog/catalog.repository';
+import { withPlaceholders } from '../catalog/catalog.service';
 
 /** Product photos: 800 px on the long side, WebP — ~30–60 KB each, so 30k fit well inside R2's free 10 GB. */
 const MAX_SIDE = 800;
@@ -22,6 +23,7 @@ const columns = {
   barcode: products.barcode,
   brand: products.brand,
   category: categories.name,
+  categoryId: products.categoryId,
   packSize: products.packSize,
   mrp: products.mrp,
   sellingPrice: products.sellingPrice,
@@ -194,7 +196,7 @@ export const adminProductsService = {
       })
       .from(products);
     return {
-      products: page,
+      products: await withPlaceholders(page.map((p) => ({ ...p, placeholderImageUrl: null as string | null }))),
       nextCursor: rows.length > params.limit && last ? cursorOf(last) : null,
       counts: { active: Number(counts?.active ?? 0), withImage: Number(counts?.withImage ?? 0) },
     };

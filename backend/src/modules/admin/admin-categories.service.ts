@@ -7,6 +7,7 @@ import { categories, products } from '../../db/schema';
 import { r2 } from '../../infra/r2';
 import { appConfigService } from '../app-config/app-config.service';
 import { catalogCache } from '../catalog/catalog.cache';
+import { withPlaceholders } from '../catalog/catalog.service';
 import { DEFAULT_HOME_LISTS, HOME_LISTS_KEY, homeListsSchema } from '../catalog/home-lists';
 import { adminProductColumns, loadSharp } from './admin-products.service';
 
@@ -86,7 +87,8 @@ export const adminCategoriesService = {
           .leftJoin(categories, eq(categories.id, products.categoryId))
           .where(and(inArray(products.id, ids)))
       : [];
-    const byId = new Map(rows.map((r) => [r.id, r]));
+    const withPhotos = await withPlaceholders(rows.map((r) => ({ ...r, placeholderImageUrl: null as string | null })));
+    const byId = new Map(withPhotos.map((r) => [r.id, r]));
     return {
       offers: lists.offers.flatMap((id) => byId.get(id) ?? []),
       popular: lists.popular.flatMap((id) => byId.get(id) ?? []),

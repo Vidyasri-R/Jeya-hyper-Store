@@ -107,7 +107,7 @@ class _MyPhotosScreenState extends ConsumerState<MyPhotosScreen> {
                 Card(
                   margin: const EdgeInsets.only(bottom: 8),
                   child: ListTile(
-                    leading: ProductThumb(url: p.imageUrl),
+                    leading: ProductThumb(url: p.imageUrl, placeholderUrl: p.placeholderImageUrl),
                     title: Text(p.name, maxLines: 2, overflow: TextOverflow.ellipsis),
                     subtitle: Text([if (p.brand != null) p.brand!, if (p.category != null) p.category!, 'Code ${p.itemCode}'].join(' · '), maxLines: 1, overflow: TextOverflow.ellipsis),
                     trailing: const Icon(Icons.add_a_photo_outlined),

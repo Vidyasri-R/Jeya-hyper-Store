@@ -280,6 +280,7 @@ class _CategoryBar extends StatelessWidget {
       final more = roots.skip(fits).toList();
       return Row(children: [
         PopupMenuButton<Category>(
+          enabled: roots.isNotEmpty, // an empty menu can't open (categories still loading / offline)
           tooltip: 'All categories',
           position: PopupMenuPosition.under,
           onSelected: onOpen,

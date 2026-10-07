@@ -242,6 +242,7 @@ class AdminProduct {
       sellingPrice = _str(j['sellingPrice'], '0.00'),
       available = _str(j['available'], '0'),
       imageUrl = j['imageUrl'] as String?,
+      placeholderImageUrl = j['placeholderImageUrl'] as String?,
       description = j['description'] as String?,
       sortRank = (j['sortRank'] as num?)?.toInt() ?? 0,
       isActive = j['isActive'] != false;
@@ -258,6 +259,8 @@ class AdminProduct {
   final String sellingPrice;
   final String available;
   final String? imageUrl;
+  /// No photo yet: its category's general photo (from the server).
+  final String? placeholderImageUrl;
   final String? description;
   final int sortRank;
   final bool isActive;

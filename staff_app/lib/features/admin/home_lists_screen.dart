@@ -151,7 +151,7 @@ class _ListTab extends StatelessWidget {
           key: ValueKey(p.id),
           margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(
-            leading: ProductThumb(url: p.imageUrl),
+            leading: ProductThumb(url: p.imageUrl, placeholderUrl: p.placeholderImageUrl),
             title: Text(p.name, maxLines: 2, overflow: TextOverflow.ellipsis),
             subtitle: Text(
               hidden ? 'Not shown now — out of stock' : '${formatRupees(p.sellingPrice)}${p.mrp != p.sellingPrice ? '  (MRP ${formatRupees(p.mrp)})' : ''}',
@@ -237,7 +237,7 @@ class _ProductSearchSheetState extends ConsumerState<_ProductSearchSheet> {
                 for (final p in _results)
                   ListTile(
                     enabled: !widget.exclude.contains(p.id),
-                    leading: ProductThumb(url: p.imageUrl),
+                    leading: ProductThumb(url: p.imageUrl, placeholderUrl: p.placeholderImageUrl),
                     title: Text(p.name, maxLines: 2, overflow: TextOverflow.ellipsis),
                     subtitle: Text(
                       widget.exclude.contains(p.id) ? 'Already in the list' : '${formatRupees(p.sellingPrice)} · ${p.category ?? ''}',

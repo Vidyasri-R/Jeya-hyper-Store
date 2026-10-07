@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <script>
+    // The *.pages.dev address can't reach the store's server (it only answers our own domain).
+    if (/\.pages\.dev$/.test(location.hostname)) location.replace('https://jeyahyperstore.in' + location.pathname + location.search + location.hash);
+  </script>
   <!--
     If you are serving your web app in a path other than the root, change the
     href value below to reflect the base path you are serving from.

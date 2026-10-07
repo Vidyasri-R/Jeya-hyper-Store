@@ -1,10 +1,9 @@
 import { AppError } from '../../common/errors';
 import { displayQty, fromMilli, fromPaise, toMilli } from '../../common/money';
 import { db } from '../../db/client';
-import { withPlaceholders } from '../catalog/catalog.service';
 import { validateQty } from '../catalog/purchase-rules';
 import { cartRepository } from './cart.repository';
-import { fixedQtyMilli, priceLine, summarize, toPublicLine, type PricedLine } from './pricing';
+import { fixedQtyMilli, priceLine, publicLines, summarize, type PricedLine } from './pricing';
 
 const MAX_CART_LINES = 100;
 
@@ -15,10 +14,8 @@ export async function pricedCart(userId: string): Promise<PricedLine[]> {
 
 async function toView(lines: PricedLine[]) {
   const summary = summarize(lines);
-  const items = lines.map(toPublicLine);
-  const products = await withPlaceholders(items.map((item) => item.product)); // category photo until the product has its own
   return {
-    items: items.map((item, i) => ({ ...item, product: products[i]! })),
+    items: await publicLines(lines),
     summary: {
       itemCount: summary.itemCount,
       subtotal: fromPaise(summary.subtotalPaise),
