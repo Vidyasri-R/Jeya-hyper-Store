@@ -82,14 +82,19 @@ appliesOnline, sortOrder, syncTs}), `/stock` (itemReferenceCode, outletId, stock
 `/price` (mrp, salePrice, taxPercentage, timestamp), `/salesOrders` (POST/GET; update & cancel exist),
 `/taxes`, `/matrixitems`, `/eCustomers` (POST).
 
-## CONSENT_NOT_AVAILABLE (H00255) — the fix to try first (2026-10-07)
+## CONSENT_NOT_AVAILABLE (H00255) — status 2026-10-07
 
 Seen on every endpoint (items v1/v2, categories, salesOrders, stock) with a valid key from API user
-`jeya-online` (Product: E-Commerce API, Active) even after a licence sync and regenerating keys —
-a new key doesn't help; the outlet hasn't granted data access. In WebReporter:
-**☰ menu → Security Consent → Data Sync Consent → tick Grant Access → OK** (needs the POS admin login),
-then retest. If that menu is missing, the partner must enable consent for add-on 514 on GoFrugal's side.
-Source: Vikra's GoFrugal integration guide (vikra.com/seller/help/gofrugal-pos-integration/).
+`jeya-online` (Product: E-Commerce API, Active), after a licence sync and with regenerated keys —
+a new key doesn't help. WebReporter's ☰ → Security Consent → Data Sync Consent page is only for
+**Zoho Finance** ("You have not subscribed any of our ZOHO Finance apps"), not e-commerce.
+GoFrugal's 403 guide says e-commerce integrations need the outlet configuration saved in the
+GoFrugal **Portal** — so the partner (Best Retail Solution) / GoFrugal must enable the e-commerce
+consent / outlet configuration for add-on 514 on their side.
+
+**Public endpoint:** the store's WebReporter is published at `https://1543881.true-order.com/WebReporter/`
+(GoFrugal's own HTTPS relay). `/api/v1/items` there answers 403 without a key, like localhost — so Render
+can call `https://1543881.true-order.com/WebReporter/api/v1/` directly; no Cloudflare tunnel needed.
 
 ## Open questions for GoFrugal (human support)
 
