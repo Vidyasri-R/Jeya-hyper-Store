@@ -89,6 +89,7 @@ class _StaffAccountsScreenState extends ConsumerState<StaffAccountsScreen> {
                         spacing: 6,
                         children: [
                           if (s.isAdmin) const Pill('Admin', fg: AppColors.brandBlue, bg: AppColors.brandBlueSoft),
+                          if (s.isPhotoHelper) const Pill('Photo helper', fg: AppColors.green700, bg: AppColors.green50),
                           if (!s.isActive) const Pill('Disabled', fg: AppColors.offerRed, bg: AppColors.offerRedSoft),
                           if (s.isLocked) const Pill('Locked', fg: Color(0xFF8A5A00), bg: AppColors.amberSoft),
                           if (s.mustChangePassword && s.isActive) const Pill('New'),
@@ -189,6 +190,7 @@ Future<(String, String, String)?> _createStaff(BuildContext context, WidgetRef r
           SegmentedButton<String>(
             segments: const [
               ButtonSegment(value: 'staff', label: Text('Staff'), icon: Icon(Icons.inventory_2_outlined)),
+              ButtonSegment(value: 'photos', label: Text('Photo helper'), icon: Icon(Icons.add_a_photo_outlined)),
               ButtonSegment(value: 'admin', label: Text('Admin'), icon: Icon(Icons.admin_panel_settings_outlined)),
             ],
             selected: {role},
@@ -196,7 +198,11 @@ Future<(String, String, String)?> _createStaff(BuildContext context, WidgetRef r
           ),
           const SizedBox(height: 6),
           Text(
-            role == 'admin' ? 'Admins can also see sales, change settings and manage staff.' : 'Staff handle orders: packing, delivery and cancellations.',
+            switch (role) {
+              'admin' => 'Admins can also see sales, change settings and manage staff.',
+              'photos' => 'Photo helpers only add photos to the products you give them. They can’t see orders, customers or sales.',
+              _ => 'Staff handle orders: packing, delivery and cancellations. They can also add photos you give them.',
+            },
             style: Theme.of(context).textTheme.bodySmall,
           ),
           if (error != null)
@@ -262,12 +268,16 @@ Future<Object?> _manageStaff(BuildContext context, WidgetRef ref, Staff staff, {
           ),
           if (!isMe) ...[
             const SizedBox(height: 10),
-            OutlinedButton.icon(
-              icon: Icon(staff.isAdmin ? Icons.inventory_2_outlined : Icons.admin_panel_settings_outlined),
-              label: Text(staff.isAdmin ? 'Change to staff (no admin tools)' : 'Make admin'),
-              onPressed: () => update({'role': staff.isAdmin ? 'staff' : 'admin'}, staff.isAdmin ? 'Now staff' : 'Now an admin'),
-            ),
-            const SizedBox(height: 10),
+            for (final (role, label, icon, done) in const [
+              ('staff', 'Change to staff (orders, no admin tools)', Icons.inventory_2_outlined, 'Now staff'),
+              ('photos', 'Change to photo helper (photos only)', Icons.add_a_photo_outlined, 'Now a photo helper'),
+              ('admin', 'Make admin', Icons.admin_panel_settings_outlined, 'Now an admin'),
+            ])
+              if (staff.role != role)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: OutlinedButton.icon(icon: Icon(icon), label: Text(label), onPressed: () => update({'role': role}, done)),
+                ),
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
                 foregroundColor: staff.isActive ? AppColors.offerRed : AppColors.green700,

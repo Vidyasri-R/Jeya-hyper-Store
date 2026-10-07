@@ -129,7 +129,9 @@ class BoardController extends Notifier<BoardState> with WidgetsBindingObserver {
 
   @override
   BoardState build() {
-    final signedIn = ref.watch(sessionProvider) is SignedIn;
+    final session = ref.watch(sessionProvider);
+    // Photo helpers have no access to orders: no polling, no chime.
+    final signedIn = session is SignedIn && !session.staff.isPhotoHelper;
     WidgetsBinding.instance.addObserver(this);
     ref.onDispose(() {
       _timer?.cancel();
@@ -149,7 +151,8 @@ class BoardController extends Notifier<BoardState> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _foreground = state == AppLifecycleState.resumed;
-    if (_foreground && ref.read(sessionProvider) is SignedIn) refresh();
+    final s = ref.read(sessionProvider);
+    if (_foreground && s is SignedIn && !s.staff.isPhotoHelper) refresh();
   }
 
   Future<void> refresh() async {

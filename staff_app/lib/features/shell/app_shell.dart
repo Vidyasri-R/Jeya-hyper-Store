@@ -12,6 +12,7 @@ abstract final class Branch {
   static const sales = 1;
   static const products = 2;
   static const more = 3;
+  static const myPhotos = 4;
 }
 
 class _Destination {
@@ -24,6 +25,12 @@ class _Destination {
 
 const _staffDestinations = [
   _Destination(Branch.orders, 'Orders', Icons.receipt_long_outlined, Icons.receipt_long_rounded),
+  _Destination(Branch.myPhotos, 'My photos', Icons.add_a_photo_outlined, Icons.add_a_photo_rounded),
+  _Destination(Branch.more, 'Account', Icons.person_outline_rounded, Icons.person_rounded),
+];
+
+const _photoHelperDestinations = [
+  _Destination(Branch.myPhotos, 'My photos', Icons.add_a_photo_outlined, Icons.add_a_photo_rounded),
   _Destination(Branch.more, 'Account', Icons.person_outline_rounded, Icons.person_rounded),
 ];
 
@@ -34,7 +41,8 @@ const _adminDestinations = [
   _Destination(Branch.more, 'More', Icons.grid_view_outlined, Icons.grid_view_rounded),
 ];
 
-/// Staff see Orders + Account; admins also get Sales, product Photos and the admin tools.
+/// Staff see Orders, My photos and Account; photo helpers only My photos and Account; admins also
+/// get Sales, product Photos and the admin tools.
 /// Phones get a bottom bar; the store computer gets a side rail.
 class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.shell});
@@ -42,8 +50,9 @@ class AppShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isAdmin = ref.watch(currentStaffProvider)?.isAdmin ?? false;
-    final destinations = isAdmin ? _adminDestinations : _staffDestinations;
+    final staff = ref.watch(currentStaffProvider);
+    final isAdmin = staff?.isAdmin ?? false;
+    final destinations = isAdmin ? _adminDestinations : (staff?.isPhotoHelper ?? false ? _photoHelperDestinations : _staffDestinations);
     final selected = destinations.indexWhere((d) => d.branch == shell.currentIndex).clamp(0, destinations.length - 1);
     final newCount = ref.watch(boardProvider.select((s) => s.summary?.counts['new'] ?? 0));
     final alerts = ref.watch(boardProvider.select((s) => s.summary?.alertsOpen ?? 0));

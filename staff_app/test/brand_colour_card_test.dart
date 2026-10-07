@@ -24,7 +24,10 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
         body: SingleChildScrollView(
-          child: BrandColourCard(value: const {'color': '#1B7A3E'}, onSave: (v) async => (sent = v) != null),
+          child: BrandColourCard(value: const {'color': '#1B7A3E'}, onSave: (v) async {
+            sent = v;
+            return true;
+          }),
         ),
       ),
     ));

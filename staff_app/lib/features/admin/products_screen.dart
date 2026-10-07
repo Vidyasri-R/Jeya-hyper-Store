@@ -3,10 +3,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/money.dart';
+import '../../core/photo_cutout.dart';
 import '../../core/theme.dart';
 import '../../data/models.dart';
 import '../../state/providers.dart';
@@ -77,7 +79,13 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     final active = _counts['active'] ?? 0;
     final withImage = _counts['withImage'] ?? 0;
     return Scaffold(
-      appBar: AppBar(title: const Text('Product photos')),
+      appBar: AppBar(
+        title: const Text('Product photos'),
+        actions: [
+          IconButton(onPressed: () => context.push('/scan'), tooltip: 'Scan a barcode', icon: const Icon(Icons.qr_code_scanner_rounded)),
+          IconButton(onPressed: () => context.go('/more/photo-work'), tooltip: 'Photo work', icon: const Icon(Icons.assignment_ind_outlined)),
+        ],
+      ),
       body: Column(
         children: [
           Padding(
@@ -215,7 +223,8 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
 }
 
 /// Returns true when something changed (so the list reloads).
-Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct product) {
+/// [photoOnly]: just the photo (photo helpers and staff); admins also edit the store's product details.
+Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct product, {bool photoOnly = false}) {
   var featured = product.sortRank > 0;
   var imageUrl = product.imageUrl;
   var busy = false;
@@ -233,11 +242,14 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
       Future<void> pick(ImageSource source) async {
         final file = await ImagePicker().pickImage(source: source, maxWidth: 1600, maxHeight: 1600, imageQuality: 85);
         if (file == null) return;
-        final bytes = await file.readAsBytes();
-        final type = imageTypeOf(bytes);
+        final original = await file.readAsBytes();
+        final originalType = imageTypeOf(original);
         if (!context.mounted) return;
-        if (type == null) return showSnack(context, 'Use a JPG, PNG or WebP photo', error: true);
+        if (originalType == null) return showSnack(context, 'Use a JPG, PNG or WebP photo', error: true);
         setState(() => busy = true);
+        // Android cuts the product out on the phone; the server then puts it on pure white.
+        final (bytes, type) = await cutOutProduct(file.path, original, originalType);
+        if (!context.mounted) return;
         final url = await guard(context, () => ref.read(repositoryProvider).uploadPhoto(product.id, bytes, type));
         if (!context.mounted) return;
         setState(() {
@@ -301,7 +313,7 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
               ),
             ],
           ),
-          if (imageUrl != null)
+          if (imageUrl != null && !photoOnly)
             TextButton.icon(
               onPressed: busy
                   ? null
@@ -323,7 +335,12 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
               icon: const Icon(Icons.delete_outline_rounded),
               label: const Text('Remove photo'),
             ),
-          Text('Tip: product on a plain white background, filling the frame, in daylight.', style: text.bodySmall),
+          Text('Tip: product in the light box or on plain white paper. The app removes the background and centres it on white.', style: text.bodySmall),
+          if (photoOnly) ...[
+            const SizedBox(height: 12),
+            FilledButton.tonal(onPressed: () => Navigator.pop(context, changed), child: Text(changed ? 'Done — next product' : 'Close')),
+          ],
+          if (!photoOnly) ...[
           const Divider(height: 28),
           TextField(
             controller: nameTa,
@@ -363,6 +380,7 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
                   },
             child: const Text('Save details'),
           ),
+          ],
         ],
       );
     },

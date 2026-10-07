@@ -207,6 +207,21 @@ class ApiClient {
 
   Future<Map<String, dynamic>> delete(String path) => _send(() => _dio.delete(path));
 
+  /// Raw POST of a file (the daily stock CSV), with time for the server to import ~9,000 products.
+  Future<Map<String, dynamic>> postBytes(String path, Uint8List bytes, String contentType, {Map<String, dynamic>? query}) => _send(
+    () => _dio.post(
+      path,
+      data: Stream.fromIterable([bytes]),
+      queryParameters: query,
+      options: Options(
+        contentType: contentType,
+        headers: {Headers.contentLengthHeader: bytes.length},
+        sendTimeout: const Duration(minutes: 2),
+        receiveTimeout: const Duration(minutes: 4),
+      ),
+    ),
+  );
+
   /// Raw upload (product photos): the body is the file itself.
   Future<Map<String, dynamic>> putBytes(String path, Uint8List bytes, String contentType) => _send(
     () => _dio.put(

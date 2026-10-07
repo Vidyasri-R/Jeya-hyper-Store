@@ -54,7 +54,7 @@ class MoreScreen extends ConsumerWidget {
                   ),
                 ),
                 Pill(
-                  staff.isAdmin ? 'Admin' : 'Staff',
+                  staff.isAdmin ? 'Admin' : (staff.isPhotoHelper ? 'Photo helper' : 'Staff'),
                   fg: staff.isAdmin ? AppColors.brandBlue : AppColors.green700,
                   bg: staff.isAdmin ? AppColors.brandBlueSoft : AppColors.green50,
                 ),
@@ -69,6 +69,18 @@ class MoreScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Column(
                 children: [
+                  tile(
+                    Icons.upload_file_rounded,
+                    'Upload stock file',
+                    'Daily GoFrugal “Current Stock Detail” CSV: products, prices, stock',
+                    () => context.go('/more/stock'),
+                  ),
+                  tile(
+                    Icons.add_a_photo_outlined,
+                    'Photo work',
+                    'Products without photos — hand them out and track progress',
+                    () => context.go('/more/photo-work'),
+                  ),
                   tile(
                     Icons.account_balance_wallet_outlined,
                     'Usage & bills',
@@ -93,13 +105,14 @@ class MoreScreen extends ConsumerWidget {
             child: Column(
               children: [
                 tile(Icons.password_rounded, 'Change password', 'Signs out your other devices', () => context.push('/password')),
-                tile(
-                  Icons.volume_up_outlined,
-                  'Test new-order sound',
-                  'Check the phone volume',
-                  () => ref.read(boardProvider.notifier).chime(),
-                  trailing: const Icon(Icons.play_arrow_rounded),
-                ),
+                if (!staff.isPhotoHelper)
+                  tile(
+                    Icons.volume_up_outlined,
+                    'Test new-order sound',
+                    'Check the phone volume',
+                    () => ref.read(boardProvider.notifier).chime(),
+                    trailing: const Icon(Icons.play_arrow_rounded),
+                  ),
                 ListTile(
                   leading: Container(
                     padding: const EdgeInsets.all(8),

@@ -5,9 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'features/account/more_screen.dart';
 import 'features/admin/banners_screen.dart';
 import 'features/admin/dashboard_screen.dart';
+import 'features/admin/my_photos_screen.dart';
+import 'features/admin/photo_mode_screen.dart';
+import 'features/admin/photo_work_screen.dart';
 import 'features/admin/products_screen.dart';
 import 'features/admin/settings_screen.dart';
 import 'features/admin/staff_accounts_screen.dart';
+import 'features/admin/stock_import_screen.dart';
 import 'features/admin/usage_screen.dart';
 import 'features/auth/change_password_screen.dart';
 import 'features/auth/login_screen.dart';
@@ -19,7 +23,10 @@ import 'state/providers.dart';
 final _rootKey = GlobalKey<NavigatorState>();
 
 /// Admin-only locations; staff are sent back to the board.
-const _adminOnly = ['/sales', '/products', '/more/staff', '/more/settings', '/more/usage'];
+const _adminOnly = ['/sales', '/products', '/more/staff', '/more/settings', '/more/usage', '/more/banners', '/more/stock', '/more/photo-work'];
+
+/// Photo helpers only add product photos: their list, the scanner and their account.
+bool _photoHelperMayOpen(String at) => at == '/my-photos' || at == '/scan' || at == '/more' || at == '/password';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier(0);
@@ -38,6 +45,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         SessionUnreachable() => at == '/offline' ? null : '/offline',
         SignedOut() => at == '/login' ? null : '/login',
         SignedIn(:final staff) when staff.mustChangePassword => at == '/welcome' ? null : '/welcome',
+        SignedIn(:final staff) when staff.isPhotoHelper && !_photoHelperMayOpen(at) => '/my-photos',
         SignedIn(:final staff) when !staff.isAdmin && _adminOnly.any(at.startsWith) => '/orders',
         SignedIn() when at == '/splash' || at == '/login' || at == '/welcome' || at == '/offline' => '/orders',
         _ => null,
@@ -54,6 +62,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, state) => OrderDetailScreen(orderId: state.pathParameters['id']!),
       ),
       GoRoute(path: '/password', parentNavigatorKey: _rootKey, builder: (_, _) => const ChangePasswordScreen()),
+      GoRoute(path: '/scan', parentNavigatorKey: _rootKey, builder: (_, _) => const PhotoModeScreen()),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(shell: shell),
         branches: [
@@ -76,9 +85,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(path: 'settings', builder: (_, _) => const SettingsScreen()),
                   GoRoute(path: 'banners', builder: (_, _) => const BannersScreen()),
                   GoRoute(path: 'usage', builder: (_, _) => const UsageScreen()),
+                  GoRoute(path: 'stock', builder: (_, _) => const StockImportScreen()),
+                  GoRoute(path: 'photo-work', builder: (_, _) => const PhotoWorkScreen()),
                 ],
               ),
             ],
+          ),
+          StatefulShellBranch(
+            routes: [GoRoute(path: '/my-photos', builder: (_, _) => const MyPhotosScreen())],
           ),
         ],
       ),

@@ -115,10 +115,54 @@ class StaffRepository {
 
   Future<void> updateProduct(int id, Map<String, dynamic> patch) => _api.patch('/admin/products/$id', body: patch);
 
+  /// Any staff role: admins for any product, others for products assigned to them.
   Future<String> uploadPhoto(int id, Uint8List bytes, String contentType) async =>
-      (await _api.putBytes('/admin/products/$id/image', bytes, contentType))['imageUrl'] as String;
+      (await _api.putBytes('/staff/photos/$id/image', bytes, contentType))['imageUrl'] as String;
 
   Future<void> removePhoto(int id) => _api.delete('/admin/products/$id/image');
+
+  // ── admin: daily stock file ──
+  /// Last import, the import settings and the website categories.
+  Future<Map<String, dynamic>> stockImportStatus() => _api.get('/admin/catalog/import');
+
+  /// Preview (apply: false) or import (apply: true) a GoFrugal "Current Stock Detail" CSV.
+  Future<Map<String, dynamic>> importStockFile(Uint8List csv, {required bool apply}) =>
+      _api.postBytes('/admin/catalog/import', csv, 'text/csv', query: {'apply': '$apply'});
+
+  /// Photo mode: the product behind a scanned barcode, or null.
+  Future<AdminProduct?> productByBarcode(String code) async {
+    try {
+      final body = await _api.get('/staff/photos/by-barcode/${Uri.encodeComponent(code)}');
+      return AdminProduct.fromJson(Map<String, dynamic>.from(body['product'] as Map));
+    } on ApiException catch (e) {
+      if (e.status == 404) return null;
+      rethrow;
+    }
+  }
+
+  // ── photo work ──
+  /// Totals and each person's progress (admin).
+  Future<Map<String, dynamic>> photoWork() => _api.get('/admin/photo-work');
+
+  /// Products without photos, best first (admin). assignee: staff id, 'unassigned' or 'any'.
+  Future<ResultPage<AdminProduct>> photoQueue({String assignee = 'any', String? cursor}) async {
+    final body = await _api.get('/admin/photo-work/queue', query: {'assignee': assignee, 'cursor': ?cursor});
+    return ResultPage([for (final p in body['products'] as List) AdminProduct.fromJson(Map<String, dynamic>.from(p as Map))], body['nextCursor'] as String?);
+  }
+
+  Future<int> assignPhotos(String staffId, int count, {int? categoryId}) async =>
+      ((await _api.post('/admin/photo-work/assign', body: {'staffId': staffId, 'count': count, 'categoryId': ?categoryId}))['assigned'] as num).toInt();
+
+  Future<int> unassignPhotos(String staffId) async => ((await _api.post('/admin/photo-work/unassign', body: {'staffId': staffId}))['released'] as num).toInt();
+
+  /// My products to photograph, and my counts (any staff role).
+  Future<(ResultPage<AdminProduct>, Map<String, int>)> myPhotos({String? cursor}) async {
+    final body = await _api.get('/staff/photos/mine', query: {'cursor': ?cursor});
+    return (
+      ResultPage([for (final p in body['products'] as List) AdminProduct.fromJson(Map<String, dynamic>.from(p as Map))], body['nextCursor'] as String?),
+      {for (final k in ['open', 'done', 'doneToday']) k: (body[k] as num? ?? 0).toInt()},
+    );
+  }
 
   // ── admin: home banners ──
   /// Uploads a banner picture (cropped to 2:1 by the server); returns its URL for the banner.

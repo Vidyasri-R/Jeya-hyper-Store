@@ -96,15 +96,47 @@ class FakeRepo extends StaffRepository {
   };
 
   @override
+  Future<Map<String, dynamic>> photoWork() async => {
+    'totals': {'active': 8631, 'withPhoto': 120, 'withoutPhoto': 8511, 'unassigned': 8400, 'today': 14},
+    'people': [
+      {'staffId': '00000000-0000-4000-8000-000000000002', 'name': 'Priya', 'username': 'priya', 'role': 'photos', 'isActive': true, 'open': 25, 'done': 86, 'doneToday': 14, 'lastPhotoAt': '2026-10-07T05:30:00.000Z'},
+    ],
+  };
+
+  @override
+  Future<int> assignPhotos(String staffId, int count, {int? categoryId}) async {
+    calls.add({'call': 'assignPhotos', 'staffId': staffId, 'count': count});
+    return count;
+  }
+
+  @override
+  Future<(ResultPage<AdminProduct>, Map<String, int>)> myPhotos({String? cursor}) async => (
+    ResultPage<AdminProduct>(const [], null),
+    {'open': 0, 'done': 86, 'doneToday': 14},
+  );
+
+  @override
+  Future<Map<String, dynamic>> stockImportStatus() async => {
+    'last': null,
+    'settings': {'departments': ['SUPER MARKET'], 'typeMap': {}},
+    'categories': [
+      {'key': 'staples', 'name': 'Staples', 'parent': null},
+      {'key': 'dals', 'name': 'Dals & Pulses', 'parent': 'staples'},
+    ],
+  };
+
+  @override
   Future<Object?> saveSetting(String key, Object? value) async {
     calls.add({'call': 'saveSetting', 'key': key, 'value': value});
     return value;
   }
 }
 
+Staff signedInAs = admin;
+
 class SignedInSession extends SessionController {
   @override
-  SessionState build() => SignedIn(admin);
+  SessionState build() => SignedIn(signedInAs);
 }
 
 /// The real board controller minus the polling timer and sound.
@@ -136,6 +168,40 @@ Future<GoRouter> pumpApp(WidgetTester tester, FakeRepo repo, {required String at
 }
 
 void main() {
+  setUp(() => signedInAs = admin);
+
+  testWidgets('a photo helper only gets My photos and Account', (tester) async {
+    signedInAs = Staff.fromJson({'id': 'p1', 'username': 'priya', 'name': 'Priya', 'role': 'photos', 'mustChangePassword': false, 'isActive': true});
+    final router = await pumpApp(tester, FakeRepo(orderAt('placed')), at: '/orders');
+    expect(router.state.matchedLocation, '/my-photos');
+    expect(find.text('All done!'), findsOneWidget);
+    expect(find.text('Orders'), findsNothing);
+    router.go('/sales');
+    await tester.pumpAndSettle();
+    expect(router.state.matchedLocation, '/my-photos');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('admin hands out photo work in priority batches', (tester) async {
+    final repo = FakeRepo(orderAt('placed'));
+    await pumpApp(tester, repo, at: '/more/photo-work');
+    expect(find.text('1.4% of products have photos'), findsOneWidget);
+    expect(find.textContaining('25 to do'), findsOneWidget);
+    await tester.tap(find.text('Give more'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('50 products (most important first)'));
+    await tester.pumpAndSettle();
+    expect(repo.calls.last, {'call': 'assignPhotos', 'staffId': '00000000-0000-4000-8000-000000000002', 'count': 50});
+    expect(find.text('50 products given to Priya'), findsOneWidget);
+  });
+
+  testWidgets('stock upload screen explains the daily export', (tester) async {
+    await pumpApp(tester, FakeRepo(orderAt('placed')), at: '/more/stock');
+    expect(find.textContaining('No stock file uploaded yet'), findsOneWidget);
+    expect(find.text('Choose stock file (.csv)'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('board lists orders on a phone', (tester) async {
     await pumpApp(tester, FakeRepo(orderAt('placed')), at: '/orders');
     expect(find.text('#1016'), findsOneWidget);

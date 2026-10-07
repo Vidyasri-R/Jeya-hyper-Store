@@ -26,6 +26,9 @@ class Staff {
   final DateTime? lastLoginAt;
 
   bool get isAdmin => role == 'admin';
+
+  /// Photo helper: only the products assigned to them for photos (no orders, no customers).
+  bool get isPhotoHelper => role == 'photos';
 }
 
 /// Order board tabs, in display order. Keys match the API.
