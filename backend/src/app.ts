@@ -40,7 +40,9 @@ export function createApp(): Express {
   // Never leave a client hanging: answer "busy, retry" (with the CORS headers already set above)
   // before the apps' own 25 s timeout, which they would otherwise report as "no internet".
   app.use((req, res, next) => {
-    res.setTimeout(req.path.endsWith('/image') ? 120_000 : 20_000, () => {
+    // Uploads take longer: photos (resize + R2) and the daily stock file (~9,000 products, ~20-40 s).
+    const slow = req.path.endsWith('/image') || req.path.endsWith('/catalog/import');
+    res.setTimeout(slow ? 120_000 : 20_000, () => {
       if (res.headersSent) return;
       req.log.error({ path: req.path }, 'request timed out');
       res.status(503).json({ error: { code: 'UPSTREAM_UNAVAILABLE', message: 'The server is busy right now. Please try again.', details: { reason: 'request_timeout' }, requestId: req.id } });

@@ -123,7 +123,7 @@ class _StockImportScreenState extends ConsumerState<StockImportScreen> {
       appBar: AppBar(title: const Text('Upload stock file')),
       body: _status == null && _error != null
           ? ErrorView(message: _error!, onRetry: _loadStatus)
-          : ListView(padding: const EdgeInsets.all(16), children: [
+          : ListView(padding: EdgeInsets.symmetric(vertical: 16, horizontal: ((MediaQuery.sizeOf(context).width - 900) / 2).clamp(16, double.infinity)), children: [
               SectionCard(
                 color: stale ? AppColors.amberSoft : AppColors.green50,
                 child: Row(children: [
@@ -276,16 +276,28 @@ class _OtherTypes extends StatelessWidget {
         Text('In "More Items" — move them to a better place', style: text.titleSmall),
         Text('These POS groups didn’t match a category. Pick one and every product in that group moves (remembered for future uploads).', style: text.bodySmall),
         const SizedBox(height: 6),
-        for (final t in types.take(25))
-          Row(children: [
-            Expanded(child: Text('${t['type']} · ${t['count']}', style: text.bodyMedium)),
-            PopupMenuButton<String>(
-              tooltip: 'Move ${t['type']}',
-              onSelected: (key) => onMove(t['type'] as String, key),
-              itemBuilder: (_) => [for (final c in leafs) PopupMenuItem(value: c['key'] as String, child: Text(c['name'] as String))],
-              child: const Padding(padding: EdgeInsets.all(8), child: Row(mainAxisSize: MainAxisSize.min, children: [Text('Move to'), Icon(Icons.arrow_drop_down)])),
-            ),
-          ]),
+        const Divider(height: 1),
+        for (final t in types) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(children: [
+              Expanded(child: Text(t['type'] as String, style: text.bodyMedium)),
+              Text('${t['count']} products', style: text.bodySmall),
+              const SizedBox(width: 12),
+              PopupMenuButton<String>(
+                tooltip: 'Move ${t['type']}',
+                onSelected: (key) => onMove(t['type'] as String, key),
+                itemBuilder: (_) => [for (final c in leafs) PopupMenuItem(value: c['key'] as String, child: Text(c['name'] as String))],
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
+                  decoration: BoxDecoration(border: Border.all(color: AppColors.line), borderRadius: BorderRadius.circular(8)),
+                  child: const Row(mainAxisSize: MainAxisSize.min, children: [Text('Move to'), Icon(Icons.arrow_drop_down)]),
+                ),
+              ),
+            ]),
+          ),
+          const Divider(height: 1),
+        ],
       ]),
     );
   }
