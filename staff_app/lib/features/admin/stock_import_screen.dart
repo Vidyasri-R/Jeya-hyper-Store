@@ -1,12 +1,12 @@
 import 'dart:typed_data';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/money.dart';
+import '../../core/pick_file.dart';
 import '../../core/theme.dart';
 import '../../state/providers.dart';
 import '../../widgets/common.dart';
@@ -46,13 +46,16 @@ class _StockImportScreenState extends ConsumerState<StockImportScreen> {
   }
 
   Future<void> _pick() async {
-    final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: const ['csv']);
-    if (picked.isEmpty || !mounted) return;
-    final f = picked.single;
-    final bytes = await f.readAsBytes();
-    if (!mounted) return;
+    final PickedFile? f;
+    try {
+      f = await pickFile('csv');
+    } catch (_) {
+      if (mounted) showSnack(context, 'Couldn’t read that file. Try choosing it again.');
+      return;
+    }
+    if (f == null || !mounted) return;
     setState(() {
-      _file = bytes;
+      _file = f!.bytes;
       _fileName = f.name;
       _preview = null;
       _result = null;
