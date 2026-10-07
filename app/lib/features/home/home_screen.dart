@@ -12,6 +12,8 @@ import '../../widgets/common.dart';
 import '../../widgets/festive_decor.dart';
 import '../../widgets/product_card.dart';
 import 'home_header.dart';
+import 'web_home.dart';
+import '../../core/layout.dart';
 import '../../core/navigation.dart';
 import '../../widgets/store_banner_card.dart';
 
@@ -24,6 +26,7 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (isWideLayout(context)) return const WebHome(); // web shop on laptops & tablets
     final categories = ref.watch(categoriesProvider);
     final products = ref.watch(_homeProductsProvider);
     final paused = ref.watch(storePausedMessageProvider).valueOrNull;

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/layout.dart';
+import 'web_categories.dart';
 import '../../core/theme.dart';
 import '../../data/models.dart';
 import '../../state/providers.dart';
@@ -54,6 +56,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (isWideLayout(context)) return WebCategoryPage(initialSlug: widget.initialSlug); // web shop on laptops & tablets
     final categories = ref.watch(categoriesProvider);
     final text = Theme.of(context).textTheme;
 

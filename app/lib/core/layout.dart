@@ -1,23 +1,24 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/widgets.dart';
 
-/// Laptops, desktops and landscape tablets get the web shop layout (top bar, centred page);
-/// phones and portrait tablets keep the app layout (bottom tabs).
-const kWideBreakpoint = 900.0;
+/// The web shop layout (jeyahyperstore.in on laptops and tablets): two-row header, centred page,
+/// footer, desktop-style pages. Phones — and the Android/iOS apps on any screen — keep the app layout.
+const kWideBreakpoint = 720.0;
 
 /// The widest the page content gets; wider windows show margins either side.
 const kMaxContentWidth = 1280.0;
 
-/// True inside the web shop frame (even on a 760 px reading page) or on any wide screen.
-bool isWideLayout(BuildContext context) =>
-    context.dependOnInheritedWidgetOfExactType<WideLayoutScope>() != null || MediaQuery.sizeOf(context).width >= kWideBreakpoint;
+/// Profile, sign-in, addresses, orders and help: easier to read at this width.
+const kReadingWidth = 760.0;
 
-/// Marks pages shown inside the wide layout's frame (see WebFrame).
+/// True for the web shop on a laptop or tablet (inside its frame, even on a narrow reading page).
+bool isWideLayout(BuildContext context) =>
+    context.dependOnInheritedWidgetOfExactType<WideLayoutScope>() != null || (kIsWeb && MediaQuery.sizeOf(context).width >= kWideBreakpoint);
+
+/// Marks pages shown inside the web shop frame (see WebFrame).
 class WideLayoutScope extends InheritedWidget {
   const WideLayoutScope({super.key, required super.child});
 
   @override
   bool updateShouldNotify(WideLayoutScope oldWidget) => false;
 }
-
-/// Cart, checkout, orders, account and sign-in pages: easier to read at this width.
-const kReadingWidth = 760.0;

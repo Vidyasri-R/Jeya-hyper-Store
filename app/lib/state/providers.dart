@@ -149,6 +149,12 @@ final storeBannersProvider = Provider<List<StoreBanner>>((ref) {
   return StoreBanner.activeFrom(_settings(ref)?['home.banners'], DateTime.now());
 });
 
+/// Admin → Store settings → Store details (public config `store.info`): name, address, phone, hours.
+final storeInfoProvider = Provider<Map<String, dynamic>>((ref) {
+  final raw = _settings(ref)?['store.info'];
+  return raw is Map ? Map<String, dynamic>.from(raw) : const {};
+});
+
 /// How fast the store delivers — Admin → Store settings → Deliver within (delivery.rules.deliveryDays).
 class DeliverySpeed {
   const DeliverySpeed(this.days);

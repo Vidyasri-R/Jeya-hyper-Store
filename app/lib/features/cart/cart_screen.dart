@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/layout.dart';
+import '../../widgets/web_frame.dart';
+import '../../widgets/web_product_card.dart';
+import '../home/web_home.dart';
 import '../../core/api/api_client.dart';
 import '../../core/money.dart';
 import '../../core/theme.dart';
@@ -24,6 +28,7 @@ class CartScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (isWideLayout(context)) return const _WebCart(); // web shop on laptops & tablets
     final cart = ref.watch(cartProvider);
     final text = Theme.of(context).textTheme;
 
@@ -346,6 +351,250 @@ class _CheckoutBar extends ConsumerWidget {
           )),
         ),
       ),
+    );
+  }
+}
+
+
+Future<void> _confirmClear(BuildContext context, WidgetRef ref) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (c) => AlertDialog(
+      title: const Text('Clear cart?'),
+      content: const Text('All items will be removed from your cart.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Clear')),
+      ],
+    ),
+  );
+  if (ok == true) {
+    await ref.read(repositoryProvider).clearCart();
+    ref.invalidate(cartProvider);
+  }
+}
+
+/// Web shop cart (laptops/tablets): item table on the left, order summary on the right.
+class _WebCart extends ConsumerWidget {
+  const _WebCart();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cart = ref.watch(cartProvider);
+    final text = Theme.of(context).textTheme;
+    final more = ref.watch(webHomeProductsProvider).valueOrNull ?? const <Product>[];
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      body: cart.when(
+        loading: () => Center(child: CircularProgressIndicator(color: AppColors.brand700)),
+        error: (e, _) => ErrorRetry(error: e, onRetry: () => ref.invalidate(cartProvider)),
+        data: (c) {
+          if (c.lines.isEmpty) {
+            return ListView(children: [
+              const SizedBox(height: 40),
+              EmptyState(
+                icon: Icons.shopping_cart_outlined,
+                title: 'Your cart is empty',
+                message: 'Groceries from Jeya Hyper Store are a few clicks away.',
+                action: 'Start Shopping',
+                onAction: () => context.go('/home'),
+              ),
+              const WebFooter(),
+            ]);
+          }
+          final inCart = {for (final l in c.lines) l.product.id};
+          final suggestions = more.where((p) => !inCart.contains(p.id)).toList();
+          final wide = MediaQuery.sizeOf(context).width >= 1000;
+          final table = Container(
+            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.line)),
+            child: Column(children: [
+              for (var i = 0; i < c.lines.length; i++) ...[
+                if (i > 0) const Divider(height: 1),
+                _WebCartRow(line: c.lines[i]),
+              ],
+            ]),
+          );
+          final summary = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            _WebOrderSummary(cart: c),
+            const SizedBox(height: 14),
+            _FreeDeliveryProgress(subtotal: toPaise(c.subtotal)),
+          ]);
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+            children: [
+              Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                Text.rich(TextSpan(children: [
+                  TextSpan(text: 'Your Cart ', style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+                  TextSpan(text: '(${c.lines.length} item${c.lines.length == 1 ? '' : 's'})', style: text.titleMedium?.copyWith(color: AppColors.inkMuted)),
+                ])),
+                const Spacer(),
+                TextButton.icon(onPressed: () => context.go('/home'), icon: const Icon(Icons.arrow_back_rounded), label: const Text('Continue Shopping')),
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: () => _confirmClear(context, ref),
+                  style: TextButton.styleFrom(foregroundColor: AppColors.offerRed),
+                  icon: const Icon(Icons.delete_outline_rounded),
+                  label: const Text('Clear Cart'),
+                ),
+              ]),
+              const SizedBox(height: 14),
+              const _PausedNotice(),
+              if (c.hasIssues) _IssuesBanner(),
+              _MinimumOrderHint(subtotal: toPaise(c.subtotal)),
+              const SizedBox(height: 4),
+              if (wide)
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Expanded(child: table),
+                  const SizedBox(width: 20),
+                  SizedBox(width: 380, child: summary),
+                ])
+              else ...[
+                table,
+                const SizedBox(height: 16),
+                summary,
+              ],
+              if (suggestions.isNotEmpty) ...[
+                const SizedBox(height: 28),
+                Text('Add more essentials', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                Text('Popular in your store', style: text.bodySmall),
+                const SizedBox(height: 12),
+                WebProductRow(products: suggestions),
+              ],
+              const WebFooter(),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _WebCartRow extends ConsumerWidget {
+  const _WebCartRow({required this.line});
+  final CartLine line;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final text = Theme.of(context).textTheme;
+    final p = line.product;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(children: [
+        InkWell(onTap: () => context.push('/product/${p.slug}'), child: ProductImage(url: p.imageUrl, name: p.name, size: 72)),
+        const SizedBox(width: 16),
+        Expanded(
+          child: InkWell(
+            onTap: () => context.push('/product/${p.slug}'),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(p.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 2),
+              Text(p.sizeLabel, style: text.bodySmall),
+              if (line.issueText != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(line.issueText!, style: text.labelSmall?.copyWith(color: AppColors.offerRed, fontWeight: FontWeight.w700)),
+                ),
+            ]),
+          ),
+        ),
+        SizedBox(
+          width: 130,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Text(formatRupees(p.sellingPrice), style: text.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+              if (p.hasDiscount) ...[
+                const SizedBox(width: 6),
+                Text(formatRupees(p.mrp), style: text.labelSmall?.copyWith(decoration: TextDecoration.lineThrough, color: AppColors.inkFaint)),
+              ],
+            ]),
+            if (p.hasDiscount) ...[
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(color: AppColors.offerRedSoft, borderRadius: BorderRadius.circular(4)),
+                child: Text('${p.discountPercent}% OFF', style: text.labelSmall?.copyWith(color: AppColors.offerRed, fontWeight: FontWeight.w800)),
+              ),
+            ],
+          ]),
+        ),
+        SizedBox(width: 130, child: AddToCartControl(product: p, height: 38)),
+        SizedBox(
+          width: 100,
+          child: Text(formatRupees(line.lineTotal), textAlign: TextAlign.right, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          tooltip: 'Remove ${p.name}',
+          onPressed: () async {
+            try {
+              await ref.read(cartProvider.notifier).setQty(p, 0);
+            } on ApiException catch (e) {
+              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+            }
+          },
+          icon: const Icon(Icons.delete_outline_rounded, color: AppColors.inkMuted),
+        ),
+      ]),
+    );
+  }
+}
+
+class _WebOrderSummary extends ConsumerWidget {
+  const _WebOrderSummary({required this.cart});
+  final Cart cart;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final text = Theme.of(context).textTheme;
+    final quote = ref.watch(cartQuoteProvider).valueOrNull;
+    final discount = toPaise(cart.mrpTotal) - toPaise(cart.subtotal);
+    final delivery = quote == null ? 'At checkout' : (quote.freeDeliveryApplied || toPaise(quote.deliveryFee) == 0 ? 'FREE' : formatRupees(quote.deliveryFee));
+    Widget row(String a, String b, {Color? color}) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 5),
+          child: Row(children: [
+            Expanded(child: Text(a, style: text.bodyMedium?.copyWith(color: AppColors.inkMuted))),
+            Text(b, style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: color)),
+          ]),
+        );
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.line)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Icon(Icons.receipt_long_outlined, color: AppColors.brand700),
+          const SizedBox(width: 8),
+          Text('Order Summary', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+        ]),
+        const SizedBox(height: 12),
+        row('Subtotal (${cart.lines.length} items)', formatRupees(cart.mrpTotal)),
+        if (discount > 0) row('Product discount', '− ${formatPaise(discount)}', color: AppColors.brand700),
+        row('Delivery charge', delivery, color: delivery == 'FREE' ? AppColors.brand700 : null),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(color: AppColors.brand50, borderRadius: BorderRadius.circular(12)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Expanded(child: Text('Total amount', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
+              Text(formatRupees(quote?.total ?? cart.subtotal), style: text.titleLarge?.copyWith(fontWeight: FontWeight.w900, color: AppColors.brand800)),
+            ]),
+            if (toPaise(cart.savings) > 0) ...[
+              const SizedBox(height: 4),
+              Text('You saved ${formatRupees(cart.savings)} on this order!', style: text.labelLarge?.copyWith(color: AppColors.brand700, fontWeight: FontWeight.w700)),
+            ],
+          ]),
+        ),
+        const SizedBox(height: 14),
+        FilledButton.icon(
+          onPressed: cart.hasIssues
+              ? () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fix the highlighted items first')))
+              : () => context.push('/checkout'),
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+          icon: const Icon(Icons.arrow_forward_rounded),
+          iconAlignment: IconAlignment.end,
+          label: const Text('Proceed to Checkout'),
+        ),
+      ]),
     );
   }
 }

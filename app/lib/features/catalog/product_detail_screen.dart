@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/money.dart';
+import '../../widgets/web_product_card.dart';
+import '../../widgets/web_frame.dart';
 import '../../core/theme.dart';
 import '../../data/models.dart';
 import '../../state/providers.dart';
@@ -217,63 +220,189 @@ class _RoundIcon extends StatelessWidget {
       );
 }
 
-/// Laptop / landscape tablet: photo on the left, details and the add button on the right.
-class _WideProductPage extends StatelessWidget {
+/// Web shop product page (laptops/tablets): photo · details table and add · delivery & trust cards,
+/// then the description and similar products.
+class _WideProductPage extends ConsumerWidget {
   const _WideProductPage({required this.product, required this.details, required this.related, required this.railWidth});
   final Product product;
-  final Widget details;
+  final Widget details; // phone details column (unused here, kept for the shared signature)
   final AsyncValue<List<Product>>? related;
   final double railWidth;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final text = Theme.of(context).textTheme;
     final p = product;
     final items = related?.valueOrNull ?? const <Product>[];
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        leading: context.canPop() ? IconButton(icon: const Icon(Icons.arrow_back_rounded), tooltip: 'Back', onPressed: () => context.pop()) : null,
-        title: Text(p.breadcrumb.isEmpty ? '' : p.breadcrumb.last.name),
+    final address = ref.watch(selectedAddressProvider);
+    final speed = ref.watch(deliverySpeedProvider);
+    final rules = ref.watch(storeRulesProvider);
+    final free = rules.freeAbovePaise;
+    final width = MediaQuery.sizeOf(context).width;
+    final threeCols = width >= 1100;
+
+    Widget row(String label, Widget value) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 5),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            SizedBox(width: 120, child: Text(label, style: text.bodyMedium?.copyWith(color: AppColors.inkMuted))),
+            Text(':  ', style: text.bodyMedium?.copyWith(color: AppColors.inkMuted)),
+            Expanded(child: value),
+          ]),
+        );
+    Widget card(IconData icon, String title, Widget child) => Container(
+          margin: const EdgeInsets.only(bottom: 14),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.line)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [Icon(icon, color: AppColors.brand700, size: 20), const SizedBox(width: 8), Text(title, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700))]),
+            const SizedBox(height: 10),
+            child,
+          ]),
+        );
+
+    final photo = Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.line)),
+      child: AspectRatio(aspectRatio: 1, child: Hero(tag: 'p${p.id}', child: ProductImage(url: p.imageUrl, name: p.name, radius: 12))),
+    );
+
+    final info = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(p.name, style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800, height: 1.2)),
+      if (p.brand != null) ...[
+        const SizedBox(height: 6),
+        Text(p.brand!, style: text.titleSmall?.copyWith(color: AppColors.brandBlue, fontWeight: FontWeight.w700)),
+      ],
+      const SizedBox(height: 14),
+      if (p.brand != null) row('Brand', Text(p.brand!, style: text.bodyMedium)),
+      row('Pack size', Text(p.sizeLabel, style: text.bodyMedium)),
+      if (p.hasDiscount) row('MRP', Text('${formatRupees(p.mrp)} (inclusive of all taxes)', style: text.bodyMedium?.copyWith(decoration: TextDecoration.lineThrough, color: AppColors.inkMuted))),
+      row(
+        'Selling price',
+        Row(children: [
+          Text(formatRupees(p.sellingPrice), style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800, color: p.hasDiscount ? AppColors.offerRed : AppColors.ink)),
+          const SizedBox(width: 10),
+          if (p.hasDiscount) DiscountBadge(percent: p.discountPercent, large: true),
+        ]),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 40),
-        children: [
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Expanded(
-              flex: 5,
-              child: AspectRatio(
-                aspectRatio: 1,
-                child: Container(
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(color: AppColors.brandTint, borderRadius: BorderRadius.circular(AppRadius.xl)),
-                  child: Hero(tag: 'p${p.id}', child: ProductImage(url: p.imageUrl, name: p.name, radius: AppRadius.lg)),
-                ),
-              ),
+      if (p.gstRate != null) row('GST', Text('${p.gstRate!.replaceAll(RegExp(r'\.0+$'), '')}% (included)', style: text.bodyMedium)),
+      row('Availability', _StockLine(product: p)),
+      const SizedBox(height: 18),
+      Row(children: [
+        SizedBox(width: 240, child: AddToCartControl(product: p, height: 50, big: true)),
+        const SizedBox(width: 12),
+        OutlinedButton.icon(
+          onPressed: () => openCart(context),
+          style: OutlinedButton.styleFrom(minimumSize: const Size(0, 50)),
+          icon: const Icon(Icons.shopping_cart_outlined),
+          label: const Text('View cart'),
+        ),
+      ]),
+      if (free != null && free > 0) ...[
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(color: AppColors.brand50, borderRadius: BorderRadius.circular(10)),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.local_shipping_outlined, color: AppColors.brand700),
+            const SizedBox(width: 8),
+            Text('Free delivery on orders above ${formatPaise(free)}', style: text.labelLarge?.copyWith(color: AppColors.brand800, fontWeight: FontWeight.w700)),
+          ]),
+        ),
+      ],
+    ]);
+
+    final side = Column(children: [
+      card(
+        Icons.local_shipping_outlined,
+        'Delivery information',
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            const Icon(Icons.location_on_outlined, size: 18, color: AppColors.offerRed),
+            const SizedBox(width: 6),
+            Expanded(child: Text(address == null ? 'Tiruchirappalli' : '${address.title} · ${address.city} ${address.pincode}', style: text.bodyMedium)),
+          ]),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: AppColors.brand50, borderRadius: BorderRadius.circular(10)),
+            child: Row(children: [
+              Icon(Icons.check_circle_rounded, color: AppColors.brand700, size: 18),
+              const SizedBox(width: 8),
+              Expanded(child: Text(speed.headline, style: text.labelLarge?.copyWith(color: AppColors.brand800, fontWeight: FontWeight.w700))),
+            ]),
+          ),
+        ]),
+      ),
+      card(
+        Icons.lock_outline_rounded,
+        'Secure payment',
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          for (final m in [if (rules.online) 'UPI', if (rules.online) 'Cards', if (rules.online) 'Net banking', if (rules.cod) 'Cash on delivery'])
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: AppColors.line)),
+              child: Text(m, style: text.labelMedium?.copyWith(fontWeight: FontWeight.w700)),
             ),
-            const SizedBox(width: 32),
-            Expanded(
-              flex: 6,
-              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                details,
-                const SizedBox(height: 20),
-                Align(alignment: Alignment.centerLeft, child: SizedBox(width: 320, child: AddToCartControl(product: p, height: 52, big: true))),
+        ]),
+      ),
+      card(
+        Icons.verified_user_outlined,
+        'Shop with confidence',
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          for (final (icon, label) in [(Icons.storefront_outlined, 'From our own store in Trichy'), (Icons.replay_rounded, 'Damaged or wrong item? Tell us within 24 hours')])
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Icon(icon, size: 18, color: AppColors.brand700),
+                const SizedBox(width: 8),
+                Expanded(child: Text(label, style: text.bodySmall)),
               ]),
             ),
+        ]),
+      ),
+    ]);
+
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+        children: [
+          Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
+            TextButton(onPressed: () => context.go('/home'), style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 30)), child: const Text('Home')),
+            for (final b in p.breadcrumb) ...[
+              const Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.inkFaint),
+              TextButton(onPressed: () => context.go('/categories?c=${b.slug}'), style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 30)), child: Text(b.name)),
+            ],
+            const Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.inkFaint),
+            Text(p.name, style: text.labelLarge),
           ]),
-          if (items.isNotEmpty) ...[
-            const SizedBox(height: 24),
-            const SectionHeader(title: 'You might also need'),
-            SizedBox(
-              height: railWidth + 132,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: items.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 10),
-                itemBuilder: (_, i) => ProductCard(product: items[i], width: railWidth),
-              ),
+          const SizedBox(height: 10),
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(flex: 4, child: photo),
+            const SizedBox(width: 24),
+            Expanded(flex: 5, child: info),
+            if (threeCols) ...[const SizedBox(width: 24), SizedBox(width: 300, child: side)],
+          ]),
+          if (!threeCols) ...[const SizedBox(height: 18), side],
+          if (p.description != null && p.description!.trim().isNotEmpty) ...[
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.line)),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Product details', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 8),
+                Text(p.description!, style: text.bodyMedium?.copyWith(color: AppColors.inkMuted, height: 1.5)),
+              ]),
             ),
           ],
+          if (items.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            Text('Similar products', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 12),
+            WebProductRow(products: items),
+          ],
+          const WebFooter(),
         ],
       ),
     );

@@ -73,6 +73,7 @@ flutter:
   assets:
     - assets/brand/
     - assets/brand/intro/
+    - assets/web/
     - assets/themes/diwali/
     - assets/themes/pongal/
     - assets/themes/christmas/

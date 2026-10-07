@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/layout.dart';
+import '../../widgets/web_frame.dart';
 import '../../core/api/api_client.dart';
 import '../../core/money.dart';
 import '../../core/dates.dart';
@@ -137,6 +139,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (isWideLayout(context)) return _buildWide(context); // web shop on laptops & tablets
     final addresses = ref.watch(addressesProvider);
     final address = ref.watch(selectedAddressProvider);
     final text = Theme.of(context).textTheme;
@@ -204,6 +207,286 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           ),
         );
       }(),
+    );
+  }
+
+  // ── web shop (laptops & tablets) ──────────────────────────────────────────
+
+  Widget _buildWide(BuildContext context) {
+    final addresses = ref.watch(addressesProvider);
+    final address = ref.watch(selectedAddressProvider);
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      body: addresses.when(
+        loading: () => Center(child: CircularProgressIndicator(color: AppColors.brand700)),
+        error: (e, _) => ErrorRetry(error: e, onRetry: () => ref.invalidate(addressesProvider)),
+        data: (list) {
+          if (list.isEmpty || address == null) {
+            return ListView(children: [
+              const SizedBox(height: 40),
+              EmptyState(
+                icon: Icons.add_location_alt_outlined,
+                title: 'Add a delivery address',
+                message: 'Drop a pin so we can calculate delivery from Jeya Hyper Store.',
+                action: 'Add Address',
+                onAction: () => context.push('/address'),
+              ),
+              const WebFooter(),
+            ]);
+          }
+          final quote = ref.watch(_quoteProvider(address.id));
+          return quote.when(
+            loading: () => Center(child: CircularProgressIndicator(color: AppColors.brand700)),
+            error: (e, _) => ErrorRetry(error: e, onRetry: () => ref.invalidate(_quoteProvider(address.id))),
+            data: (q) => _wideBody(context, list, address, q),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _wideBody(BuildContext context, List<Address> list, Address address, Quote q) {
+    final text = Theme.of(context).textTheme;
+    if (_method == null || (_method == 'online' && !q.onlineAvailable) || (_method == 'cod' && !q.codAvailable)) {
+      _method = q.onlineAvailable ? 'online' : 'cod';
+    }
+    final wide = MediaQuery.sizeOf(context).width >= 1000;
+    final free = q.freeDeliveryApplied || toPaise(q.deliveryFee) == 0;
+
+    Widget section(int n, IconData icon, String title, Widget child) => Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.line)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: AppColors.brand700, borderRadius: BorderRadius.circular(10)),
+                child: Icon(icon, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Text('$n. $title', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+            ]),
+            const SizedBox(height: 14),
+            child,
+          ]),
+        );
+
+    final addressCards = LayoutBuilder(builder: (context, c) {
+      const gap = 12.0;
+      final cols = c.maxWidth >= 720 ? 3 : 2;
+      final w = (c.maxWidth - gap * (cols - 1)) / cols;
+      return Wrap(spacing: gap, runSpacing: gap, children: [
+        for (final a in list)
+          SizedBox(
+            width: w,
+            child: InkWell(
+              onTap: () => ref.read(selectedAddressIdProvider.notifier).state = a.id,
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: a.id == address.id ? AppColors.brand50 : AppColors.surface,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: a.id == address.id ? AppColors.brand700 : AppColors.line, width: a.id == address.id ? 2 : 1),
+                ),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Icon(a.id == address.id ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded, color: a.id == address.id ? AppColors.brand700 : AppColors.inkFaint),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Row(children: [
+                        Icon(a.title.toLowerCase() == 'work' ? Icons.business_rounded : Icons.home_rounded, size: 18, color: AppColors.ink),
+                        const SizedBox(width: 6),
+                        Text(a.title, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+                      ]),
+                      const SizedBox(height: 6),
+                      Text(a.recipientName, style: text.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+                      Text(a.oneLine, maxLines: 3, overflow: TextOverflow.ellipsis, style: text.bodySmall),
+                      Text(a.phone, style: text.bodySmall),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(onPressed: () => context.push('/address?id=${a.id}'), child: const Text('Edit')),
+                      ),
+                    ]),
+                  ),
+                ]),
+              ),
+            ),
+          ),
+        SizedBox(
+          width: w,
+          height: 150,
+          child: OutlinedButton.icon(
+            onPressed: () => context.push('/address'),
+            style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+            icon: const Icon(Icons.add_location_alt_outlined),
+            label: const Text('Add new address'),
+          ),
+        ),
+      ]);
+    });
+
+    final left = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      for (final b in q.blockers)
+        Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(color: AppColors.offerRedSoft, borderRadius: BorderRadius.circular(12)),
+          child: Row(children: [
+            const Icon(Icons.error_outline_rounded, color: AppColors.offerRed),
+            const SizedBox(width: 10),
+            Expanded(child: Text(b.message)),
+            if (b.reason == 'cart_needs_review') TextButton(onPressed: () => context.go('/cart'), child: const Text('Review')),
+          ]),
+        ),
+      section(1, Icons.location_on_outlined, 'Delivery Address', addressCards),
+      section(
+        2,
+        Icons.local_shipping_outlined,
+        'Delivery',
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(color: AppColors.brand50, borderRadius: BorderRadius.circular(12)),
+          child: Row(children: [
+            Icon(Icons.check_circle_rounded, color: AppColors.brand700),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(
+                  switch (q.expectedDeliveryBy) {
+                    null => 'Home delivery',
+                    final by when deliveryDay(by) == 'Today' => 'Delivery today',
+                    final by => 'Delivery by ${deliveryDay(by) == 'Tomorrow' ? 'tomorrow' : deliveryDay(by)}',
+                  },
+                  style: text.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                Text(
+                  [
+                    if (q.expectedDeliveryBy != null) 'Expected ${deliveryPromise(q.expectedDeliveryBy!)}',
+                    q.distanceKm != null ? '${q.distanceKm!.toStringAsFixed(1)} km from Jeya Hyper Store' : 'From Jeya Hyper Store, Trichy',
+                  ].join(' · '),
+                  style: text.bodySmall,
+                ),
+              ]),
+            ),
+            Text(free ? 'FREE' : formatRupees(q.deliveryFee), style: text.titleMedium?.copyWith(color: AppColors.brand700, fontWeight: FontWeight.w800)),
+          ]),
+        ),
+      ),
+      section(
+        3,
+        Icons.payments_outlined,
+        'Payment Method',
+        Column(children: [
+          if (q.onlineAvailable)
+            _PayOption(
+              value: 'online',
+              group: _method!,
+              icon: Icons.account_balance_wallet_outlined,
+              title: 'Pay Online',
+              subtitle: 'UPI (GPay, PhonePe, Paytm), credit/debit cards, net banking, wallets',
+              badge: 'Recommended',
+              onTap: () => setState(() => _method = 'online'),
+            ),
+          if (q.codAvailable)
+            _PayOption(
+              value: 'cod',
+              group: _method!,
+              icon: Icons.payments_outlined,
+              title: 'Cash on Delivery',
+              subtitle: 'Pay with cash or UPI when your order arrives',
+              onTap: () => setState(() => _method = 'cod'),
+            ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _note,
+            maxLength: 300,
+            maxLines: 2,
+            decoration: const InputDecoration(labelText: 'Delivery instructions (optional)', hintText: 'e.g. Ring the bell, leave with security', counterText: ''),
+          ),
+        ]),
+      ),
+    ]);
+
+    final right = Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.line)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Icon(Icons.receipt_long_outlined, color: AppColors.brand700),
+          const SizedBox(width: 8),
+          Text('Order Summary', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+          const SizedBox(width: 6),
+          Text('(${q.lines.length} items)', style: text.bodySmall),
+          const Spacer(),
+          TextButton(onPressed: () => context.go('/cart'), child: const Text('Edit cart')),
+        ]),
+        const SizedBox(height: 6),
+        for (final l in q.lines)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(children: [
+              ProductImage(url: l.product.imageUrl, name: l.product.name, size: 48, radius: 8),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(l.product.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: text.labelLarge?.copyWith(fontWeight: FontWeight.w600)),
+                  Text('${formatQty(l.qtyMilli, l.product.unit)} × ${formatRupees(l.product.sellingPrice)}', style: text.labelSmall),
+                ]),
+              ),
+              Text(formatRupees(l.lineTotal), style: text.labelLarge?.copyWith(fontWeight: FontWeight.w800)),
+            ]),
+          ),
+        const Divider(height: 22),
+        _BillRow('Item total', formatRupees(q.subtotal)),
+        _BillRow('Delivery charge', free ? 'FREE' : formatRupees(q.deliveryFee)),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(color: AppColors.brand50, borderRadius: BorderRadius.circular(12)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Expanded(child: Text('Total amount', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
+              Text(formatRupees(q.total), style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w900, color: AppColors.brand800)),
+            ]),
+            if (toPaise(q.savings) > 0) Text('You saved ${formatRupees(q.savings)} on this order!', style: text.labelLarge?.copyWith(color: AppColors.brand700, fontWeight: FontWeight.w700)),
+          ]),
+        ),
+        const SizedBox(height: 14),
+        FilledButton(
+          onPressed: q.canPlaceOrder && !_placing ? () => _place(address, q) : null,
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(54)),
+          child: _placing
+              ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
+              : Text('Place Order — ${formatRupees(q.total)}', style: text.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w800)),
+        ),
+        const SizedBox(height: 8),
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          const Icon(Icons.lock_outline_rounded, size: 16, color: AppColors.inkMuted),
+          const SizedBox(width: 6),
+          Text('Secure and encrypted payment', style: text.labelSmall),
+        ]),
+      ]),
+    );
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+      children: [
+        Text('Checkout', style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+        const SizedBox(height: 14),
+        if (wide)
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(child: left),
+            const SizedBox(width: 20),
+            SizedBox(width: 400, child: right),
+          ])
+        else ...[
+          left,
+          right,
+        ],
+        const WebFooter(),
+      ],
     );
   }
 
