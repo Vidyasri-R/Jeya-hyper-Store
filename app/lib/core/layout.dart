@@ -22,3 +22,25 @@ class WideLayoutScope extends InheritedWidget {
   @override
   bool updateShouldNotify(WideLayoutScope oldWidget) => false;
 }
+
+/// Web shop illustration for a category (assets/web/cat_*.webp), matched on its name; null when none fits.
+String? categoryArt(String name) {
+  final n = name.toLowerCase();
+  final key = switch (n) {
+    _ when n.contains('rice') => 'rice',
+    _ when n.contains('atta') || n.contains('flour') || n.contains('sooji') => 'atta',
+    _ when n.contains('dal') || n.contains('pulse') => 'dals',
+    _ when n.contains('oil') || n.contains('ghee') => 'oils',
+    _ when n.contains('masala') || n.contains('spice') => 'masalas',
+    _ when n.contains('salt') || n.contains('sugar') || n.contains('jaggery') => 'salt_sugar',
+    _ when n.contains('staple') || n.contains('grocery') => 'staples',
+    _ when n.contains('dairy') || n.contains('bread') || n.contains('egg') || n.contains('milk') => 'dairy',
+    _ when n.contains('snack') || n.contains('biscuit') => 'snacks',
+    _ when n.contains('tea') || n.contains('coffee') || n.contains('bever') => 'beverages',
+    _ when n.contains('household') || n.contains('home care') || n.contains('clean') => 'household',
+    _ when n.contains('personal') => 'personal_care',
+    _ when n.contains('baby') => 'baby_care',
+    _ => null,
+  };
+  return key == null ? null : 'assets/web/cat_$key.webp';
+}

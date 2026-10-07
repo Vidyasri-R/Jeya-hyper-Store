@@ -5,8 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/festival_pack.dart';
+import '../../core/layout.dart';
 import '../../core/money.dart';
-import '../../core/store_banner.dart';
 import '../../core/theme.dart';
 import '../../data/models.dart';
 import '../../state/providers.dart';
@@ -245,25 +245,65 @@ class _Hero extends ConsumerWidget {
     final rules = ref.watch(storeRulesProvider);
     final free = rules.freeAbovePaise;
     return [
-      StoreBannerCard(StoreBanner(
-        id: 'free',
+      _PromoCard(
         tag: 'Free delivery',
         title: free == null ? 'Delivered to your door' : (free == 0 ? 'Free delivery on every order' : 'Free delivery on ${formatPaise(free)}+'),
         subtitle: 'From Jeya Hyper Store, Trichy',
         cta: 'Start shopping',
+        image: 'assets/web/promo_delivery.webp',
         background: const Color(0xFFFFF4DC),
-        route: '/categories',
-      )),
-      StoreBannerCard(StoreBanner(
-        id: 'pay',
+      ),
+      _PromoCard(
         tag: 'Pay your way',
         title: rules.online ? 'UPI, cards or cash on delivery' : 'Cash on delivery',
         subtitle: 'Safe & secure payments',
         cta: 'Explore',
+        image: 'assets/web/promo_payments.webp',
         background: const Color(0xFFE8EEFA),
-        route: '/categories',
-      )),
+      ),
     ];
+  }
+}
+
+/// Built-in hero-side promo: text on the left, illustration on the right.
+class _PromoCard extends StatelessWidget {
+  const _PromoCard({required this.tag, required this.title, required this.subtitle, required this.cta, required this.image, required this.background});
+  final String tag, title, subtitle, cta, image;
+  final Color background;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Material(
+      color: background,
+      borderRadius: BorderRadius.circular(18),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.go('/categories'),
+        child: Stack(children: [
+          Positioned(right: -6, bottom: 4, top: 30, width: 170, child: ExcludeSemantics(child: Image.asset(image, fit: BoxFit.contain, alignment: Alignment.bottomRight))),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 150, 14),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(color: AppColors.brand700, borderRadius: BorderRadius.circular(20)),
+                child: Text(tag.toUpperCase(), style: text.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
+              ),
+              const SizedBox(height: 8),
+              Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800, color: AppColors.brand900, height: 1.15)),
+              Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: text.bodySmall),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                decoration: BoxDecoration(color: AppColors.brand800, borderRadius: BorderRadius.circular(20)),
+                child: Text('$cta →', style: text.labelLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    );
   }
 }
 
@@ -318,7 +358,9 @@ class _CategoryCirclesState extends State<_CategoryCircles> {
                       height: 92,
                       decoration: BoxDecoration(shape: BoxShape.circle, color: v.bg, border: Border.all(color: AppColors.line)),
                       clipBehavior: Clip.antiAlias,
-                      child: c.imageUrl != null ? CachedNetworkImage(imageUrl: c.imageUrl!, fit: BoxFit.cover) : Icon(v.icon, color: v.fg, size: 40),
+                      child: c.imageUrl != null
+                          ? CachedNetworkImage(imageUrl: c.imageUrl!, fit: BoxFit.cover)
+                          : (categoryArt(c.name) != null ? Padding(padding: const EdgeInsets.all(8), child: Image.asset(categoryArt(c.name)!, fit: BoxFit.contain)) : Icon(v.icon, color: v.fg, size: 40)),
                     ),
                     const SizedBox(height: 8),
                     Text(c.name, maxLines: 2, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: text.labelMedium?.copyWith(fontWeight: FontWeight.w600)),
@@ -446,7 +488,7 @@ class _ShopByCategory extends StatelessWidget {
                         ]),
                       ),
                       const SizedBox(width: 8),
-                      _CategoryArt(category: r, size: 84),
+                      _CategoryArt(category: r, size: 108),
                     ]),
                   ),
                 ),
@@ -470,7 +512,9 @@ class _CategoryArt extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(color: v.bg, borderRadius: BorderRadius.circular(16)),
       clipBehavior: Clip.antiAlias,
-      child: category.imageUrl != null ? CachedNetworkImage(imageUrl: category.imageUrl!, fit: BoxFit.cover) : Icon(v.icon, color: v.fg, size: size * 0.48),
+      child: category.imageUrl != null
+          ? CachedNetworkImage(imageUrl: category.imageUrl!, fit: BoxFit.cover)
+          : (categoryArt(category.name) != null ? Image.asset(categoryArt(category.name)!, fit: BoxFit.contain) : Icon(v.icon, color: v.fg, size: size * 0.48)),
     );
   }
 }

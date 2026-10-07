@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/layout.dart';
 import '../../core/money.dart';
 import '../../core/theme.dart';
 import '../../data/models.dart';
@@ -239,7 +240,8 @@ class _Results extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(18),
                 gradient: LinearGradient(colors: [AppColors.brand900, AppColors.brand700], begin: Alignment.topLeft, end: Alignment.bottomRight),
               ),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              child: Row(children: [
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(active.name, style: text.headlineMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 4),
                 Text('Fresh stock from Jeya Hyper Store, Trichy', style: text.titleSmall?.copyWith(color: Colors.white.withValues(alpha: 0.9))),
@@ -259,6 +261,16 @@ class _Results extends ConsumerWidget {
                       ]),
                     ]),
                 ]),
+                ])),
+                if (categoryArt(active.name) ?? categoryArt(root.name) case final art?)
+                  Container(
+                    width: 150,
+                    height: 130,
+                    margin: const EdgeInsets.only(left: 16),
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.92), borderRadius: BorderRadius.circular(16)),
+                    child: Image.asset(art, fit: BoxFit.contain),
+                  ),
               ]),
             ),
             const SizedBox(height: 16),
