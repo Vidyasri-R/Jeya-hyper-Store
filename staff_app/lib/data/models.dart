@@ -113,6 +113,7 @@ class OrderItem {
       packSize = j['packSize'] as String?,
       isLoose = j['isLoose'] == true,
       imageUrl = j['imageUrl'] as String?,
+      placeholderImageUrl = j['placeholderImageUrl'] as String?,
       quantity = _str(j['quantity'], '0'),
       packedQuantity = j['packedQuantity'] as String?,
       unitPrice = _str(j['unitPrice'], '0.00'),
@@ -126,6 +127,8 @@ class OrderItem {
   final String? packSize;
   final bool isLoose;
   final String? imageUrl;
+  /// No photo of its own yet: its category's general photo (shown labelled "Category photo").
+  final String? placeholderImageUrl;
   final String quantity;
   final String? packedQuantity;
   final String unitPrice;

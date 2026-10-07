@@ -5,7 +5,7 @@ import { products } from '../../db/schema';
 import { appConfigService } from '../app-config/app-config.service';
 import { catalogCache } from './catalog.cache';
 import { available, productCardColumns, type ProductCardRow } from './catalog.repository';
-import { toProductCard } from './catalog.service';
+import { toProductCard, withPlaceholders } from './catalog.service';
 
 /** Admin → Home lists: products the store picks for the customer home screen, in order. */
 export const HOME_LISTS_KEY = 'home.lists';
@@ -62,8 +62,8 @@ async function load() {
       .limit(AUTO_POPULAR)) as ProductCardRow[];
   }
   return {
-    offers: offers.map(toProductCard),
-    popular: popular.map(toProductCard),
+    offers: await withPlaceholders(offers.map(toProductCard)),
+    popular: await withPlaceholders(popular.map(toProductCard)),
     /** True when the admin chose the list (the app may label it differently). */
     curated: { offers: lists.offers.length > 0, popular: lists.popular.length > 0 },
   };

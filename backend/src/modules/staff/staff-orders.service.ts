@@ -1,4 +1,5 @@
 import { AppError } from '../../common/errors';
+import { placeholderFor } from '../catalog/catalog.service';
 import { displayQty, fromMilli, fromPaise, lineTotalPaise, toMilli, toPaise } from '../../common/money';
 import { logger } from '../../config/logger';
 import { db } from '../../db/client';
@@ -138,6 +139,7 @@ export const staffOrdersService = {
       db,
       [...new Set(found.history.map((entry) => entry.changedByStaff).filter((id): id is string => id !== null))],
     );
+    const placeholders = await Promise.all(found.items.map((row) => (row.imageUrl ? null : placeholderFor(row.categoryId))));
     const next = (NEXT[order.orderStatus] ?? []).at(-1) ?? null;
     const isCod = order.paymentMethod === 'cod';
 
@@ -157,7 +159,7 @@ export const staffOrdersService = {
       customer: found.customer ? { name: found.customer.name, phone: found.customer.phone } : null,
       deliveryAddress: order.deliveryAddress,
       mapsUrl: mapsUrl(order.deliveryAddress.latitude, order.deliveryAddress.longitude),
-      items: found.items.map(({ item, barcode, packSize, isLoose, imageUrl }) => ({
+      items: found.items.map(({ item, barcode, packSize, isLoose, imageUrl }, i) => ({
         productId: item.productId,
         name: item.productName,
         itemCode: item.itemCode,
@@ -166,6 +168,8 @@ export const staffOrdersService = {
         packSize,
         isLoose,
         imageUrl,
+        /** No photo yet: its category's general photo (the app labels it, so packers don't rely on it). */
+        placeholderImageUrl: placeholders[i] ?? null,
         quantity: displayQty(toMilli(item.quantity)),
         packedQuantity: item.packedQuantity !== null ? displayQty(toMilli(item.packedQuantity)) : null,
         unitPrice: item.unitPrice,

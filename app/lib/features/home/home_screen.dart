@@ -81,7 +81,7 @@ class HomeScreen extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     sliver: SliverGrid(
                       gridDelegate: productGridDelegate(context),
-                      delegate: SliverChildBuilderDelegate((_, i) => ProductCard(product: items[i]), childCount: items.length.clamp(0, 20)),
+                      delegate: SliverChildBuilderDelegate((_, i) => ProductCard(product: items[i], compact: compactProducts(context)), childCount: items.length.clamp(0, 21)),
                     ),
                   ),
                 ];
@@ -309,15 +309,16 @@ class _ProductRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardWidth = ((MediaQuery.sizeOf(context).width - 48) / 2.6).clamp(0.0, 200.0);
+    final compact = compactProducts(context);
+    final cardWidth = productRailCardWidth(context);
     return SizedBox(
-      height: cardWidth + 132,
+      height: cardWidth + (compact ? 118 : 132),
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
         itemCount: products.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 10),
-        itemBuilder: (_, i) => ProductCard(product: products[i], width: cardWidth),
+        separatorBuilder: (_, _) => SizedBox(width: compact ? 6 : 10),
+        itemBuilder: (_, i) => ProductCard(product: products[i], width: cardWidth, compact: compact),
       ),
     );
   }

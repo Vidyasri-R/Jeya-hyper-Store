@@ -42,7 +42,7 @@ class ProductCard extends StatelessWidget {
                       aspectRatio: 1,
                       child: Opacity(
                         opacity: product.canBuy ? 1 : 0.5,
-                        child: ProductImage(url: product.imageUrl, name: product.name),
+                        child: ProductImage(url: product.imageUrl, placeholderUrl: product.placeholderImageUrl, name: product.name),
                       ),
                     ),
                     if (product.hasDiscount)

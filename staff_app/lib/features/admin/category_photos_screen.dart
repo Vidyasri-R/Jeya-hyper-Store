@@ -8,8 +8,9 @@ import '../../core/theme.dart';
 import '../../state/providers.dart';
 import '../../widgets/common.dart';
 
-/// Admin → Category photos: the pictures customers see on category tiles, the category side bar
-/// and banners. Any real photo works; it is cropped to a square on the server.
+/// Admin → Category photos: the general picture shown on every product of a category that has no
+/// photo of its own yet (shop, search, cart; labelled "Category" on store orders). Category tiles
+/// keep their icons. Any real photo works; it is cropped to a square on the server.
 class CategoryPhotosScreen extends ConsumerStatefulWidget {
   const CategoryPhotosScreen({super.key});
 
@@ -96,7 +97,7 @@ class _CategoryPhotosScreenState extends ConsumerState<CategoryPhotosScreen> {
           : RefreshIndicator(
               onRefresh: _load,
               child: ListView(padding: const EdgeInsets.all(16), children: [
-                Text('Tap a category to change its picture. Use a clear, real photo of the kind of products (no brand names or logos).', style: text.bodySmall),
+                Text('Products without their own photo show their category\'s photo until a real one is added. Tap a category to change it — use a clear photo of that kind of product, with no brand names or logos.', style: text.bodySmall),
                 const SizedBox(height: 12),
                 for (final p in parents) ...[
                   Padding(padding: const EdgeInsets.fromLTRB(0, 12, 0, 8), child: Text(p['name'] as String, style: text.titleMedium)),

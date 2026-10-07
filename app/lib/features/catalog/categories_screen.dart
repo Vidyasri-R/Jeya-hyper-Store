@@ -10,9 +10,6 @@ import '../../state/providers.dart';
 import '../../widgets/common.dart';
 import 'product_grid.dart';
 
-/// Products per row on phones. 3 = compact cards (preview); 2 = the earlier, roomier layout.
-const _productsPerRow = 3;
-
 const _sorts = {'popular': 'Popular', 'price_asc': 'Price: Low to High', 'price_desc': 'Price: High to Low', 'name_asc': 'Name: A–Z'};
 
 class CategoriesScreen extends ConsumerStatefulWidget {
@@ -100,7 +97,6 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
               Expanded(
                 child: ProductGrid(
                   key: ValueKey('$activeSlug|$_sort|$_inStock'),
-                  phoneColumns: _productsPerRow,
                   query: (category: activeSlug, q: null, sort: _sort, inStock: _inStock),
                   header: [
                     SliverToBoxAdapter(child: _Banner(category: root)),
@@ -184,7 +180,7 @@ class _Rail extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     return SizedBox(
-      width: _productsPerRow >= 3 ? 76 : 84,
+      width: 76, // narrow, so three products fit beside it
       child: ListView.builder(
         padding: const EdgeInsets.only(bottom: 100),
         itemCount: roots.length,
@@ -201,22 +197,12 @@ class _Rail extends StatelessWidget {
                 border: Border(left: BorderSide(color: active ? AppColors.brand700 : Colors.transparent, width: 3)),
               ),
               child: Column(children: [
-                c.imageUrl != null
-                    ? Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                          border: Border.all(color: active ? AppColors.brand700 : Colors.transparent, width: 2),
-                        ),
-                        child: CategoryPhoto(url: c.imageUrl!, radius: AppRadius.md - 2),
-                      )
-                    : Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(color: active ? Colors.white : v.bg, borderRadius: BorderRadius.circular(AppRadius.md)),
-                        child: Icon(v.icon, color: v.fg, size: 24),
-                      ),
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(color: active ? Colors.white : v.bg, borderRadius: BorderRadius.circular(AppRadius.md)),
+                  child: Icon(v.icon, color: v.fg, size: 24),
+                ),
                 const SizedBox(height: 6),
                 Text(c.name,
                     textAlign: TextAlign.center,
@@ -253,12 +239,9 @@ class _Banner extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(children: [
-        if (category.imageUrl != null)
-          Positioned(top: 0, right: 0, bottom: 0, width: 130, child: CategoryPhoto(url: category.imageUrl!, radius: 0))
-        else
-          Positioned(right: -10, bottom: -18, child: Icon(v.icon, size: 130, color: v.fg.withValues(alpha: 0.16))),
+        Positioned(right: -10, bottom: -18, child: Icon(v.icon, size: 130, color: v.fg.withValues(alpha: 0.16))),
         Padding(
-          padding: EdgeInsets.fromLTRB(14, 14, category.imageUrl != null ? 140 : 14, 14),
+          padding: const EdgeInsets.all(14),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
             Text(category.name, style: text.titleLarge?.copyWith(color: AppColors.brand900, fontWeight: FontWeight.w800, height: 1.1)),
             const SizedBox(height: 4),

@@ -27,6 +27,9 @@ class AppUser {
 
 enum StockStatus { inStock, lowStock, outOfStock }
 
+/// A search suggestion: one product, shown with its picture.
+typedef Suggestion = ({String slug, String name, String? imageUrl, String? placeholderImageUrl});
+
 class Product {
   Product({
     required this.id,
@@ -45,6 +48,7 @@ class Product {
     required this.maxMilli,
     required this.stockStatus,
     this.imageUrl,
+    this.placeholderImageUrl,
     this.description,
     this.gstRate,
     this.breadcrumb = const [],
@@ -66,6 +70,8 @@ class Product {
   final int maxMilli;
   final StockStatus stockStatus;
   final String? imageUrl;
+  /// No photo of its own yet: a general photo of its category (shown instead of initials).
+  final String? placeholderImageUrl;
   final String? description;
   final String? gstRate;
   final List<CategoryRef> breadcrumb;
@@ -97,6 +103,7 @@ class Product {
           _ => StockStatus.inStock,
         },
         imageUrl: _opt<String>(j['imageUrl']),
+        placeholderImageUrl: _opt<String>(j['placeholderImageUrl']),
         description: _opt<String>(j['description']),
         gstRate: _opt<String>(j['gstRate']),
         breadcrumb: _list(j['breadcrumb']).map(CategoryRef.fromJson).toList(),

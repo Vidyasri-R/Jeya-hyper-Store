@@ -2,10 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/theme.dart';
+import '../../data/models.dart';
 import '../../state/providers.dart';
 import '../../widgets/common.dart';
+import '../../widgets/product_image.dart';
 import 'product_grid.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
@@ -20,7 +23,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   late final _controller = TextEditingController(text: widget.initialQuery);
   final _focus = FocusNode();
   Timer? _debounce;
-  List<String> _suggestions = const [];
+  List<Suggestion> _suggestions = const [];
   String? _submitted;
 
   @override
@@ -117,17 +120,21 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               children: [
                 for (final s in _suggestions)
                   ListTile(
-                    leading: const Icon(Icons.search_rounded, color: AppColors.inkFaint),
-                    title: Text(s),
-                    trailing: const Icon(Icons.north_west_rounded, size: 18, color: AppColors.inkFaint),
-                    onTap: () => _submit(s),
+                    leading: ProductImage(url: s.imageUrl, placeholderUrl: s.placeholderImageUrl, name: s.name, size: 44, radius: AppRadius.sm),
+                    title: Text(s.name, maxLines: 2, overflow: TextOverflow.ellipsis),
+                    trailing: IconButton(
+                      tooltip: 'Search for this',
+                      icon: const Icon(Icons.north_west_rounded, size: 18, color: AppColors.inkFaint),
+                      onPressed: () => _submit(s.name),
+                    ),
+                    onTap: () => context.push('/product/${s.slug}'),
                   ),
                 if (_suggestions.isEmpty) ...[
                   const SectionHeader(title: 'Popular searches'),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Wrap(spacing: 8, runSpacing: 8, children: [
-                      for (final s in const ['Ponni rice', 'Toor dal', 'Sunflower oil', 'Aavin milk', 'Tomato', 'Onion', 'Atta', 'Sugar'])
+                      for (final s in const ['Ponni rice', 'Toor dal', 'Sunflower oil', 'Biscuits', 'Atta', 'Sugar', 'Soap', 'Tea'])
                         ActionChip(label: Text(s), onPressed: () => _submit(s)),
                     ]),
                   ),

@@ -6,9 +6,11 @@ import '../core/theme.dart';
 /// Single product photo (one image per product, served from Cloudflare R2).
 /// Until photos are uploaded, shows a tasteful branded placeholder instead of a broken box.
 class ProductImage extends StatelessWidget {
-  const ProductImage({super.key, required this.url, required this.name, this.size, this.radius = AppRadius.md, this.fit = BoxFit.contain});
+  const ProductImage({super.key, required this.url, required this.name, this.placeholderUrl, this.size, this.radius = AppRadius.md, this.fit = BoxFit.contain});
 
   final String? url;
+  /// Category photo shown while the product has no photo of its own.
+  final String? placeholderUrl;
   final String name;
   final double? size;
   final double radius;
@@ -23,7 +25,15 @@ class ProductImage extends StatelessWidget {
         width: size,
         height: size,
         child: url == null || url!.isEmpty
-            ? placeholder
+            ? (placeholderUrl == null || placeholderUrl!.isEmpty
+                ? placeholder
+                : CachedNetworkImage(
+                    imageUrl: placeholderUrl!,
+                    fit: BoxFit.cover,
+                    fadeInDuration: const Duration(milliseconds: 180),
+                    placeholder: (_, _) => Container(color: AppColors.brand50),
+                    errorWidget: (_, _, _) => placeholder,
+                  ))
             : CachedNetworkImage(
                 imageUrl: url!,
                 fit: fit,

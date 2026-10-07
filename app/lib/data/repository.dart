@@ -67,9 +67,16 @@ class Repository {
   Future<Product> product(String slug) async =>
       Product.fromJson((await api.get('/products/$slug', auth: false))['product'] as Map<String, dynamic>);
 
-  Future<List<String>> suggest(String q) async => ((await api.get('/search/suggest', auth: false, query: {'q': q}))['suggestions'] as List)
-      .map((s) => (s as Map)['name'] as String)
-      .toList();
+  /// Products matching what the customer is typing, with their photo (or category photo).
+  Future<List<Suggestion>> suggest(String q) async => [
+        for (final s in (await api.get('/search/suggest', auth: false, query: {'q': q}))['suggestions'] as List)
+          (
+            slug: (s as Map)['slug'] as String,
+            name: s['name'] as String,
+            imageUrl: s['imageUrl'] as String?,
+            placeholderImageUrl: s['placeholderImageUrl'] as String?,
+          ),
+      ];
 
   // ── Cart ──
   Future<Cart> cart() async => Cart.fromJson((await api.get('/cart'))['cart'] as Map<String, dynamic>);

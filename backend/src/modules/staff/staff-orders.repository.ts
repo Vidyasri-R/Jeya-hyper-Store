@@ -135,6 +135,7 @@ export const staffOrdersRepository = {
           packSize: products.packSize,
           isLoose: products.isLoose,
           imageUrl: products.imageUrl,
+          categoryId: products.categoryId,
         })
         .from(orderItems)
         .innerJoin(products, eq(products.id, orderItems.productId))

@@ -1,6 +1,7 @@
 import { AppError } from '../../common/errors';
 import { displayQty, fromMilli, fromPaise, toMilli } from '../../common/money';
 import { db } from '../../db/client';
+import { withPlaceholders } from '../catalog/catalog.service';
 import { validateQty } from '../catalog/purchase-rules';
 import { cartRepository } from './cart.repository';
 import { fixedQtyMilli, priceLine, summarize, toPublicLine, type PricedLine } from './pricing';
@@ -12,10 +13,12 @@ export async function pricedCart(userId: string): Promise<PricedLine[]> {
   return rows.map((row) => priceLine(row.product, toMilli(row.quantity)));
 }
 
-function toView(lines: PricedLine[]) {
+async function toView(lines: PricedLine[]) {
   const summary = summarize(lines);
+  const items = lines.map(toPublicLine);
+  const products = await withPlaceholders(items.map((item) => item.product)); // category photo until the product has its own
   return {
-    items: lines.map(toPublicLine),
+    items: items.map((item, i) => ({ ...item, product: products[i]! })),
     summary: {
       itemCount: summary.itemCount,
       subtotal: fromPaise(summary.subtotalPaise),
@@ -26,7 +29,7 @@ function toView(lines: PricedLine[]) {
   };
 }
 
-export type CartView = ReturnType<typeof toView>;
+export type CartView = Awaited<ReturnType<typeof toView>>;
 
 export const cartService = {
   async get(userId: string): Promise<CartView> {

@@ -48,6 +48,8 @@ export type ProductCard = {
   maxPurchasableQty: string;
   stockStatus: StockStatus;
   imageUrl: string | null;
+  /** Until the product has its own photo: a general photo of its category (or the parent's). */
+  placeholderImageUrl: string | null;
 };
 
 function buildIndex(
@@ -138,7 +140,31 @@ export function toProductCard(row: ProductCardRow): ProductCard {
     maxPurchasableQty: displayQty(limits.maxMilli),
     stockStatus: limits.stockStatus,
     imageUrl: row.imageUrl,
+    placeholderImageUrl: null,
   };
+}
+
+/** The category's photo, or the nearest parent's that has one. */
+function categoryImage(index: CategoryIndex, categoryId: number | null): string | null {
+  for (let id = categoryId, depth = 0; id !== null && depth < 10; depth++) {
+    const node = index.byId.get(id);
+    if (!node) return null;
+    if (node.imageUrl) return node.imageUrl;
+    id = index.parentOf.get(id) ?? null;
+  }
+  return null;
+}
+
+/** Fills placeholderImageUrl for products without a photo of their own. */
+export async function withPlaceholders<T extends { imageUrl: string | null; categoryId: number | null; placeholderImageUrl?: string | null }>(cards: T[]): Promise<T[]> {
+  if (cards.every((c) => c.imageUrl)) return cards;
+  const index = await categoryIndex();
+  return cards.map((c) => (c.imageUrl ? c : { ...c, placeholderImageUrl: categoryImage(index, c.categoryId) }));
+}
+
+/** Same, for one category id (staff order lines). */
+export async function placeholderFor(categoryId: number | null): Promise<string | null> {
+  return categoryImage(await categoryIndex(), categoryId);
 }
 
 async function resolveCategoryIds(slug: string | undefined): Promise<number[] | null> {
@@ -179,7 +205,7 @@ export const catalogService = {
       });
       const hasMore = rows.length > query.limit && offset + query.limit < MAX_SEARCH_OFFSET;
       return {
-        items: rows.slice(0, query.limit).map(toProductCard),
+        items: await withPlaceholders(rows.slice(0, query.limit).map(toProductCard)),
         nextCursor: hasMore ? encodeCursor({ v: offset + query.limit, id: 0 }) : null,
         sort,
       };
@@ -196,7 +222,7 @@ export const catalogService = {
     const page = rows.slice(0, query.limit);
     const last = page.at(-1);
     return {
-      items: page.map(toProductCard),
+      items: await withPlaceholders(page.map(toProductCard)),
       nextCursor: rows.length > query.limit && last ? encodeCursor({ v: sortValue(last, sort), id: last.id }) : null,
       sort,
     };
@@ -215,7 +241,9 @@ export const catalogService = {
       offset: 0,
       limit: 8,
     });
-    return rows.slice(0, 8).map((row) => ({ slug: row.slug, name: row.name, imageUrl: row.imageUrl }));
+    return withPlaceholders(
+      rows.slice(0, 8).map((row) => ({ slug: row.slug, name: row.name, imageUrl: row.imageUrl, categoryId: row.categoryId, placeholderImageUrl: null as string | null })),
+    );
   },
 
   async productDetail(slug: string) {
@@ -235,8 +263,9 @@ export const catalogService = {
       id = index.parentOf.get(id) ?? null;
     }
 
+    const [card] = await withPlaceholders([toProductCard(row)]);
     return {
-      ...toProductCard(row),
+      ...card!,
       description: row.description,
       barcode: row.barcode,
       hsnCode: row.hsnCode,

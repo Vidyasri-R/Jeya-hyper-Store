@@ -427,7 +427,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Row(children: [
-              ProductImage(url: l.product.imageUrl, name: l.product.name, size: 48, radius: 8),
+              ProductImage(url: l.product.imageUrl, placeholderUrl: l.product.placeholderImageUrl, name: l.product.name, size: 48, radius: 8),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -594,7 +594,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 child: Row(children: [
-                  ProductImage(url: l.product.imageUrl, name: l.product.name, size: 44, radius: AppRadius.sm),
+                  ProductImage(url: l.product.imageUrl, placeholderUrl: l.product.placeholderImageUrl, name: l.product.name, size: 44, radius: AppRadius.sm),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

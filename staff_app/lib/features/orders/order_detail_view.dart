@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -418,6 +419,71 @@ String _formatPhone(String phone) {
   return digits.length == 10 ? '${digits.substring(0, 5)} ${digits.substring(5)}' : digits;
 }
 
+/// An order line's photo for packing; tap to see it large. Without a photo of its own it shows the
+/// category's general photo, labelled so packers go by the name and code, not the picture.
+class ItemPhoto extends StatelessWidget {
+  const ItemPhoto({super.key, required this.item, required this.size});
+  final OrderItem item;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final own = item.imageUrl;
+    final stand = own == null ? item.placeholderImageUrl : null;
+    final url = own ?? stand;
+    if (url == null) return ProductThumb(url: null, size: size);
+    return GestureDetector(
+      onTap: () => showDialog<void>(
+        context: context,
+        builder: (context) => Dialog(
+          clipBehavior: Clip.antiAlias,
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            AspectRatio(aspectRatio: 1, child: InteractiveViewer(child: CachedNetworkImage(imageUrl: url, fit: BoxFit.contain))),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Text(item.name, style: Theme.of(context).textTheme.titleMedium),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                [if (stand != null) 'Category photo — not the exact product', 'Code ${item.itemCode}', if (item.barcode != null) item.barcode!].join(' · '),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+          ]),
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: Stack(fit: StackFit.expand, children: [
+            CachedNetworkImage(
+              imageUrl: url,
+              fit: own != null ? BoxFit.contain : BoxFit.cover,
+              placeholder: (_, _) => const ColoredBox(color: AppColors.bg),
+              errorWidget: (_, _, _) => const ColoredBox(color: AppColors.bg, child: Icon(Icons.image_not_supported_outlined, color: AppColors.inkMuted)),
+            ),
+            if (stand != null)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  color: const Color(0xB3000000),
+                  padding: const EdgeInsets.symmetric(vertical: 1),
+                  child: const Text('Category', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600)),
+                ),
+              ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
 class _ItemRow extends StatelessWidget {
   const _ItemRow({required this.item});
   final OrderItem item;
@@ -431,7 +497,7 @@ class _ItemRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ProductThumb(url: item.imageUrl, size: 56),
+          ItemPhoto(item: item, size: 72),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -523,7 +589,7 @@ Future<List<Map<String, dynamic>>?> _askPacked(BuildContext context, OrderDetail
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
                 children: [
-                  ProductThumb(url: item.imageUrl, size: 44),
+                  ItemPhoto(item: item, size: 52),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(

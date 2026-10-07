@@ -80,7 +80,8 @@ class _Detail extends ConsumerWidget {
                 ],
               );
     final wide = isWideLayout(context);
-    final railWidth = ((width - 48) / 2.6).clamp(0.0, 200.0);
+    final railWidth = productRailCardWidth(context);
+    final compact = compactProducts(context);
 
     if (wide) {
       return _WideProductPage(product: p, details: details, related: related, railWidth: railWidth);
@@ -104,7 +105,7 @@ class _Detail extends ConsumerWidget {
               background: Container(
                 color: AppColors.brandTint,
                 padding: EdgeInsets.fromLTRB(32, MediaQuery.paddingOf(context).top + 56, 32, 24),
-                child: Hero(tag: 'p${p.id}', child: ProductImage(url: p.imageUrl, name: p.name, radius: AppRadius.lg)),
+                child: Hero(tag: 'p${p.id}', child: ProductImage(url: p.imageUrl, placeholderUrl: p.placeholderImageUrl, name: p.name, radius: AppRadius.lg)),
               ),
             ),
           ),
@@ -122,13 +123,13 @@ class _Detail extends ConsumerWidget {
                       const SliverToBoxAdapter(child: SectionHeader(title: 'You might also need')),
                       SliverToBoxAdapter(
                         child: SizedBox(
-                          height: railWidth + 132,
+                          height: railWidth + (compact ? 118 : 132),
                           child: ListView.separated(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             scrollDirection: Axis.horizontal,
                             itemCount: items.length,
-                            separatorBuilder: (_, _) => const SizedBox(width: 10),
-                            itemBuilder: (_, i) => ProductCard(product: items[i], width: railWidth),
+                            separatorBuilder: (_, _) => SizedBox(width: compact ? 6 : 10),
+                            itemBuilder: (_, i) => ProductCard(product: items[i], width: railWidth, compact: compact),
                           ),
                         ),
                       ),
@@ -263,7 +264,7 @@ class _WideProductPage extends ConsumerWidget {
     final photo = Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.line)),
-      child: AspectRatio(aspectRatio: 1, child: Hero(tag: 'p${p.id}', child: ProductImage(url: p.imageUrl, name: p.name, radius: 12))),
+      child: AspectRatio(aspectRatio: 1, child: Hero(tag: 'p${p.id}', child: ProductImage(url: p.imageUrl, placeholderUrl: p.placeholderImageUrl, name: p.name, radius: 12))),
     );
 
     final info = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

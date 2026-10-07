@@ -152,7 +152,7 @@ class _CartLineTile extends ConsumerWidget {
     return InkWell(
       onTap: () => context.push('/product/${p.slug}'),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        ProductImage(url: p.imageUrl, name: p.name, size: 72),
+        ProductImage(url: p.imageUrl, placeholderUrl: p.placeholderImageUrl, name: p.name, size: 72),
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -480,7 +480,7 @@ class _WebCartRow extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(children: [
-        InkWell(onTap: () => context.push('/product/${p.slug}'), child: ProductImage(url: p.imageUrl, name: p.name, size: 72)),
+        InkWell(onTap: () => context.push('/product/${p.slug}'), child: ProductImage(url: p.imageUrl, placeholderUrl: p.placeholderImageUrl, name: p.name, size: 72)),
         const SizedBox(width: 16),
         Expanded(
           child: InkWell(

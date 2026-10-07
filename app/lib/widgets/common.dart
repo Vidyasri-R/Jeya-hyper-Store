@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
@@ -183,19 +182,30 @@ class ShimmerBox extends StatelessWidget {
       );
 }
 
-/// Grid delegate shared by every product grid: 2 columns on phones, 3 on tablets, up to 6 on
-/// a laptop (cards stay about 190–260 px wide).
+/// Phones show 3 compact product cards per row (grids, rails); tablets and laptops roomier ones.
+bool compactProducts(BuildContext context) => MediaQuery.sizeOf(context).width - 32 <= 560;
+
+/// Grid delegate shared by every full-width product grid: 3 compact columns on phones, then a
+/// column per ~200 px (up to 6 on a laptop).
 SliverGridDelegate productGridDelegate(BuildContext context, {double extraHeight = 0}) {
   // Full-width grids (16px page padding each side).
   final width = MediaQuery.sizeOf(context).width - 32;
-  final columns = width > 560 ? (width / 200).floor().clamp(3, 6) : 2;
-  final colWidth = (width - 10 * (columns - 1)) / columns;
+  final compact = compactProducts(context);
+  final columns = compact ? 3 : (width / 200).floor().clamp(3, 6);
+  final gap = compact ? 6.0 : 10.0;
+  final colWidth = (width - gap * (columns - 1)) / columns;
   return SliverGridDelegateWithFixedCrossAxisCount(
     crossAxisCount: columns,
-    mainAxisSpacing: 10,
-    crossAxisSpacing: 10,
-    mainAxisExtent: colWidth + 132 + extraHeight,
+    mainAxisSpacing: gap,
+    crossAxisSpacing: gap,
+    mainAxisExtent: colWidth + (compact ? 118 : 132) + extraHeight,
   );
+}
+
+/// Card width for a sideways product rail: 3 and a bit visible on phones.
+double productRailCardWidth(BuildContext context) {
+  final width = MediaQuery.sizeOf(context).width;
+  return compactProducts(context) ? (width - 32 - 12) / 3.25 : ((width - 48) / 2.6).clamp(0.0, 200.0);
 }
 
 /// Visual identity for a category tile (until category photos are uploaded to R2).
@@ -216,27 +226,6 @@ SliverGridDelegate productGridDelegate(BuildContext context, {double extraHeight
   return (icon: Icons.storefront_rounded, bg: AppColors.brand50, fg: AppColors.brand700);
 }
 
-/// A category's photo (Admin → Category photos), cropped to fill its box.
-class CategoryPhoto extends StatelessWidget {
-  const CategoryPhoto({super.key, required this.url, this.radius = AppRadius.md});
-  final String url;
-  final double radius;
-
-  @override
-  Widget build(BuildContext context) => ClipRRect(
-        borderRadius: BorderRadius.circular(radius),
-        child: CachedNetworkImage(
-          imageUrl: url,
-          fit: BoxFit.cover,
-          width: double.infinity,
-          height: double.infinity,
-          fadeInDuration: const Duration(milliseconds: 150),
-          placeholder: (_, _) => ColoredBox(color: AppColors.brand50),
-          errorWidget: (_, _, _) => ColoredBox(color: AppColors.brand50),
-        ),
-      );
-}
-
 /// Round-cornered category tile with icon (or photo when available) + label.
 class CategoryTile extends StatelessWidget {
   const CategoryTile({super.key, required this.name, this.imageUrl, required this.onTap, this.size = 64});
@@ -255,15 +244,11 @@ class CategoryTile extends StatelessWidget {
         width: size + 12,
         child: Column(
           children: [
-            SizedBox(
+            Container(
               width: size,
               height: size,
-              child: imageUrl != null
-                  ? CategoryPhoto(url: imageUrl!, radius: AppRadius.lg)
-                  : DecoratedBox(
-                      decoration: BoxDecoration(color: v.bg, borderRadius: BorderRadius.circular(AppRadius.lg)),
-                      child: Icon(v.icon, color: v.fg, size: size * 0.48),
-                    ),
+              decoration: BoxDecoration(color: v.bg, borderRadius: BorderRadius.circular(AppRadius.lg)),
+              child: Icon(v.icon, color: v.fg, size: size * 0.48),
             ),
             const SizedBox(height: 6),
             Text(name, maxLines: 2, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis,

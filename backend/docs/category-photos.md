@@ -1,8 +1,8 @@
 # Category photos
 
-Shop category pictures (Admin → Category photos can replace any of them). All are **CC0 or Public Domain Mark** images found through [Openverse](https://openverse.org) — free for commercial use, no credit required; listed here so their origin is on record. None show a brand.
+General photos per category, shown on products that have no photo of their own yet (API field `placeholderImageUrl`; store orders label them "Category"). Category tiles in the apps keep their icons. Admin → Category photos can replace any of them. All are **CC0 or Public Domain Mark** images found through [Openverse](https://openverse.org) — free for commercial use, no credit required; listed here so their origin is on record. None show a brand.
 
-Deos & Perfumes, Feminine Care and More Items have no photo yet (the apps show their drawn icon).
+Deos & Perfumes and Feminine Care use their parent's (Personal Care) photo; More Items has none (products there show initials).
 
 | Category | Title | Creator | Licence | Source | Page |
 |---|---|---|---|---|---|

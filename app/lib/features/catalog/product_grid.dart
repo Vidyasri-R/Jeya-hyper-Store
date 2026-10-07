@@ -8,7 +8,7 @@ import '../../widgets/product_card.dart';
 
 /// Infinite-scroll product grid for any (category, search, sort) query.
 class ProductGrid extends ConsumerWidget {
-  const ProductGrid({super.key, required this.query, this.header = const [], this.emptyTitle = 'No products here yet', this.phoneColumns = 2});
+  const ProductGrid({super.key, required this.query, this.header = const [], this.emptyTitle = 'No products here yet', this.phoneColumns = 3});
 
   final ProductQuery query;
   /// Columns on a phone-width grid (3 = compact cards).

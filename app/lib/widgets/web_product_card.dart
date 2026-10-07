@@ -34,7 +34,7 @@ class WebProductCard extends StatelessWidget {
               Stack(children: [
                 AspectRatio(
                   aspectRatio: 1.15,
-                  child: Opacity(opacity: p.canBuy ? 1 : 0.5, child: ProductImage(url: p.imageUrl, name: p.name, radius: 10)),
+                  child: Opacity(opacity: p.canBuy ? 1 : 0.5, child: ProductImage(url: p.imageUrl, placeholderUrl: p.placeholderImageUrl, name: p.name, radius: 10)),
                 ),
                 if (p.hasDiscount) Positioned(left: 0, top: 0, child: DiscountBadge(percent: p.discountPercent)),
               ]),
