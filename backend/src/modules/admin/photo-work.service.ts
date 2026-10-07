@@ -24,6 +24,10 @@ function decode(raw: string): { photoPriority: number; id: number } {
  * Photo work: the store's admin hands out products without photos (best first) to staff and
  * photo helpers, and sees each person's progress. A product leaves the queue once it has a photo.
  */
+// Drizzle prints a lone-table column unqualified ("id"); inside the products subqueries that would
+// mean products.id, so spell out the staff table.
+const staffIdRef = sql`"staff_users"."id"`;
+
 export const photoWorkService = {
   /** Products without photos, best first. assignee: a staff id, 'unassigned', or 'any'. */
   async queue(params: { assignee: string; categoryId?: number | undefined; cursor?: string | undefined; limit: number }) {
@@ -33,7 +37,7 @@ export const photoWorkService = {
     if (params.categoryId) where.push(sql`(${products.categoryId} = ${params.categoryId} OR ${products.categoryId} IN (SELECT id FROM ${categories} WHERE parent_id = ${params.categoryId}))`);
     if (params.cursor) {
       const c = decode(params.cursor);
-      where.push(sql`(${products.photoPriority}, -${products.id}) < (${c.photoPriority}, -${c.id})`);
+      where.push(sql`(${products.photoPriority}, -${products.id}) < (${c.photoPriority}::int, -(${c.id}::bigint))`);
     }
     const rows = await db
       .select({ ...adminProductColumns, photoPriority: products.photoPriority })
@@ -64,10 +68,10 @@ export const photoWorkService = {
         username: staffUsers.username,
         role: staffUsers.role,
         isActive: staffUsers.isActive,
-        open: sql<number>`(select count(*) from ${products} p where p.photo_assignee_id = ${staffUsers.id} and p.is_active and p.image_url is null)::int`,
-        done: sql<number>`(select count(*) from ${products} p where p.photo_by_id = ${staffUsers.id} and p.image_url is not null)::int`,
-        doneToday: sql<number>`(select count(*) from ${products} p where p.photo_by_id = ${staffUsers.id} and p.photo_at >= date_trunc('day', now() at time zone 'Asia/Kolkata') at time zone 'Asia/Kolkata')::int`,
-        lastPhotoAt: sql<string | null>`(select max(p.photo_at) from ${products} p where p.photo_by_id = ${staffUsers.id})`,
+        open: sql<number>`(select count(*) from ${products} p where p.photo_assignee_id = ${staffIdRef} and p.is_active and p.image_url is null)::int`,
+        done: sql<number>`(select count(*) from ${products} p where p.photo_by_id = ${staffIdRef} and p.image_url is not null)::int`,
+        doneToday: sql<number>`(select count(*) from ${products} p where p.photo_by_id = ${staffIdRef} and p.photo_at >= date_trunc('day', now() at time zone 'Asia/Kolkata') at time zone 'Asia/Kolkata')::int`,
+        lastPhotoAt: sql<string | null>`(select max(p.photo_at) from ${products} p where p.photo_by_id = ${staffIdRef})`,
       })
       .from(staffUsers)
       .orderBy(staffUsers.name);
