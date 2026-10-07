@@ -1,7 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/app_update.dart';
 import '../../core/config.dart';
 import '../../core/theme.dart';
 import '../../state/providers.dart';
@@ -116,6 +119,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 18),
                     Text('Forgot your password? Ask the store admin to reset it.', textAlign: TextAlign.center, style: text.bodySmall),
+                    if (kIsWeb) ...[
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: () => launchUrl(Uri.parse(downloadPageUrl), webOnlyWindowName: '_self'),
+                        icon: const Icon(Icons.android_rounded),
+                        label: const Text('Android phone? Get the app'),
+                      ),
+                    ],
                   ],
                 ),
               ),

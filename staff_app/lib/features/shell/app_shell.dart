@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/app_update.dart';
 import '../../core/config.dart';
 import '../../core/theme.dart';
 import '../../state/providers.dart';
@@ -89,7 +91,7 @@ class AppShell extends ConsumerWidget {
     }
 
     return Scaffold(
-      body: shell,
+      body: Column(children: [const _UpdateBar(), Expanded(child: shell)]),
       bottomNavigationBar: NavigationBar(
         selectedIndex: selected,
         onDestinationSelected: go,
@@ -99,6 +101,37 @@ class AppShell extends ConsumerWidget {
           for (final d in destinations)
             NavigationDestination(icon: iconFor(d, selectedIcon: false), selectedIcon: iconFor(d, selectedIcon: true), label: d.label),
         ],
+      ),
+    );
+  }
+}
+
+/// "New version available" on Android phones that installed the APK from the download page.
+class _UpdateBar extends ConsumerWidget {
+  const _UpdateBar();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final update = ref.watch(appUpdateProvider).valueOrNull;
+    if (update == null) return const SizedBox.shrink();
+    final text = Theme.of(context).textTheme;
+    return Material(
+      color: AppColors.green700,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 6, 8, 6),
+          child: Row(children: [
+            const Icon(Icons.system_update_rounded, color: Colors.white),
+            const SizedBox(width: 10),
+            Expanded(child: Text('New version ${update.versionName} is ready', style: text.bodyMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w600))),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
+              onPressed: () => launchUrl(Uri.parse(update.url), mode: LaunchMode.externalApplication),
+              child: const Text('Update'),
+            ),
+          ]),
+        ),
       ),
     );
   }
