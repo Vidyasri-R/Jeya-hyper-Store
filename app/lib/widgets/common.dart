@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
@@ -215,6 +216,27 @@ SliverGridDelegate productGridDelegate(BuildContext context, {double extraHeight
   return (icon: Icons.storefront_rounded, bg: AppColors.brand50, fg: AppColors.brand700);
 }
 
+/// A category's photo (Admin → Category photos), cropped to fill its box.
+class CategoryPhoto extends StatelessWidget {
+  const CategoryPhoto({super.key, required this.url, this.radius = AppRadius.md});
+  final String url;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: CachedNetworkImage(
+          imageUrl: url,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+          fadeInDuration: const Duration(milliseconds: 150),
+          placeholder: (_, _) => ColoredBox(color: AppColors.brand50),
+          errorWidget: (_, _, _) => ColoredBox(color: AppColors.brand50),
+        ),
+      );
+}
+
 /// Round-cornered category tile with icon (or photo when available) + label.
 class CategoryTile extends StatelessWidget {
   const CategoryTile({super.key, required this.name, this.imageUrl, required this.onTap, this.size = 64});
@@ -233,11 +255,15 @@ class CategoryTile extends StatelessWidget {
         width: size + 12,
         child: Column(
           children: [
-            Container(
+            SizedBox(
               width: size,
               height: size,
-              decoration: BoxDecoration(color: v.bg, borderRadius: BorderRadius.circular(AppRadius.lg)),
-              child: Icon(v.icon, color: v.fg, size: size * 0.48),
+              child: imageUrl != null
+                  ? CategoryPhoto(url: imageUrl!, radius: AppRadius.lg)
+                  : DecoratedBox(
+                      decoration: BoxDecoration(color: v.bg, borderRadius: BorderRadius.circular(AppRadius.lg)),
+                      child: Icon(v.icon, color: v.fg, size: size * 0.48),
+                    ),
             ),
             const SizedBox(height: 6),
             Text(name, maxLines: 2, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis,

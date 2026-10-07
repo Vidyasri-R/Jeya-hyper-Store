@@ -166,6 +166,26 @@ class StaffRepository {
 
   // ── admin: home banners ──
   /// Uploads a banner picture (cropped to 2:1 by the server); returns its URL for the banner.
+  // ── admin: category photos & customer home lists ──
+  /// Shop categories with their photo (parents first, then their children).
+  Future<List<Map<String, dynamic>>> shopCategories() async =>
+      [for (final c in (await _api.get('/admin/categories'))['categories'] as List) Map<String, dynamic>.from(c as Map)];
+
+  Future<String> uploadCategoryPhoto(int id, Uint8List bytes, String contentType) async =>
+      (await _api.putBytes('/admin/categories/$id/image', bytes, contentType))['imageUrl'] as String;
+
+  Future<void> removeCategoryPhoto(int id) => _api.delete('/admin/categories/$id/image');
+
+  /// The products picked for "Today's offers" and "Popular in your store", in order.
+  Future<({List<AdminProduct> offers, List<AdminProduct> popular})> homeLists() async {
+    final body = await _api.get('/admin/home-lists');
+    List<AdminProduct> list(String key) => [for (final p in body[key] as List) AdminProduct.fromJson(Map<String, dynamic>.from(p as Map))];
+    return (offers: list('offers'), popular: list('popular'));
+  }
+
+  Future<void> saveHomeLists({required List<int> offers, required List<int> popular}) async =>
+      saveSetting('home.lists', {'offers': offers, 'popular': popular});
+
   Future<String> uploadBannerImage(Uint8List bytes, String contentType) async =>
       (await _api.putBytes('/admin/banners/image', bytes, contentType))['imageUrl'] as String;
 

@@ -3,6 +3,8 @@ import { AppError } from '../../common/errors';
 import { normalizeIndianMobile } from '../../common/phone';
 import { appConfigService, CONFIG_KEYS } from '../app-config/app-config.service';
 import { CATALOG_IMPORT_KEY, catalogImportSchema, DEFAULT_CATALOG_IMPORT } from '../catalog-import/catalog-import.service';
+import { catalogCache } from '../catalog/catalog.cache';
+import { DEFAULT_HOME_LISTS, HOME_LISTS_KEY, homeListsSchema } from '../catalog/home-lists';
 import { adminBannersService, bannersSchema, type Banner } from './admin-banners';
 import { DEFAULT_DELIVERY_RULES, deliveryRulesSchema } from '../delivery/delivery.service';
 import { DEFAULT_USAGE_LIMITS, usageLimitsSchema } from '../usage/usage.limits';
@@ -87,6 +89,12 @@ const SETTINGS = {
     isPublic: true,
     description: 'Home-screen banners (image or text, link to a search/category/product, order and dates).',
   },
+  [HOME_LISTS_KEY]: {
+    schema: homeListsSchema,
+    fallback: DEFAULT_HOME_LISTS,
+    isPublic: false,
+    description: 'Product ids for the customer home "Today\'s offers" and "Popular in your store" (empty = automatic).',
+  },
   [CATALOG_IMPORT_KEY]: {
     schema: catalogImportSchema,
     fallback: DEFAULT_CATALOG_IMPORT,
@@ -140,6 +148,7 @@ export const adminSettingsService = {
     const previous = key === CONFIG_KEYS.HOME_BANNERS ? await appConfigService.getRaw(key) : undefined;
     await appConfigService.set(key, parsed, { isPublic: setting.isPublic, description: setting.description });
     if (key === CONFIG_KEYS.HOME_BANNERS) await adminBannersService.removeUnusedImages(previous, parsed as Banner[]);
+    if (key === HOME_LISTS_KEY) catalogCache.invalidate();
     return parsed;
   },
 };

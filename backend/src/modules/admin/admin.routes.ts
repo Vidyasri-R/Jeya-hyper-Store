@@ -11,6 +11,7 @@ import { usageService } from '../usage/usage.service';
 import { WEB_CATEGORIES } from '../catalog-import/category-map';
 import { catalogImportService } from '../catalog-import/catalog-import.service';
 import { adminBannersService } from './admin-banners';
+import { adminCategoriesService } from './admin-categories.service';
 import { photoWorkService } from './photo-work.service';
 import { adminDashboardService } from './admin-dashboard.service';
 import { adminProductsService } from './admin-products.service';
@@ -121,6 +122,31 @@ adminRouter.put('/banners/image', uploadLimiter, express.raw({ type: ['image/jpe
     throw new AppError('BAD_REQUEST', 'Send the image as the request body (JPG, PNG or WebP)', { reason: 'image_missing' });
   }
   res.json(await adminBannersService.uploadImage(req.body));
+});
+
+/* ── shop categories (pictures) and the customer home lists ── */
+
+adminRouter.get('/categories', async (_req, res) => {
+  res.json({ categories: await adminCategoriesService.list() });
+});
+
+adminRouter.put('/categories/:id/image', uploadLimiter, express.raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: '8mb' }), async (req, res) => {
+  const { id } = parseParams(productParams, req);
+  if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+    throw new AppError('BAD_REQUEST', 'Send the photo as the request body (JPG, PNG or WebP)', { reason: 'image_missing' });
+  }
+  res.json(await adminCategoriesService.setImage(id, req.body));
+});
+
+adminRouter.delete('/categories/:id/image', async (req, res) => {
+  const { id } = parseParams(productParams, req);
+  await adminCategoriesService.removeImage(id);
+  res.status(204).end();
+});
+
+/** The chosen products with details; saved with PUT /settings/home.lists {offers: ids, popular: ids}. */
+adminRouter.get('/home-lists', async (_req, res) => {
+  res.json(await adminCategoriesService.homeLists());
 });
 
 /* ── photo work: who photographs which products ── */

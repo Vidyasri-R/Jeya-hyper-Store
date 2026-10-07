@@ -17,10 +17,6 @@ import '../../core/layout.dart';
 import '../../core/navigation.dart';
 import '../../widgets/store_banner_card.dart';
 
-final _homeProductsProvider = FutureProvider<List<Product>>(
-  (ref) async => (await ref.watch(repositoryProvider).products(sort: 'popular', inStock: true, limit: 40)).items,
-);
-
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -28,7 +24,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (isWideLayout(context)) return const WebHome(); // web shop on laptops & tablets
     final categories = ref.watch(categoriesProvider);
-    final products = ref.watch(_homeProductsProvider);
+    final lists = ref.watch(homeListsProvider);
     final paused = ref.watch(storePausedMessageProvider).valueOrNull;
     final festival = ref.watch(festivalProvider);
 
@@ -38,9 +34,9 @@ class HomeScreen extends ConsumerWidget {
         color: AppColors.brand700,
         onRefresh: () async {
           ref.invalidate(categoriesProvider);
-          ref.invalidate(_homeProductsProvider);
+          ref.invalidate(homeListsProvider);
           ref.invalidate(publicConfigProvider);
-          await ref.read(_homeProductsProvider.future);
+          await ref.read(homeListsProvider.future);
         },
         child: CustomScrollView(
           slivers: [
@@ -66,13 +62,13 @@ class HomeScreen extends ConsumerWidget {
               ),
             ),
             const SliverToBoxAdapter(child: _HeroCarousel()),
-            ...products.when(
-              data: (items) {
-                final deals = items.where((p) => p.hasDiscount).toList()..sort((a, b) => b.discountPercent.compareTo(a.discountPercent));
+            ...lists.when(
+              data: (home) {
+                final items = home.popular;
                 return [
-                  if (deals.isNotEmpty) ...[
+                  if (home.offers.isNotEmpty) ...[
                     SliverToBoxAdapter(child: SectionHeader(title: "Today's Offers", subtitle: 'Best savings in store today', onSeeAll: () => context.go('/categories'))),
-                    SliverToBoxAdapter(child: _ProductRail(products: deals.take(12).toList())),
+                    SliverToBoxAdapter(child: _ProductRail(products: home.offers)),
                   ],
                   SliverToBoxAdapter(
                     child: categories.maybeWhen(
@@ -99,7 +95,7 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ),
               ],
-              error: (e, _) => [SliverToBoxAdapter(child: ErrorRetry(error: e, onRetry: () => ref.invalidate(_homeProductsProvider)))],
+              error: (e, _) => [SliverToBoxAdapter(child: ErrorRetry(error: e, onRetry: () => ref.invalidate(homeListsProvider)))],
             ),
             const SliverToBoxAdapter(child: _StorePromise()),
             const SliverToBoxAdapter(child: SizedBox(height: 24)),

@@ -382,7 +382,7 @@ class _WebCart extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cart = ref.watch(cartProvider);
     final text = Theme.of(context).textTheme;
-    final more = ref.watch(webHomeProductsProvider).valueOrNull ?? const <Product>[];
+    final more = ref.watch(homeListsProvider).valueOrNull?.popular ?? const <Product>[];
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: cart.when(

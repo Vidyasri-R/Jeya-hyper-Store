@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import 'features/account/more_screen.dart';
 import 'features/admin/banners_screen.dart';
+import 'features/admin/category_photos_screen.dart';
 import 'features/admin/dashboard_screen.dart';
+import 'features/admin/home_lists_screen.dart';
 import 'features/admin/my_photos_screen.dart';
 import 'features/admin/photo_mode_screen.dart';
 import 'features/admin/photo_work_screen.dart';
@@ -23,7 +25,7 @@ import 'state/providers.dart';
 final _rootKey = GlobalKey<NavigatorState>();
 
 /// Admin-only locations; staff are sent back to the board.
-const _adminOnly = ['/sales', '/products', '/more/staff', '/more/settings', '/more/usage', '/more/banners', '/more/stock', '/more/photo-work'];
+const _adminOnly = ['/sales', '/products', '/more/staff', '/more/settings', '/more/usage', '/more/banners', '/more/stock', '/more/photo-work', '/more/categories', '/more/home-lists'];
 
 /// Photo helpers only add product photos: their list, the scanner and their account.
 bool _photoHelperMayOpen(String at) => at == '/my-photos' || at == '/scan' || at == '/more' || at == '/password';
@@ -87,6 +89,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(path: 'usage', builder: (_, _) => const UsageScreen()),
                   GoRoute(path: 'stock', builder: (_, _) => const StockImportScreen()),
                   GoRoute(path: 'photo-work', builder: (_, _) => const PhotoWorkScreen()),
+                  GoRoute(path: 'categories', builder: (_, _) => const CategoryPhotosScreen()),
+                  GoRoute(path: 'home-lists', builder: (_, _) => const HomeListsScreen()),
                 ],
               ),
             ],

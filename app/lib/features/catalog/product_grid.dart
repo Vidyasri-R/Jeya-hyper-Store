@@ -8,9 +8,11 @@ import '../../widgets/product_card.dart';
 
 /// Infinite-scroll product grid for any (category, search, sort) query.
 class ProductGrid extends ConsumerWidget {
-  const ProductGrid({super.key, required this.query, this.header = const [], this.emptyTitle = 'No products here yet'});
+  const ProductGrid({super.key, required this.query, this.header = const [], this.emptyTitle = 'No products here yet', this.phoneColumns = 2});
 
   final ProductQuery query;
+  /// Columns on a phone-width grid (3 = compact cards).
+  final int phoneColumns;
   final List<Widget> header;
   final String emptyTitle;
 
@@ -41,20 +43,23 @@ class ProductGrid extends ConsumerWidget {
             SliverFillRemaining(hasScrollBody: false, child: EmptyState(icon: Icons.search_off_rounded, title: emptyTitle))
           else
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+              padding: phoneColumns >= 3 ? const EdgeInsets.fromLTRB(8, 4, 8, 12) : const EdgeInsets.fromLTRB(12, 4, 12, 12),
               sliver: SliverLayoutBuilder(
                 builder: (context, constraints) {
                   // 2 on phones, then a column per ~200 px (up to 6 on a laptop).
-                  final columns = constraints.crossAxisExtent > 520 ? (constraints.crossAxisExtent / 200).floor().clamp(3, 6) : 2;
-                  final colWidth = (constraints.crossAxisExtent - 10 * (columns - 1)) / columns;
+                  final wide = constraints.crossAxisExtent > 520;
+                  final columns = wide ? (constraints.crossAxisExtent / 200).floor().clamp(3, 6) : phoneColumns;
+                  final compact = !wide && columns >= 3;
+                  final gap = compact ? 6.0 : 10.0;
+                  final colWidth = (constraints.crossAxisExtent - gap * (columns - 1)) / columns;
                   return SliverGrid(
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: columns,
-                      mainAxisSpacing: 10,
-                      crossAxisSpacing: 10,
-                      mainAxisExtent: colWidth + 132, // square image + name/size/price/button
+                      mainAxisSpacing: gap,
+                      crossAxisSpacing: gap,
+                      mainAxisExtent: colWidth + (compact ? 118 : 132), // square image + name/size/price/button
                     ),
-                    delegate: SliverChildBuilderDelegate((_, i) => ProductCard(product: state.items[i]), childCount: state.items.length),
+                    delegate: SliverChildBuilderDelegate((_, i) => ProductCard(product: state.items[i], compact: compact), childCount: state.items.length),
                   );
                 },
               ),

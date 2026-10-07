@@ -57,6 +57,13 @@ class Repository {
         'limit': limit,
       }));
 
+  /// Home lists: "Today's offers" and "Popular in your store" (picked by the store, else automatic).
+  Future<({List<Product> offers, List<Product> popular})> home() async {
+    final j = await api.get('/home', auth: false);
+    List<Product> list(String key) => [for (final p in (j[key] as List? ?? const [])) Product.fromJson(Map<String, dynamic>.from(p as Map))];
+    return (offers: list('offers'), popular: list('popular'));
+  }
+
   Future<Product> product(String slug) async =>
       Product.fromJson((await api.get('/products/$slug', auth: false))['product'] as Map<String, dynamic>);
 

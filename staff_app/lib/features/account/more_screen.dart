@@ -92,6 +92,8 @@ class MoreScreen extends ConsumerWidget {
                   ),
                   tile(Icons.badge_outlined, 'Staff accounts', 'Add people, reset passwords, disable', () => context.go('/more/staff')),
                   tile(Icons.storefront_outlined, 'Store settings', 'Festival theme, delivery fees, payments, contact', () => context.go('/more/settings')),
+                  tile(Icons.star_outline_rounded, 'Home: offers & popular', 'Pick the products for "Today\'s offers" and "Popular in your store"', () => context.go('/more/home-lists')),
+                  tile(Icons.category_outlined, 'Category photos', 'Pictures on the shop\'s category tiles', () => context.go('/more/categories')),
                   tile(Icons.view_carousel_outlined, 'Home banners', 'Offer pictures and text at the top of the customer app', () => context.go('/more/banners')),
                 ],
               ),

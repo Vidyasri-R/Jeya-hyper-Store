@@ -95,6 +95,24 @@ class FakeRepo extends StaffRepository {
     'auth.demo_login_enabled': false,
   };
 
+  static AdminProduct product(int id, String name, {String available = '5'}) => AdminProduct.fromJson(
+    {'id': id, 'name': name, 'itemCode': 'C$id', 'mrp': '50.00', 'sellingPrice': '45.00', 'available': available, 'isActive': true},
+  );
+
+  @override
+  Future<({List<AdminProduct> offers, List<AdminProduct> popular})> homeLists() async =>
+      (offers: [product(1, 'Aashirvaad Atta 1kg'), product(2, 'Bru 100g', available: '0')], popular: <AdminProduct>[]);
+
+  @override
+  Future<(ResultPage<AdminProduct>, Map<String, int>)> products({String? query, String filter = 'all', String? cursor}) async =>
+      (ResultPage([product(1, 'Aashirvaad Atta 1kg'), product(3, 'Gold Winner Oil 1L')], null), {'active': 3, 'withImage': 0});
+
+  @override
+  Future<List<Map<String, dynamic>>> shopCategories() async => [
+    {'id': 10, 'name': 'Staples', 'parentId': null, 'imageUrl': null, 'products': 751},
+    {'id': 11, 'name': 'Rice & Rice Products', 'parentId': 10, 'imageUrl': null, 'products': 60},
+  ];
+
   @override
   Future<Map<String, dynamic>> photoWork() async => {
     'totals': {'active': 8631, 'withPhoto': 120, 'withoutPhoto': 8511, 'unassigned': 8400, 'today': 14},
@@ -193,6 +211,32 @@ void main() {
     await tester.pumpAndSettle();
     expect(repo.calls.last, {'call': 'assignPhotos', 'staffId': '00000000-0000-4000-8000-000000000002', 'count': 50});
     expect(find.text('50 products given to Priya'), findsOneWidget);
+  });
+
+  testWidgets('admin picks Today\'s offers: sold-out ones are flagged, added products are saved in order', (tester) async {
+    final repo = FakeRepo(orderAt('placed'));
+    await pumpApp(tester, repo, at: '/more/home-lists');
+    expect(find.text('Aashirvaad Atta 1kg'), findsOneWidget);
+    expect(find.text('Not shown now — out of stock'), findsOneWidget);
+    await tester.tap(find.text('Add product'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'gold');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    expect(find.text('Already in the list'), findsOneWidget);
+    await tester.tap(find.text('Gold Winner Oil 1L'));
+    await tester.pumpAndSettle();
+    expect(repo.calls.last, {'call': 'saveSetting', 'key': 'home.lists', 'value': {'offers': [1, 2, 3], 'popular': <int>[]}});
+    await tester.tap(find.text('Popular (0)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Automatic'), findsOneWidget);
+  });
+
+  testWidgets('category photos lists each category with its product count', (tester) async {
+    await pumpApp(tester, FakeRepo(orderAt('placed')), at: '/more/categories');
+    expect(find.text('Rice & Rice Products'), findsOneWidget);
+    expect(find.text('60 products'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('stock upload screen explains the daily export', (tester) async {

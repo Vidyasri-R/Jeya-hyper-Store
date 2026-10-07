@@ -16,9 +16,10 @@ import '../../widgets/store_banner_card.dart';
 import '../../widgets/web_frame.dart';
 import '../../widgets/web_product_card.dart';
 
-/// Popular in-stock products for the web Home (deals are the discounted ones among them).
-final webHomeProductsProvider = FutureProvider<List<Product>>(
-  (ref) async => (await ref.watch(repositoryProvider).products(sort: 'popular', inStock: true, limit: 50)).items,
+/// Home lists for phone and web Home: "Today's offers" and "Popular in your store" — picked by the
+/// store in the admin app, else automatic (biggest discounts / fast movers).
+final homeListsProvider = FutureProvider<({List<Product> offers, List<Product> popular})>(
+  (ref) async => ref.watch(repositoryProvider).home(),
 );
 
 /// Web shop Home for laptops and tablets: hero, categories, deals, category tiles, best sellers,
@@ -40,7 +41,9 @@ class _WebHomeState extends ConsumerState<WebHome> {
   @override
   Widget build(BuildContext context) {
     final roots = ref.watch(categoriesProvider).valueOrNull ?? const <Category>[];
-    final products = ref.watch(webHomeProductsProvider).valueOrNull ?? const <Product>[];
+    final lists = ref.watch(homeListsProvider).valueOrNull;
+    final offers = lists?.offers ?? const <Product>[];
+    final products = lists?.popular ?? const <Product>[];
     final paused = ref.watch(storePausedMessageProvider).valueOrNull;
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -52,7 +55,7 @@ class _WebHomeState extends ConsumerState<WebHome> {
           const SizedBox(height: 24),
           if (roots.isNotEmpty) _Pad(child: _CategoryCircles(roots: roots)),
           const SizedBox(height: 24),
-          _Pad(key: _dealsKey, child: _BestDeals(products: products)),
+          _Pad(key: _dealsKey, child: _BestDeals(products: offers)),
           const SizedBox(height: 28),
           if (roots.isNotEmpty) _Pad(child: _ShopByCategory(roots: roots)),
           const SizedBox(height: 28),
@@ -391,14 +394,14 @@ class _BestDealsState extends State<_BestDeals> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final deals = widget.products.where((p) => p.hasDiscount).toList()..sort((a, b) => b.discountPercent.compareTo(a.discountPercent));
+    final deals = widget.products; // in the store's order (or biggest discount first)
     if (deals.isEmpty) return const SizedBox.shrink();
     final shown = switch (_filter) {
       1 => deals.where((p) => toPaise(p.sellingPrice) < 9900).toList(),
       2 => deals.where((p) => p.discountPercent >= 20).toList(),
       _ => deals,
     };
-    final best = deals.first.discountPercent;
+    final best = deals.fold(0, (m, p) => p.discountPercent > m ? p.discountPercent : m);
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(18), border: Border.all(color: AppColors.line)),
@@ -408,10 +411,13 @@ class _BestDealsState extends State<_BestDeals> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text("Today's Best Deals", style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800, height: 1.1)),
             const SizedBox(height: 8),
-            Text.rich(TextSpan(children: [
-              TextSpan(text: 'Up to ', style: text.titleMedium),
-              TextSpan(text: '$best% OFF', style: text.titleMedium?.copyWith(color: AppColors.offerRed, fontWeight: FontWeight.w800)),
-            ])),
+            if (best > 0)
+              Text.rich(TextSpan(children: [
+                TextSpan(text: 'Up to ', style: text.titleMedium),
+                TextSpan(text: '$best% OFF', style: text.titleMedium?.copyWith(color: AppColors.offerRed, fontWeight: FontWeight.w800)),
+              ]))
+            else
+              Text('Picked by your store', style: text.titleMedium),
             const SizedBox(height: 8),
             Text('Great offers on your daily essentials.', style: text.bodySmall),
             const SizedBox(height: 18),

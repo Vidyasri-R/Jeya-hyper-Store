@@ -9,10 +9,12 @@ import 'product_image.dart';
 
 /// Grid / rail card from the approved design: badge, single image, name, size, price + MRP, Add.
 class ProductCard extends StatelessWidget {
-  const ProductCard({super.key, required this.product, this.width});
+  const ProductCard({super.key, required this.product, this.width, this.compact = false});
 
   final Product product;
   final double? width;
+  /// Three-per-row grids on phones: tighter padding and type.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +28,7 @@ class ProductCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadius.md),
           onTap: () => context.push('/product/${product.slug}'),
           child: Container(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+            padding: EdgeInsets.all(compact ? 5 : 8),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppRadius.md),
               border: Border.all(color: AppColors.line),
@@ -53,14 +55,15 @@ class ProductCard extends StatelessWidget {
                       ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(product.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: text.labelLarge?.copyWith(height: 1.2, fontWeight: FontWeight.w600)),
+                SizedBox(height: compact ? 5 : 8),
+                Text(product.name, maxLines: 2, overflow: TextOverflow.ellipsis,
+                    style: (compact ? text.labelMedium : text.labelLarge)?.copyWith(height: 1.2, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 2),
                 Text(product.sizeLabel, maxLines: 1, overflow: TextOverflow.ellipsis, style: text.labelSmall),
                 const Spacer(),
-                PriceLine(price: product.sellingPrice, mrp: product.mrp, showMrp: product.hasDiscount),
-                const SizedBox(height: 6),
-                AddToCartControl(product: product),
+                PriceLine(price: product.sellingPrice, mrp: product.mrp, showMrp: product.hasDiscount, compact: compact),
+                SizedBox(height: compact ? 4 : 6),
+                AddToCartControl(product: product, height: compact ? 30 : 34),
               ],
             ),
           ),
@@ -71,20 +74,21 @@ class ProductCard extends StatelessWidget {
 }
 
 class PriceLine extends StatelessWidget {
-  const PriceLine({super.key, required this.price, required this.mrp, required this.showMrp, this.large = false});
+  const PriceLine({super.key, required this.price, required this.mrp, required this.showMrp, this.large = false, this.compact = false});
   final String price;
   final String mrp;
   final bool showMrp;
   final bool large;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     return Wrap(
       crossAxisAlignment: WrapCrossAlignment.end,
-      spacing: 6,
+      spacing: compact ? 4 : 6,
       children: [
-        Text(formatRupees(price), style: (large ? text.headlineSmall : text.titleSmall)?.copyWith(fontWeight: FontWeight.w800)),
+        Text(formatRupees(price), style: (large ? text.headlineSmall : (compact ? text.labelLarge : text.titleSmall))?.copyWith(fontWeight: FontWeight.w800)),
         if (showMrp)
           Text(
             formatRupees(mrp),
