@@ -50,7 +50,7 @@ export const posItemSchema = z
     // Legal Metrology Act: never sell above MRP. Reject rather than silently clamp.
     if (mrp > 0 && price > mrp) ctx.addIssue({ code: 'custom', message: `selling price ${price} > MRP ${mrp}` });
     const gst = Number(item.gstRate);
-    if (gst < 0 || gst > 28) ctx.addIssue({ code: 'custom', message: `invalid GST rate ${gst}` });
+    if (gst < 0 || gst > 40) ctx.addIssue({ code: 'custom', message: `invalid GST rate ${gst}` });
   });
 
 export type PosCategory = z.infer<typeof posCategorySchema>;

@@ -12,6 +12,13 @@ function createPosClient(): PosCatalogClient {
   switch (env.POS_PROVIDER) {
     case 'mock':
       return new MockGoFrugalClient();
+    case 'csv':
+      // The store uploads GoFrugal's stock file (Admin → Upload stock file); there is nothing to pull.
+      return {
+        name: 'stock-file-only',
+        fetchCategories: () => Promise.reject(new Error('POS_PROVIDER=csv: upload the stock file instead of pulling')),
+        fetchItemsPage: () => Promise.reject(new Error('POS_PROVIDER=csv: upload the stock file instead of pulling')),
+      };
   }
 }
 

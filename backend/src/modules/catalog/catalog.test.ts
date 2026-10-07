@@ -85,7 +85,8 @@ describe('POS item validation', () => {
   });
   it('rejects zero price and bad GST', () => {
     expect(posItemSchema.safeParse({ ...valid, sellingPrice: 0 }).success).toBe(false);
-    expect(posItemSchema.safeParse({ ...valid, gstRate: 40 }).success).toBe(false);
+    expect(posItemSchema.safeParse({ ...valid, gstRate: 40 }).success).toBe(true); // GST 2.0 slab (aerated drinks)
+    expect(posItemSchema.safeParse({ ...valid, gstRate: 41 }).success).toBe(false);
   });
   it('rejects non-numeric price', () => {
     expect(posItemSchema.safeParse({ ...valid, mrp: 'abc' }).success).toBe(false);

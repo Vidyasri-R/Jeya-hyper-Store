@@ -49,9 +49,10 @@ services:
       - key: DEMO_LOGIN_ENABLED
         value: "false" # live switch is app_config.auth.demo_login_enabled
 
-      # POS sync — mock catalogue until GoFrugal API access; scheduler runs every 15 min
+      # Catalogue comes from the daily GoFrugal stock file uploaded in the store app (Admin → Upload
+      # stock file); "csv" turns the 15-minute POS pull off. Switch back if GoFrugal API access arrives.
       - key: POS_PROVIDER
-        value: mock
+        value: csv
       - key: CATALOG_SYNC_ENABLED
         value: "true"
       - key: CATALOG_SYNC_INTERVAL_MIN

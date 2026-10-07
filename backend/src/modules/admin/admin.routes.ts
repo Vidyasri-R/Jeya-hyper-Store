@@ -8,7 +8,10 @@ import { optionalPhone, username } from '../staff/staff.schemas';
 import { backupService } from '../backup/backup.service';
 import { catalogSyncService } from '../sync/catalog-sync.service';
 import { usageService } from '../usage/usage.service';
+import { WEB_CATEGORIES } from '../catalog-import/category-map';
+import { catalogImportService } from '../catalog-import/catalog-import.service';
 import { adminBannersService } from './admin-banners';
+import { photoWorkService } from './photo-work.service';
 import { adminDashboardService } from './admin-dashboard.service';
 import { adminProductsService } from './admin-products.service';
 import { adminSettingsService } from './admin-settings.service';
@@ -23,7 +26,7 @@ const productParams = z.object({ id: z.coerce.number().int().positive() });
 
 /* ── staff accounts ── */
 
-const role = z.enum(['staff', 'admin']);
+const role = z.enum(['staff', 'admin', 'photos']);
 const name = z.string().trim().min(2).max(120);
 
 adminRouter.get('/staff', async (_req, res) => {
@@ -108,7 +111,7 @@ adminRouter.put(
     if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
       throw new AppError('BAD_REQUEST', 'Send the photo as the request body (JPG, PNG or WebP)', { reason: 'image_missing' });
     }
-    res.json(await adminProductsService.setImage(id, req.body));
+    res.json(await adminProductsService.setImage(id, req.body, staffOf(req).staffId));
   },
 );
 
@@ -118,6 +121,65 @@ adminRouter.put('/banners/image', uploadLimiter, express.raw({ type: ['image/jpe
     throw new AppError('BAD_REQUEST', 'Send the image as the request body (JPG, PNG or WebP)', { reason: 'image_missing' });
   }
   res.json(await adminBannersService.uploadImage(req.body));
+});
+
+/* ── photo work: who photographs which products ── */
+
+adminRouter.get('/photo-work', async (_req, res) => {
+  res.json(await photoWorkService.summary());
+});
+
+adminRouter.get('/photo-work/queue', async (req, res) => {
+  const q = parseQuery(
+    z.object({
+      assignee: z.union([z.enum(['any', 'unassigned']), z.uuid()]).default('any'),
+      categoryId: z.coerce.number().int().positive().optional(),
+      cursor: z.string().max(400).optional(),
+      limit: z.coerce.number().int().min(1).max(50).default(30),
+    }),
+    req,
+  );
+  res.json(await photoWorkService.queue(q));
+});
+
+adminRouter.post('/photo-work/assign', async (req, res) => {
+  const body = parseBody(z.object({ staffId: z.uuid(), count: z.number().int().min(1).max(1000), categoryId: z.number().int().positive().optional() }).strict(), req);
+  res.json(await photoWorkService.assign(body));
+});
+
+adminRouter.post('/photo-work/unassign', async (req, res) => {
+  const { staffId } = parseBody(z.object({ staffId: z.uuid() }).strict(), req);
+  res.json(await photoWorkService.unassign(staffId));
+});
+
+/* ── daily stock file (GoFrugal "Current Stock Detail" CSV) ── */
+
+const stockFile = express.text({ type: ['text/csv', 'text/plain', 'application/vnd.ms-excel', 'application/octet-stream'], limit: '30mb' });
+const stockFileBody = (req: express.Request) => {
+  if (typeof req.body !== 'string' || req.body.length < 20) {
+    throw new AppError('BAD_REQUEST', 'Send the CSV file as the request body', { reason: 'stock_file_missing' });
+  }
+  return req.body;
+};
+
+/** ?apply=true imports; otherwise returns what would change (nothing is written). */
+adminRouter.post('/catalog/import', uploadLimiter, stockFile, async (req, res) => {
+  const { apply } = parseQuery(z.object({ apply: z.enum(['true', 'false']).default('false') }), req);
+  const text = stockFileBody(req);
+  const preview = await catalogImportService.preview(text); // before applying, so it describes this import
+  if (apply === 'true') res.json({ applied: true, result: await catalogImportService.apply(text), preview });
+  else res.json({ applied: false, preview });
+});
+
+adminRouter.get('/catalog/import', async (_req, res) => {
+  res.json({ last: await catalogImportService.lastImport(), settings: await catalogImportService.settings(), categories: WEB_CATEGORIES });
+});
+
+adminRouter.get('/products/by-barcode/:code', async (req, res) => {
+  const { code } = parseParams(z.object({ code: z.string().trim().regex(/^[0-9A-Za-z-]{3,40}$/) }), req);
+  const product = await adminProductsService.findByBarcode(code);
+  if (!product) throw AppError.notFound('Product');
+  res.json({ product });
 });
 
 adminRouter.delete('/products/:id/image', async (req, res) => {

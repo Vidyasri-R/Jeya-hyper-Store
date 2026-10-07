@@ -106,7 +106,8 @@ export const gofrugalSyncStatus = pgEnum('gofrugal_sync_status', [
 export const syncRunStatus = pgEnum('sync_run_status', ['idle', 'running', 'success', 'failed']);
 
 /** Back-office roles (Jeya Staff app) — separate from customer accounts. */
-export const staffRole = pgEnum('staff_role', ['staff', 'admin']);
+/** photos = photo helper: sees only the products assigned to them for photos (no orders, no customers). */
+export const staffRole = pgEnum('staff_role', ['staff', 'admin', 'photos']);
 
 export const alertLevel = pgEnum('alert_level', ['info', 'warning', 'critical']);
 
@@ -357,6 +358,14 @@ export const products = pgTable(
     maxOrderQty: quantity(),
 
     imageUrl: text(),
+    /** Photo work: higher = photograph sooner (fast movers, from the stock file). */
+    photoPriority: integer().notNull().default(0),
+    /** Photo work assigned to this staff member (until the product has a photo). */
+    photoAssigneeId: uuid().references(() => staffUsers.id, { onDelete: 'set null' }),
+    photoAssignedAt: tstz(),
+    /** Who uploaded the current photo, and when. */
+    photoById: uuid().references(() => staffUsers.id, { onDelete: 'set null' }),
+    photoAt: tstz(),
     isActive: boolean().notNull().default(true),
     /** Pin popular SKUs to the top of listings. */
     sortRank: integer().notNull().default(0),
@@ -391,11 +400,25 @@ export const products = pgTable(
     // Typo-tolerant search ("tomatto", "basmathi"); needs the pg_trgm extension.
     index('products_name_trgm_idx').using('gin', sql`${t.name} gin_trgm_ops`),
     index('products_updated_at_idx').on(t.updatedAt),
+    // Photo work queue: active products without a photo, best first.
+    index('products_photo_queue_idx').on(t.photoAssigneeId, t.photoPriority.desc(), t.id).where(sql`${t.isActive} = true AND ${t.imageUrl} IS NULL`),
     check('products_prices_ck', sql`${t.mrp} >= 0 AND ${t.sellingPrice} >= 0`),
-    check('products_gst_rate_ck', sql`${t.gstRate} >= 0 AND ${t.gstRate} <= 28`),
+    check('products_gst_rate_ck', sql`${t.gstRate} >= 0 AND ${t.gstRate} <= 40`), // 40% = GST 2.0 slab (aerated drinks)
     check('products_reserved_ck', sql`${t.reservedQuantity} >= 0`),
     check('products_order_qty_ck', sql`${t.minOrderQty} > 0 AND ${t.qtyStep} > 0`),
   ],
+);
+
+/** Every barcode printed on the store's POS labels (one per purchase batch), from the daily stock file. */
+export const productBarcodes = pgTable(
+  'product_barcodes',
+  {
+    barcode: varchar({ length: 64 }).primaryKey(),
+    productId: bigint({ mode: 'number' })
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+  },
+  (t) => [index('product_barcodes_product_idx').on(t.productId)],
 );
 
 /* ───────────────────────────── Cart ───────────────────────────── */

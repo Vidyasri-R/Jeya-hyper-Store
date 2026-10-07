@@ -82,8 +82,8 @@ const envSchema = z.object({
     .default('123456'),
 
   // ─── POS / catalogue sync ───
-  /** `mock` = built-in sample catalogue. `gofrugal` is added once API access is granted. */
-  POS_PROVIDER: z.enum(['mock']).default('mock'),
+  /** `mock` = built-in sample catalogue; `csv` = the store uploads GoFrugal's stock file in the admin app (no scheduled pull). */
+  POS_PROVIDER: z.enum(['mock', 'csv']).default('mock'),
   /** Run the in-process delta sync scheduler. Off locally unless you want it. */
   CATALOG_SYNC_ENABLED: z
     .enum(['true', 'false'])

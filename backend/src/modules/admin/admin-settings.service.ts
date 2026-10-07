@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { AppError } from '../../common/errors';
 import { normalizeIndianMobile } from '../../common/phone';
 import { appConfigService, CONFIG_KEYS } from '../app-config/app-config.service';
+import { CATALOG_IMPORT_KEY, catalogImportSchema, DEFAULT_CATALOG_IMPORT } from '../catalog-import/catalog-import.service';
 import { adminBannersService, bannersSchema, type Banner } from './admin-banners';
 import { DEFAULT_DELIVERY_RULES, deliveryRulesSchema } from '../delivery/delivery.service';
 import { DEFAULT_USAGE_LIMITS, usageLimitsSchema } from '../usage/usage.limits';
@@ -85,6 +86,12 @@ const SETTINGS = {
     fallback: [],
     isPublic: true,
     description: 'Home-screen banners (image or text, link to a search/category/product, order and dates).',
+  },
+  [CATALOG_IMPORT_KEY]: {
+    schema: catalogImportSchema,
+    fallback: DEFAULT_CATALOG_IMPORT,
+    isPublic: false,
+    description: 'Stock-file import: POS departments sold online and TYPE → website category overrides.',
   },
   [CONFIG_KEYS.MAINTENANCE]: {
     schema: z.object({ enabled: z.boolean(), message: z.string().trim().max(200) }).strict(),

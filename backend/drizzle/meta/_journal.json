@@ -71,6 +71,20 @@
       "when": 1791034483364,
       "tag": "0009_refresh_grace",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791392583506,
+      "tag": "0010_product_barcodes_gst40",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791393337587,
+      "tag": "0011_photo_work",
+      "breakpoints": true
     }
   ]
 }

@@ -44,7 +44,7 @@ async function tick(): Promise<void> {
  */
 export const syncScheduler = {
   start(): void {
-    if (!env.CATALOG_SYNC_ENABLED || timer) return;
+    if (!env.CATALOG_SYNC_ENABLED || env.POS_PROVIDER === 'csv' || timer) return;
     const intervalMs = env.CATALOG_SYNC_INTERVAL_MIN * 60 * 1000;
     logger.info({ intervalMin: env.CATALOG_SYNC_INTERVAL_MIN }, 'catalog sync scheduler started');
     setTimeout(() => void tick(), FIRST_RUN_DELAY_MS).unref();

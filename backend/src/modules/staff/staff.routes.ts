@@ -1,10 +1,12 @@
-import { Router, type Request } from 'express';
+import express, { Router, type Request } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { z } from 'zod';
 import { AppError } from '../../common/errors';
-import { requireStaff, requireStaffAllowingPasswordChange, staffOf } from '../../common/staff-auth.middleware';
+import { requireStaff, requireStaffAllowingPasswordChange, requireStaffRole, staffOf } from '../../common/staff-auth.middleware';
 import { parseBody, parseParams, parseQuery } from '../../common/validate';
 import { orderStatus } from '../../db/schema';
+import { adminProductsService } from '../admin/admin-products.service';
+import { photoWorkService } from '../admin/photo-work.service';
 import { usageService } from '../usage/usage.service';
 import { changePasswordSchema, staffLoginSchema, staffRefreshSchema } from './staff.schemas';
 import { staffAuthService } from './staff-auth.service';
@@ -85,7 +87,8 @@ const advanceSchema = z
 const cancelSchema = z.object({ from: status, reason: z.string().trim().min(3).max(200) }).strict();
 
 const staffOrders = Router();
-staffOrders.use(requireStaff);
+// Photo helpers never see orders or customer details.
+staffOrders.use(requireStaff, requireStaffRole('staff', 'admin'));
 
 staffOrders.get('/summary', async (req, res) => {
   const summary = await staffOrdersService.summary();
@@ -118,3 +121,46 @@ staffOrders.post('/:id/cancel', async (req, res) => {
 });
 
 staffRouter.use('/orders', staffOrders);
+
+/* ── photo work (any staff role: their assigned products) ── */
+
+const staffPhotos = Router();
+staffPhotos.use(requireStaff);
+
+const photoUploads = rateLimit({
+  windowMs: 60_000,
+  limit: 30,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  handler: (_req, _res, next) => next(new AppError('RATE_LIMITED', 'Too many uploads at once. Wait a moment.', { retryAfterSec: 30 })),
+});
+
+/** My products to photograph, best first, and how many I've done. */
+staffPhotos.get('/mine', async (req, res) => {
+  const { cursor } = parseQuery(z.object({ cursor: z.string().max(400).optional() }), req);
+  const me = staffOf(req).staffId;
+  const [queue, summary] = await Promise.all([photoWorkService.queue({ assignee: me, cursor, limit: 30 }), photoWorkService.summary()]);
+  const mine = summary.people.find((p) => p.staffId === me);
+  res.json({ ...queue, open: mine?.open ?? 0, done: mine?.done ?? 0, doneToday: mine?.doneToday ?? 0 });
+});
+
+staffPhotos.get('/by-barcode/:code', async (req, res) => {
+  const { code } = parseParams(z.object({ code: z.string().trim().regex(/^[0-9A-Za-z-]{3,40}$/) }), req);
+  const product = await adminProductsService.findByBarcode(code);
+  if (!product) throw AppError.notFound('Product');
+  res.json({ product });
+});
+
+staffPhotos.put('/:id/image', photoUploads, express.raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: '8mb' }), async (req, res) => {
+  const { id } = parseParams(z.object({ id: z.coerce.number().int().positive() }), req);
+  const me = staffOf(req);
+  if (!(await photoWorkService.canUpload(id, me.staffId, me.role))) {
+    throw new AppError('FORBIDDEN', 'This product is not assigned to you', { reason: 'not_assigned' });
+  }
+  if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+    throw new AppError('BAD_REQUEST', 'Send the photo as the request body (JPG, PNG or WebP)', { reason: 'image_missing' });
+  }
+  res.json(await adminProductsService.setImage(id, req.body, me.staffId));
+});
+
+staffRouter.use('/photos', staffPhotos);

@@ -22,7 +22,7 @@ export function temporaryPassword(): string {
 async function adminAfterChangeGuard(targetId: string, change: { role?: StaffRole; isActive?: boolean }) {
   const target = await staffRepository.findById(db, targetId);
   if (!target) throw AppError.notFound('Staff account');
-  const losesAdmin = target.role === 'admin' && target.isActive && (change.role === 'staff' || change.isActive === false);
+  const losesAdmin = target.role === 'admin' && target.isActive && ((change.role !== undefined && change.role !== 'admin') || change.isActive === false);
   if (losesAdmin && (await staffRepository.countActiveAdmins(db, targetId)) === 0) {
     throw new AppError('CONFLICT', 'There must always be at least one active admin', { reason: 'last_admin' });
   }
