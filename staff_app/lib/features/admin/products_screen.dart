@@ -208,7 +208,8 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text(formatRupees(p.sellingPrice), style: text.titleSmall),
+                          Text('MRP ${formatRupees(p.mrp)}', style: text.titleSmall),
+                          if (p.sellingPrice != p.mrp) Text('Sells ${formatRupees(p.sellingPrice)}', style: text.labelSmall),
                           if (p.imageUrl == null)
                             const Pill('Add photo', fg: AppColors.brandBlue, bg: AppColors.brandBlueSoft, icon: Icons.add_a_photo_outlined),
                         ],
@@ -296,9 +297,12 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
             ),
           ]),
           Text(
+            [product.priceLabel, if (product.packSize != null) product.packSize!].join(' · '),
+            style: text.titleSmall?.copyWith(color: AppColors.green800, fontWeight: FontWeight.w700),
+          ),
+          Text(
             [
               if (product.brand != null) product.brand!,
-              if (product.packSize != null) product.packSize!,
               'Code ${product.itemCode}',
               if (product.barcode != null) product.barcode!,
             ].join(' · '),

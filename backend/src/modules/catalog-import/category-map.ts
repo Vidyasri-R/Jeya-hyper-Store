@@ -151,11 +151,19 @@ const NAME_WORD_RULES: [string, RegExp][] = NAME_RULES.map(([key, re]) => [key, 
 export type CategoryKey = string;
 
 /** The website category for a POS TYPE (+ product name for vague TYPEs). Overrides win. */
-export function classify(type: string, name: string, overrides: Record<string, string> = {}): CategoryKey {
+/** Ice-cream makers: GoFrugal files their items under groups like "CREAM", which read as cosmetics. */
+const ICE_CREAM_BRANDS = /^(ARUN|ARUN ICE ?CREAMS?|DAIRY ?DAY|KWALITY( WALLS?)?|IBACO|HAVMOR|VADILAL|CREAM BELL|BASKIN.*)$/;
+
+export function classify(type: string, name: string, overrides: Record<string, string> = {}, brand: string | null = null): CategoryKey {
   const t = type.trim().toUpperCase();
   const override = overrides[t];
   if (override && WEB_CATEGORY_KEYS.has(override)) return override;
-  const n = name.toUpperCase();
+  const key = classifyByRules(t, name.toUpperCase());
+  if ((key === 'skin' || key === 'other') && brand && ICE_CREAM_BRANDS.test(brand.trim().toUpperCase())) return 'ice_cream';
+  return key;
+}
+
+function classifyByRules(t: string, n: string): CategoryKey {
   if (!VAGUE_TYPES.has(t)) {
     for (const [key, re] of TYPE_RULES) if (re.test(t)) return key === 'dryfish' ? 'other' : key;
   }

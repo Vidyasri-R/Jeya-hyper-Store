@@ -45,7 +45,7 @@ function parse(text: string, s: CatalogImportSettings) {
 function fileClient(items: StockItem[], typeMap: Record<string, string>): PosCatalogClient {
   const used = new Set<string>();
   const records = items.map((i) => {
-    const key = classify(i.type, i.posName, typeMap);
+    const key = classify(i.type, i.posName, typeMap, i.brand);
     used.add(key);
     return {
       externalId: i.itemCode,
@@ -110,7 +110,7 @@ export const catalogImportService = {
     const otherTypes: Record<string, number> = {};
     const priceSamples: { name: string; from: string; to: string }[] = [];
     for (const i of file.items) {
-      const key = classify(i.type, i.posName, s.typeMap);
+      const key = classify(i.type, i.posName, s.typeMap, i.brand);
       if (i.isActive) byCategory[key] = (byCategory[key] ?? 0) + 1;
       if (key === 'other') otherTypes[i.type.trim().toUpperCase() || '(blank)'] = (otherTypes[i.type.trim().toUpperCase() || '(blank)'] ?? 0) + 1;
       const was = byCode.get(i.itemCode);
@@ -164,7 +164,7 @@ export const catalogImportService = {
         .onConflictDoUpdate({ target: productBarcodes.barcode, set: { productId: sql`excluded."product_id"` } });
     }
     // Photo work order: fast movers and daily needs first.
-    const prio = file.items.flatMap((i) => (idByCode.has(i.itemCode) ? [sql`(${idByCode.get(i.itemCode)!}::bigint, ${photoPriority(i, classify(i.type, i.posName, s.typeMap))}::int)`] : []));
+    const prio = file.items.flatMap((i) => (idByCode.has(i.itemCode) ? [sql`(${idByCode.get(i.itemCode)!}::bigint, ${photoPriority(i, classify(i.type, i.posName, s.typeMap, i.brand))}::int)`] : []));
     for (let k = 0; k < prio.length; k += 1000) {
       await db.execute(sql`UPDATE ${products} AS p SET photo_priority = v.prio FROM (VALUES ${sql.join(prio.slice(k, k + 1000), sql`, `)}) AS v(id, prio) WHERE p.id = v.id AND p.photo_priority IS DISTINCT FROM v.prio`);
     }

@@ -267,6 +267,8 @@ class AdminProduct {
   final String mrp;
   final String sellingPrice;
   final String available;
+  /// "MRP ₹45 · ₹42" (selling price only when lower) — helps find the exact pack on the shelf.
+  String get priceLabel => sellingPrice != mrp && sellingPrice.isNotEmpty ? 'MRP ${formatRupees(mrp)} · ${formatRupees(sellingPrice)}' : 'MRP ${formatRupees(mrp)}';
   final String? imageUrl;
   /// No photo yet: its category's general photo (from the server).
   final String? placeholderImageUrl;

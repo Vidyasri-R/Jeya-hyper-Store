@@ -115,7 +115,13 @@ class _MyPhotosScreenState extends ConsumerState<MyPhotosScreen> {
                   child: ListTile(
                     leading: ProductThumb(url: p.imageUrl, placeholderUrl: p.placeholderImageUrl),
                     title: Text(p.name, maxLines: 2, overflow: TextOverflow.ellipsis),
-                    subtitle: Text([if (p.brand != null) p.brand!, if (p.category != null) p.category!, 'Code ${p.itemCode}'].join(' · '), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(
+                        [p.priceLabel, if (p.packSize != null) p.packSize!].join(' · '),
+                        style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.green800),
+                      ),
+                      Text([if (p.brand != null) p.brand!, if (p.category != null) p.category!, 'Code ${p.itemCode}'].join(' · '), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ]),
                     trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                       IconButton(
                         tooltip: 'Copy name',

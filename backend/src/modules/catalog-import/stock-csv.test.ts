@@ -92,5 +92,8 @@ describe('names, pack sizes and categories', () => {
     expect(classify('DRYFISH', 'NETHILI')).toBe('other');
     expect(classify('DRYFISH', 'NETHILI', { DRYFISH: 'staples' })).toBe('staples');
     expect(classify('DRYFISH', 'NETHILI', { DRYFISH: 'not-a-category' })).toBe('other');
+    expect(classify('CREAM', 'ARUN MRP.10/-', {}, 'Arun')).toBe('ice_cream');
+    expect(classify('FACE CREAM', 'DAIRYDAY CONE', {}, 'Dairyday')).toBe('ice_cream');
+    expect(classify('FACE CREAM', 'PONDS 50G', {}, 'Ponds')).toBe('skin');
   });
 });
