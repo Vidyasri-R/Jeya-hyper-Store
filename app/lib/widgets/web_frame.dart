@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -9,6 +12,7 @@ import '../core/theme.dart';
 import '../data/models.dart';
 import '../router.dart';
 import '../state/providers.dart';
+import 'product_image.dart';
 
 /// Web shop on laptops and tablets: the two-row header above every page, the page centred at up
 /// to [kMaxContentWidth]. Inside, screens see the frame's width (MediaQuery), so width-based
@@ -180,35 +184,7 @@ class _WebHeaderState extends ConsumerState<WebHeader> {
                     ),
                   ),
                 const SizedBox(width: 18),
-                Expanded(
-                  child: SizedBox(
-                    height: 46,
-                    child: TextField(
-                      controller: _search,
-                      textInputAction: TextInputAction.search,
-                      onSubmitted: (_) => _submit(),
-                      decoration: InputDecoration(
-                        hintText: 'Search for products, brands or categories…',
-                        isDense: true,
-                        filled: true,
-                        fillColor: AppColors.bg,
-                        prefixIcon: const Icon(Icons.search_rounded, color: AppColors.inkMuted),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.line)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.line)),
-                        suffixIcon: Padding(
-                          padding: const EdgeInsets.all(3),
-                          child: IconButton.filled(
-                            onPressed: _submit,
-                            tooltip: 'Search',
-                            style: IconButton.styleFrom(backgroundColor: AppColors.brand700, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-                            icon: const Icon(Icons.search_rounded, color: Colors.white),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                Expanded(child: _SearchBox(controller: _search, onSubmit: _submit)),
                 const SizedBox(width: 18),
                 if (signedIn) iconLink(Icons.receipt_long_outlined, 'Orders', () => router.go('/orders')),
                 iconLink(Icons.person_outline_rounded, signedIn ? 'Account' : 'Sign in', () => signedIn ? router.go('/profile') : router.push('/login')),
@@ -267,6 +243,232 @@ class _Centered extends StatelessWidget {
           child: Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: child),
         ),
       );
+}
+
+/// Header search with suggestions as you type (like Amazon): products with their pictures, arrow
+/// keys to move, Enter to open the highlighted one (or search), Esc to close.
+class _SearchBox extends ConsumerStatefulWidget {
+  const _SearchBox({required this.controller, required this.onSubmit});
+  final TextEditingController controller;
+  final VoidCallback onSubmit;
+
+  @override
+  ConsumerState<_SearchBox> createState() => _SearchBoxState();
+}
+
+class _SearchBoxState extends ConsumerState<_SearchBox> {
+  final _link = LayerLink();
+  final _portal = OverlayPortalController();
+  final _focus = FocusNode();
+  Timer? _debounce;
+  List<Suggestion> _items = const [];
+  String _for = '';
+  int _highlight = -1;
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(() {
+      // Let a click on a suggestion land before the list closes.
+      if (!_focus.hasFocus) Future.delayed(const Duration(milliseconds: 150), () => mounted && !_focus.hasFocus ? _portal.hide() : null);
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  void _changed(String value) {
+    _debounce?.cancel();
+    final q = value.trim();
+    if (q.length < 2) {
+      setState(() => _items = const []);
+      _portal.hide();
+      return;
+    }
+    _debounce = Timer(const Duration(milliseconds: 180), () async {
+      try {
+        final found = await ref.read(repositoryProvider).suggest(q);
+        if (!mounted || widget.controller.text.trim() != q) return;
+        setState(() {
+          _items = found;
+          _for = q;
+          _highlight = -1;
+        });
+        if (_focus.hasFocus) _portal.show();
+      } catch (_) {
+        // Suggestions are a nicety; the search itself still works.
+      }
+    });
+  }
+
+  void _open(Suggestion s) {
+    _portal.hide();
+    _focus.unfocus();
+    ref.read(routerProvider).push('/product/${s.slug}');
+  }
+
+  void _search() {
+    _portal.hide();
+    if (_highlight >= 0 && _highlight < _items.length) return _open(_items[_highlight]);
+    widget.onSubmit();
+  }
+
+  KeyEventResult _key(FocusNode _, KeyEvent e) {
+    if (e is! KeyDownEvent || !_portal.isShowing) return KeyEventResult.ignored;
+    if (e.logicalKey == LogicalKeyboardKey.arrowDown) {
+      setState(() => _highlight = (_highlight + 1).clamp(0, _items.length));
+      return KeyEventResult.handled;
+    }
+    if (e.logicalKey == LogicalKeyboardKey.arrowUp) {
+      setState(() => _highlight = (_highlight - 1).clamp(-1, _items.length));
+      return KeyEventResult.handled;
+    }
+    if (e.logicalKey == LogicalKeyboardKey.escape) {
+      _portal.hide();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return CompositedTransformTarget(
+      link: _link,
+      child: OverlayPortal(
+        controller: _portal,
+        overlayChildBuilder: (context) => CompositedTransformFollower(
+          link: _link,
+          targetAnchor: Alignment.bottomLeft,
+          offset: const Offset(0, 6),
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: LayoutBuilder(builder: (context, _) {
+              final width = (_link.leaderSize?.width ?? 600);
+              return TapRegion(
+                groupId: _link,
+                child: Material(
+                  elevation: 8,
+                  borderRadius: BorderRadius.circular(12),
+                  color: AppColors.surface,
+                  clipBehavior: Clip.antiAlias,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: width, minWidth: width, maxHeight: 460),
+                    child: ListView(shrinkWrap: true, padding: const EdgeInsets.symmetric(vertical: 6), children: [
+                      for (final (i, s) in _items.indexed)
+                        InkWell(
+                          onTap: () => _open(s),
+                          child: Container(
+                            color: i == _highlight ? AppColors.brand50 : null,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            child: Row(children: [
+                              ProductImage(url: s.imageUrl, placeholderUrl: s.placeholderImageUrl, name: s.name, size: 40, radius: 8),
+                              const SizedBox(width: 12),
+                              Expanded(child: _Highlighted(text: s.name, query: _for, style: text.bodyMedium)),
+                              const Icon(Icons.north_east_rounded, size: 16, color: AppColors.inkFaint),
+                            ]),
+                          ),
+                        ),
+                      InkWell(
+                        onTap: () {
+                          _highlight = -1;
+                          _search();
+                        },
+                        child: Container(
+                          color: _highlight == _items.length ? AppColors.brand50 : null,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          child: Row(children: [
+                            Icon(Icons.search_rounded, color: AppColors.brand700),
+                            const SizedBox(width: 12),
+                            Expanded(child: Text('See all results for "$_for"', style: text.bodyMedium?.copyWith(color: AppColors.brand800, fontWeight: FontWeight.w700))),
+                          ]),
+                        ),
+                      ),
+                    ]),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+        child: TapRegion(
+          groupId: _link,
+          onTapOutside: (_) => _portal.hide(),
+          child: SizedBox(
+            height: 46,
+            child: Focus(
+              onKeyEvent: _key,
+              child: TextField(
+                controller: widget.controller,
+                focusNode: _focus,
+                textInputAction: TextInputAction.search,
+                onChanged: _changed,
+                onTap: () {
+                  if (_items.isNotEmpty && widget.controller.text.trim().length >= 2) _portal.show();
+                },
+                onSubmitted: (_) => _search(),
+                decoration: InputDecoration(
+                  hintText: 'Search for products, brands or categories…',
+                  isDense: true,
+                  filled: true,
+                  fillColor: AppColors.bg,
+                  prefixIcon: const Icon(Icons.search_rounded, color: AppColors.inkMuted),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.line)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.line)),
+                  suffixIcon: Padding(
+                    padding: const EdgeInsets.all(3),
+                    child: IconButton.filled(
+                      onPressed: _search,
+                      tooltip: 'Search',
+                      style: IconButton.styleFrom(backgroundColor: AppColors.brand700, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                      icon: const Icon(Icons.search_rounded, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The suggestion with the typed words in bold.
+class _Highlighted extends StatelessWidget {
+  const _Highlighted({required this.text, required this.query, this.style});
+  final String text;
+  final String query;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    final words = query.toLowerCase().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    final lower = text.toLowerCase();
+    final bold = List.filled(text.length, false);
+    for (final w in words) {
+      for (var i = lower.indexOf(w); i >= 0; i = lower.indexOf(w, i + 1)) {
+        for (var k = i; k < i + w.length && k < bold.length; k++) {
+          bold[k] = true;
+        }
+      }
+    }
+    final spans = <TextSpan>[];
+    for (var i = 0; i < text.length;) {
+      var j = i;
+      while (j < text.length && bold[j] == bold[i]) {
+        j++;
+      }
+      spans.add(TextSpan(text: text.substring(i, j), style: bold[i] ? const TextStyle(fontWeight: FontWeight.w800) : null));
+      i = j;
+    }
+    return Text.rich(TextSpan(children: spans), style: style, maxLines: 1, overflow: TextOverflow.ellipsis);
+  }
 }
 
 /// "All categories" menu, then as many top categories as fit; the rest under "More".

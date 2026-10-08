@@ -201,7 +201,10 @@ class _Rail extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(color: active ? Colors.white : v.bg, borderRadius: BorderRadius.circular(AppRadius.md)),
-                  child: Icon(v.icon, color: v.fg, size: 24),
+                  clipBehavior: Clip.antiAlias,
+                  child: c.tileImageUrl != null
+                      ? CategoryPicture(url: c.tileImageUrl!, padding: 2, fallback: Icon(v.icon, color: v.fg, size: 24))
+                      : Icon(v.icon, color: v.fg, size: 24),
                 ),
                 const SizedBox(height: 6),
                 Text(c.name,
@@ -239,7 +242,10 @@ class _Banner extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(children: [
-        Positioned(right: -10, bottom: -18, child: Icon(v.icon, size: 130, color: v.fg.withValues(alpha: 0.16))),
+        if (category.tileImageUrl != null)
+          Positioned(right: 8, top: 8, bottom: 8, width: 100, child: CategoryPicture(url: category.tileImageUrl!, fallback: const SizedBox.shrink()))
+        else
+          Positioned(right: -10, bottom: -18, child: Icon(v.icon, size: 130, color: v.fg.withValues(alpha: 0.16))),
         Padding(
           padding: const EdgeInsets.all(14),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [

@@ -159,11 +159,14 @@ class CategoryRef {
 }
 
 class Category {
-  Category({required this.id, required this.name, required this.slug, this.imageUrl, required this.productCount, required this.children});
+  Category({required this.id, required this.name, required this.slug, this.imageUrl, this.tileImageUrl, required this.productCount, required this.children});
   final int id;
   final String name;
   final String slug;
+  /// Stand-in photo for the category's products that have no photo yet.
   final String? imageUrl;
+  /// The category's own picture on tiles (set by the store); null = the drawn icon.
+  final String? tileImageUrl;
   final int productCount;
   final List<Category> children;
 
@@ -172,6 +175,7 @@ class Category {
         name: _str(j['name']),
         slug: _str(j['slug']),
         imageUrl: _opt<String>(j['imageUrl']),
+        tileImageUrl: _opt<String>(j['tileImageUrl']),
         productCount: _opt<int>(j['productCount']) ?? 0,
         children: _list(j['children']).map(Category.fromJson).toList(),
       );

@@ -96,6 +96,7 @@ export const catalogRepository = {
         slug: categories.slug,
         parentId: categories.parentId,
         imageUrl: categories.imageUrl,
+        tileImageUrl: categories.tileImageUrl,
         sortOrder: categories.sortOrder,
       })
       .from(categories)

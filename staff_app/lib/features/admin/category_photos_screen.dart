@@ -22,6 +22,9 @@ class _CategoryPhotosScreenState extends ConsumerState<CategoryPhotosScreen> {
   List<Map<String, dynamic>>? _categories;
   String? _error;
   int? _busyId;
+  /// true: the category's own picture on the shop's tiles; false: stand-in photo for its products.
+  bool _tiles = true;
+  String get _field => _tiles ? 'tileImageUrl' : 'imageUrl';
 
   @override
   void initState() {
@@ -40,7 +43,7 @@ class _CategoryPhotosScreenState extends ConsumerState<CategoryPhotosScreen> {
 
   Future<void> _change(Map<String, dynamic> c) async {
     final id = (c['id'] as num).toInt();
-    final hasPhoto = c['imageUrl'] != null;
+    final hasPhoto = c[_field] != null;
     final action = await showModalBottomSheet<String>(
       context: context,
       builder: (context) => SafeArea(
@@ -51,7 +54,7 @@ class _CategoryPhotosScreenState extends ConsumerState<CategoryPhotosScreen> {
           if (hasPhoto)
             ListTile(
               leading: const Icon(Icons.delete_outline_rounded, color: AppColors.offerRed),
-              title: const Text('Remove photo (show the icon instead)', style: TextStyle(color: AppColors.offerRed)),
+              title: Text(_tiles ? 'Remove picture (show the icon instead)' : 'Remove stand-in photo', style: const TextStyle(color: AppColors.offerRed)),
               onTap: () => Navigator.pop(context, 'remove'),
             ),
         ]),
@@ -62,7 +65,7 @@ class _CategoryPhotosScreenState extends ConsumerState<CategoryPhotosScreen> {
     if (action == 'remove') {
       setState(() => _busyId = id);
       final ok = await guard(context, () async {
-        await repo.removeCategoryPhoto(id);
+        _tiles ? await repo.removeCategoryTile(id) : await repo.removeCategoryPhoto(id);
         return true;
       });
       if (mounted) setState(() => _busyId = null);
@@ -76,7 +79,7 @@ class _CategoryPhotosScreenState extends ConsumerState<CategoryPhotosScreen> {
     if (!mounted) return;
     if (type == null) return showSnack(context, 'Use a JPG, PNG or WebP picture', error: true);
     setState(() => _busyId = id);
-    final url = await guard(context, () => repo.uploadCategoryPhoto(id, bytes, type));
+    final url = await guard(context, () => _tiles ? repo.uploadCategoryTile(id, bytes, type) : repo.uploadCategoryPhoto(id, bytes, type));
     if (!mounted) return;
     setState(() => _busyId = null);
     if (url != null) {
@@ -97,13 +100,27 @@ class _CategoryPhotosScreenState extends ConsumerState<CategoryPhotosScreen> {
           : RefreshIndicator(
               onRefresh: _load,
               child: ListView(padding: const EdgeInsets.all(16), children: [
-                Text('Products without their own photo show their category\'s photo until a real one is added. Tap a category to change it — use a clear photo of that kind of product, with no brand names or logos.', style: text.bodySmall),
+                SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment(value: true, label: Text('Category pictures'), icon: Icon(Icons.grid_view_rounded)),
+                    ButtonSegment(value: false, label: Text('Product stand-ins'), icon: Icon(Icons.image_outlined)),
+                  ],
+                  selected: {_tiles},
+                  onSelectionChanged: (v) => setState(() => _tiles = v.first),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _tiles
+                      ? 'The picture customers see on a category\'s tile (main categories and sub-categories). Without one, the shop shows its drawn icon. Tap a category to set it.'
+                      : 'Products without their own photo show their category\'s photo until a real one is added. Use a clear photo of that kind of product, with no brand names or logos.',
+                  style: text.bodySmall,
+                ),
                 const SizedBox(height: 12),
                 for (final p in parents) ...[
                   Padding(padding: const EdgeInsets.fromLTRB(0, 12, 0, 8), child: Text(p['name'] as String, style: text.titleMedium)),
                   Wrap(spacing: 10, runSpacing: 10, children: [
-                    _Tile(category: p, busy: _busyId == p['id'], onTap: () => _change(p)),
-                    for (final c in all.where((c) => c['parentId'] == p['id'])) _Tile(category: c, busy: _busyId == c['id'], onTap: () => _change(c)),
+                    _Tile(category: p, field: _field, busy: _busyId == p['id'], onTap: () => _change(p)),
+                    for (final c in all.where((c) => c['parentId'] == p['id'])) _Tile(category: c, field: _field, busy: _busyId == c['id'], onTap: () => _change(c)),
                   ]),
                 ],
               ]),
@@ -113,15 +130,16 @@ class _CategoryPhotosScreenState extends ConsumerState<CategoryPhotosScreen> {
 }
 
 class _Tile extends StatelessWidget {
-  const _Tile({required this.category, required this.busy, required this.onTap});
+  const _Tile({required this.category, required this.field, required this.busy, required this.onTap});
   final Map<String, dynamic> category;
+  final String field;
   final bool busy;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final url = category['imageUrl'] as String?;
+    final url = category[field] as String?;
     return InkWell(
       onTap: busy ? null : onTap,
       borderRadius: BorderRadius.circular(12),

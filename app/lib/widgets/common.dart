@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
@@ -226,7 +227,21 @@ double productRailCardWidth(BuildContext context) {
   return (icon: Icons.storefront_rounded, bg: AppColors.brand50, fg: AppColors.brand700);
 }
 
-/// Round-cornered category tile with icon (or photo when available) + label.
+/// A category's own picture (Admin → Category photos → Category pictures), shown whole on its tile.
+class CategoryPicture extends StatelessWidget {
+  const CategoryPicture({super.key, required this.url, required this.fallback, this.padding = 4});
+  final String url;
+  final Widget fallback;
+  final double padding;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: EdgeInsets.all(padding),
+        child: CachedNetworkImage(imageUrl: url, fit: BoxFit.contain, fadeInDuration: const Duration(milliseconds: 150), placeholder: (_, _) => const SizedBox.shrink(), errorWidget: (_, _, _) => fallback),
+      );
+}
+
+/// Round-cornered category tile with icon (or the store's picture for it) + label.
 class CategoryTile extends StatelessWidget {
   const CategoryTile({super.key, required this.name, this.imageUrl, required this.onTap, this.size = 64});
   final String name;
@@ -248,7 +263,8 @@ class CategoryTile extends StatelessWidget {
               width: size,
               height: size,
               decoration: BoxDecoration(color: v.bg, borderRadius: BorderRadius.circular(AppRadius.lg)),
-              child: Icon(v.icon, color: v.fg, size: size * 0.48),
+              clipBehavior: Clip.antiAlias,
+              child: imageUrl != null ? CategoryPicture(url: imageUrl!, fallback: Icon(v.icon, color: v.fg, size: size * 0.48)) : Icon(v.icon, color: v.fg, size: size * 0.48),
             ),
             const SizedBox(height: 6),
             Text(name, maxLines: 2, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis,

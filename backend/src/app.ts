@@ -41,7 +41,7 @@ export function createApp(): Express {
   // before the apps' own 25 s timeout, which they would otherwise report as "no internet".
   app.use((req, res, next) => {
     // Uploads take longer: photos (resize + R2) and the daily stock file (~9,000 products, ~20-40 s).
-    const slow = req.path.endsWith('/image') || req.path.endsWith('/catalog/import');
+    const slow = req.path.endsWith('image') || req.path.endsWith('/catalog/import');
     res.setTimeout(slow ? 120_000 : 20_000, () => {
       if (res.headersSent) return;
       req.log.error({ path: req.path }, 'request timed out');

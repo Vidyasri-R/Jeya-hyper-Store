@@ -121,7 +121,7 @@ class _QuickCategories extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (final c in top)
-            Expanded(child: CategoryTile(name: c.name, imageUrl: c.imageUrl, size: 56, onTap: () => context.go('/categories?c=${c.slug}'))),
+            Expanded(child: CategoryTile(name: c.name, imageUrl: c.tileImageUrl, size: 56, onTap: () => context.go('/categories?c=${c.slug}'))),
           Expanded(
             child: InkWell(
               onTap: () => context.go('/categories'),
@@ -345,7 +345,7 @@ class _ShopByCategory extends StatelessWidget {
             separatorBuilder: (_, _) => const SizedBox(width: 4),
             itemBuilder: (_, i) => CategoryTile(
               name: leaves[i].name,
-              imageUrl: leaves[i].imageUrl,
+              imageUrl: leaves[i].tileImageUrl,
               onTap: () => context.go('/categories?c=${leaves[i].slug}'),
             ),
           ),

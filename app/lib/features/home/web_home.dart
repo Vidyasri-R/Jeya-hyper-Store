@@ -361,7 +361,9 @@ class _CategoryCirclesState extends State<_CategoryCircles> {
                       decoration: BoxDecoration(shape: BoxShape.circle, color: v.bg, border: Border.all(color: AppColors.line)),
                       clipBehavior: Clip.antiAlias,
                       // Drawn category art (category photos are only stand-ins for products without one).
-                      child: categoryArt(c.name) != null ? Padding(padding: const EdgeInsets.all(8), child: Image.asset(categoryArt(c.name)!, fit: BoxFit.contain)) : Icon(v.icon, color: v.fg, size: 40),
+                      child: c.tileImageUrl != null
+                          ? CategoryPicture(url: c.tileImageUrl!, padding: 10, fallback: Icon(v.icon, color: v.fg, size: 40))
+                          : (categoryArt(c.name) != null ? Padding(padding: const EdgeInsets.all(8), child: Image.asset(categoryArt(c.name)!, fit: BoxFit.contain)) : Icon(v.icon, color: v.fg, size: 40)),
                     ),
                     const SizedBox(height: 8),
                     Text(c.name, maxLines: 2, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: text.labelMedium?.copyWith(fontWeight: FontWeight.w600)),
@@ -516,7 +518,9 @@ class _CategoryArt extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(color: v.bg, borderRadius: BorderRadius.circular(16)),
       clipBehavior: Clip.antiAlias,
-      child: categoryArt(category.name) != null ? Image.asset(categoryArt(category.name)!, fit: BoxFit.contain) : Icon(v.icon, color: v.fg, size: size * 0.48),
+      child: category.tileImageUrl != null
+          ? CategoryPicture(url: category.tileImageUrl!, fallback: Icon(v.icon, color: v.fg, size: size * 0.48))
+          : (categoryArt(category.name) != null ? Image.asset(categoryArt(category.name)!, fit: BoxFit.contain) : Icon(v.icon, color: v.fg, size: size * 0.48)),
     );
   }
 }

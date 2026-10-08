@@ -18,6 +18,8 @@ export type CategoryNode = {
   name: string;
   slug: string;
   imageUrl: string | null;
+  /** Admin-set picture for the category tile (else the app draws its icon). */
+  tileImageUrl: string | null;
   productCount: number;
   children: CategoryNode[];
 };
@@ -72,6 +74,7 @@ function buildIndex(
       name: row.name,
       slug: row.slug,
       imageUrl: row.imageUrl,
+      tileImageUrl: row.tileImageUrl,
       productCount: ownCount.get(row.id) ?? 0,
       children: [],
     });

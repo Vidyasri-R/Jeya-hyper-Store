@@ -5,6 +5,9 @@ import '../core/api/token_store.dart';
 import 'models.dart';
 
 /// Every call the staff app makes (see backend/docs/staff-api.md).
+/// A home list for the admin: [pinned] extras (shown first), [automatic] products, [hidden] ones.
+typedef HomeList = ({List<AdminProduct> pinned, List<AdminProduct> automatic, List<AdminProduct> hidden});
+
 class StaffRepository {
   StaffRepository(this._api, this._tokens);
 
@@ -231,17 +234,27 @@ class StaffRepository {
 
   Future<void> removeCategoryPhoto(int id) => _api.delete('/admin/categories/$id/image');
 
+  /// The category's own picture on the shop's tiles (main and sub-categories).
+  Future<String> uploadCategoryTile(int id, Uint8List bytes, String contentType) async =>
+      (await _api.putBytes('/admin/categories/$id/tile-image', bytes, contentType))['imageUrl'] as String;
+
+  Future<void> removeCategoryTile(int id) => _api.delete('/admin/categories/$id/tile-image');
+
   /// The products picked for "Today's offers" and "Popular in your store", in order.
-  /// The picked lists, and what the shop shows automatically when a list is empty.
-  Future<({List<AdminProduct> offers, List<AdminProduct> popular, List<AdminProduct> autoOffers, List<AdminProduct> autoPopular})> homeLists() async {
+  /// Each home list as customers see it: pinned extras, the automatic products, and hidden ones.
+  Future<({HomeList offers, HomeList popular})> homeLists() async {
     final body = await _api.get('/admin/home-lists');
-    final auto = Map<String, dynamic>.from((body['automatic'] as Map?) ?? const {});
-    List<AdminProduct> list(Map<String, dynamic> from, String key) => [for (final p in (from[key] as List? ?? const [])) AdminProduct.fromJson(Map<String, dynamic>.from(p as Map))];
-    return (offers: list(body, 'offers'), popular: list(body, 'popular'), autoOffers: list(auto, 'offers'), autoPopular: list(auto, 'popular'));
+    HomeList list(String key) {
+      final m = Map<String, dynamic>.from(body[key] as Map);
+      List<AdminProduct> of(String k) => [for (final p in (m[k] as List? ?? const [])) AdminProduct.fromJson(Map<String, dynamic>.from(p as Map))];
+      return (pinned: of('pinned'), automatic: of('automatic'), hidden: of('hidden'));
+    }
+
+    return (offers: list('offers'), popular: list('popular'));
   }
 
-  Future<void> saveHomeLists({required List<int> offers, required List<int> popular}) async =>
-      saveSetting('home.lists', {'offers': offers, 'popular': popular});
+  Future<void> saveHomeLists({required List<int> offers, required List<int> popular, required List<int> hiddenOffers, required List<int> hiddenPopular}) async =>
+      saveSetting('home.lists', {'offers': offers, 'popular': popular, 'hiddenOffers': hiddenOffers, 'hiddenPopular': hiddenPopular});
 
   Future<String> uploadBannerImage(Uint8List bytes, String contentType) async =>
       (await _api.putBytes('/admin/banners/image', bytes, contentType))['imageUrl'] as String;

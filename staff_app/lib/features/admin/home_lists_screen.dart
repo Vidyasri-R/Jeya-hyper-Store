@@ -7,12 +7,12 @@ import '../../core/api/api_client.dart';
 import '../../core/money.dart';
 import '../../core/theme.dart';
 import '../../data/models.dart';
+import '../../data/repository.dart';
 import '../../state/providers.dart';
 import '../../widgets/common.dart';
 
-/// Admin → Home: offers & popular. The products customers see under "Today's offers" and
-/// "Popular in your store" on the app and website home, in this order. An empty list shows the
-/// automatic one (biggest discounts / fast movers). Every change is saved straight away.
+/// Admin → Home: offers & popular. The automatic lists always run (biggest discounts / fast movers);
+/// the admin adds extra products, shown first in their order, and hides automatic ones they don't want.
 class HomeListsScreen extends ConsumerStatefulWidget {
   const HomeListsScreen({super.key});
 
@@ -21,14 +21,10 @@ class HomeListsScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeListsScreenState extends ConsumerState<HomeListsScreen> {
-  List<AdminProduct>? _offers;
-  List<AdminProduct>? _popular;
+  HomeList? _offers;
+  HomeList? _popular;
   String? _error;
   bool _saving = false;
-
-  static const _max = {0: 100, 1: 100};
-  List<AdminProduct> _autoOffers = const [];
-  List<AdminProduct> _autoPopular = const [];
 
   @override
   void initState() {
@@ -43,8 +39,7 @@ class _HomeListsScreenState extends ConsumerState<HomeListsScreen> {
         setState(() {
           _offers = lists.offers;
           _popular = lists.popular;
-          _autoOffers = lists.autoOffers;
-          _autoPopular = lists.autoPopular;
+          _error = null;
         });
       }
     } on ApiException catch (e) {
@@ -52,35 +47,35 @@ class _HomeListsScreenState extends ConsumerState<HomeListsScreen> {
     }
   }
 
-  List<AdminProduct> _list(int tab) => tab == 0 ? _offers! : _popular!;
-
   Future<void> _save() async {
     setState(() => _saving = true);
-    await guard(context, () async {
-      await ref.read(repositoryProvider).saveHomeLists(offers: [for (final p in _offers!) p.id], popular: [for (final p in _popular!) p.id]);
+    final ok = await guard(context, () async {
+      await ref.read(repositoryProvider).saveHomeLists(
+            offers: [for (final p in _offers!.pinned) p.id],
+            popular: [for (final p in _popular!.pinned) p.id],
+            hiddenOffers: [for (final p in _offers!.hidden) p.id],
+            hiddenPopular: [for (final p in _popular!.hidden) p.id],
+          );
       return true;
     });
-    if (mounted) setState(() => _saving = false);
+    if (!mounted) return;
+    setState(() => _saving = false);
+    // The automatic part changes when something is pinned / hidden: reload what customers see.
+    if (ok == true) await _load();
   }
 
-  /// Start a picked list from what the shop shows now, then remove / add / reorder.
-  Future<void> _customise(List<AdminProduct> list, List<AdminProduct> automatic) async {
-    if (automatic.isEmpty) return;
-    setState(() => list.addAll(automatic));
-    await _save();
-    if (mounted) showSnack(context, 'Now your own list — remove, add or drag to reorder');
-  }
-
-  Future<void> _add(int tab) async {
-    final list = _list(tab);
-    if (list.length >= _max[tab]!) return showSnack(context, 'This list is full (${_max[tab]} products). Remove one first.', error: true);
+  Future<void> _add(HomeList list) async {
+    if (list.pinned.length >= 100) return showSnack(context, 'Up to 100 extra products. Remove one first.', error: true);
     final picked = await showModalBottomSheet<AdminProduct>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _ProductSearchSheet(exclude: {for (final p in list) p.id}),
+      builder: (_) => _ProductSearchSheet(exclude: {for (final p in list.pinned) p.id}),
     );
     if (picked == null || !mounted) return;
-    setState(() => list.add(picked));
+    setState(() {
+      list.pinned.add(picked);
+      list.hidden.removeWhere((p) => p.id == picked.id);
+    });
     await _save();
   }
 
@@ -94,14 +89,11 @@ class _HomeListsScreenState extends ConsumerState<HomeListsScreen> {
           appBar: AppBar(
             title: const Text('Home: offers & popular'),
             actions: [if (_saving) const Padding(padding: EdgeInsets.all(16), child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))],
-            bottom: TabBar(tabs: [
-              Tab(text: "Today's offers${loaded ? ' (${_offers!.length})' : ''}"),
-              Tab(text: 'Popular${loaded ? ' (${_popular!.length})' : ''}'),
-            ]),
+            bottom: const TabBar(tabs: [Tab(text: "Today's offers"), Tab(text: 'Popular')]),
           ),
           floatingActionButton: loaded
               ? FloatingActionButton.extended(
-                  onPressed: () => _add(DefaultTabController.of(context).index),
+                  onPressed: () => _add(DefaultTabController.of(context).index == 0 ? _offers! : _popular!),
                   icon: const Icon(Icons.add_rounded),
                   label: const Text('Add product'),
                 )
@@ -110,24 +102,14 @@ class _HomeListsScreenState extends ConsumerState<HomeListsScreen> {
               ? (_error != null ? ErrorView(message: _error!, onRetry: _load) : const Center(child: CircularProgressIndicator()))
               : TabBarView(children: [
                   _ListTab(
-                    items: _offers!,
-                    automatic: _autoOffers,
-                    rule: 'In stock and below MRP, biggest discount first (then "Show first" and fast-moving products). Top 12, one per product.',
-                    onCustomise: () => _customise(_offers!, _autoOffers),
-                    onChanged: () {
-                      setState(() {});
-                      _save();
-                    },
+                    list: _offers!,
+                    rule: 'Automatic: in stock and below MRP, biggest discount first (then "Show first" and fast-moving products). Top 12, one per product.',
+                    onChanged: _save,
                   ),
                   _ListTab(
-                    items: _popular!,
-                    automatic: _autoPopular,
-                    rule: 'In stock: "Show first" products, then the fastest movers (restocked most often and most recently, daily needs first). Top 20, one per product.',
-                    onCustomise: () => _customise(_popular!, _autoPopular),
-                    onChanged: () {
-                      setState(() {});
-                      _save();
-                    },
+                    list: _popular!,
+                    rule: 'Automatic: in stock, "Show first" products, then the fastest movers (restocked most often and most recently, daily needs first). Top 20, one per product.',
+                    onChanged: _save,
                   ),
                 ]),
         );
@@ -137,92 +119,106 @@ class _HomeListsScreenState extends ConsumerState<HomeListsScreen> {
 }
 
 class _ListTab extends StatelessWidget {
-  const _ListTab({required this.items, required this.automatic, required this.rule, required this.onCustomise, required this.onChanged});
-  final List<AdminProduct> items;
-  /// What customers see while [items] is empty.
-  final List<AdminProduct> automatic;
+  const _ListTab({required this.list, required this.rule, required this.onChanged});
+  final HomeList list;
   final String rule;
-  final VoidCallback onCustomise;
-  final VoidCallback onChanged;
+  final Future<void> Function() onChanged;
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    if (items.isEmpty) {
-      return ListView(padding: const EdgeInsets.fromLTRB(12, 12, 12, 96), children: [
-        SectionCard(
-          color: AppColors.green50,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              const Icon(Icons.auto_awesome_outlined, color: AppColors.green700),
-              const SizedBox(width: 8),
-              Expanded(child: Text('Automatic — customers see these ${automatic.length} now', style: text.titleSmall)),
-            ]),
-            const SizedBox(height: 4),
-            Text(rule, style: text.bodySmall),
-            const SizedBox(height: 10),
-            FilledButton.icon(
-              onPressed: automatic.isEmpty ? null : onCustomise,
-              icon: const Icon(Icons.edit_note_rounded),
-              label: const Text('Customise this list'),
-            ),
-            const SizedBox(height: 4),
-            Text('Copies these into your own list so you can remove, add (up to 100) and reorder. Remove all to go back to automatic.', style: text.bodySmall),
-          ]),
-        ),
-        const SizedBox(height: 8),
-        for (final p in automatic)
-          Card(
-            margin: const EdgeInsets.only(bottom: 6),
-            child: ListTile(
-              dense: true,
-              leading: ProductThumb(url: p.imageUrl, placeholderUrl: p.placeholderImageUrl),
-              title: Text(p.name, maxLines: 2, overflow: TextOverflow.ellipsis),
-              subtitle: Text(p.priceLabel, style: text.bodySmall),
-            ),
-          ),
-      ]);
-    }
-    return ReorderableListView.builder(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 96),
-      header: Padding(
-        padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-        child: Text('Customers see these in this order. Drag ☰ to reorder. Sold-out products are skipped until they are back.', style: text.bodySmall),
-      ),
-      itemCount: items.length,
-      onReorder: (from, to) {
-        final p = items.removeAt(from);
-        items.insert(to > from ? to - 1 : to, p);
-        onChanged();
-      },
-      itemBuilder: (context, i) {
-        final p = items[i];
-        final hidden = !p.isActive || (double.tryParse(p.available) ?? 0) <= 0;
-        return Card(
-          key: ValueKey(p.id),
-          margin: const EdgeInsets.only(bottom: 8),
+    Widget row(AdminProduct p, {required Widget trailing, Color? tint}) => Card(
+          key: ValueKey('${p.id}-${tint?.toARGB32()}'),
+          color: tint,
+          margin: const EdgeInsets.only(bottom: 6),
           child: ListTile(
+            dense: true,
             leading: ProductThumb(url: p.imageUrl, placeholderUrl: p.placeholderImageUrl),
             title: Text(p.name, maxLines: 2, overflow: TextOverflow.ellipsis),
             subtitle: Text(
-              hidden ? 'Not shown now — out of stock' : '${formatRupees(p.sellingPrice)}${p.mrp != p.sellingPrice ? '  (MRP ${formatRupees(p.mrp)})' : ''}',
-              style: hidden ? text.bodySmall?.copyWith(color: AppColors.offerRed) : text.bodySmall,
+              !p.isActive || (double.tryParse(p.available) ?? 0) <= 0
+                  ? 'Not shown now — out of stock'
+                  : '${formatRupees(p.sellingPrice)}${p.mrp != p.sellingPrice ? '  (MRP ${formatRupees(p.mrp)})' : ''}',
+              style: text.bodySmall,
             ),
-            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-              IconButton(
-                tooltip: 'Remove',
-                icon: const Icon(Icons.close_rounded),
-                onPressed: () {
-                  items.removeAt(i);
-                  onChanged();
-                },
-              ),
-              ReorderableDragStartListener(index: i, child: const Icon(Icons.drag_handle_rounded)),
-            ]),
+            trailing: trailing,
           ),
         );
-      },
-    );
+    return ListView(padding: const EdgeInsets.fromLTRB(12, 12, 12, 96), children: [
+      Text('Customers see your extra products first, then the automatic ones. Hide any automatic product you don\'t want; the list fills up with the next one.', style: text.bodySmall),
+      const SizedBox(height: 12),
+      Text('Your extra products (${list.pinned.length})', style: text.titleSmall),
+      const SizedBox(height: 4),
+      if (list.pinned.isEmpty) Text('None — tap Add product to put a product here.', style: text.bodySmall),
+      if (list.pinned.isNotEmpty)
+        ReorderableListView(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          buildDefaultDragHandles: false,
+          onReorder: (from, to) {
+            final p = list.pinned.removeAt(from);
+            list.pinned.insert(to > from ? to - 1 : to, p);
+            onChanged();
+          },
+          children: [
+            for (final (i, p) in list.pinned.indexed)
+              row(
+                p,
+                tint: AppColors.green50,
+                trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                  IconButton(
+                    tooltip: 'Remove',
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () {
+                      list.pinned.removeAt(i);
+                      onChanged();
+                    },
+                  ),
+                  ReorderableDragStartListener(index: i, child: const Icon(Icons.drag_handle_rounded)),
+                ]),
+              ),
+          ],
+        ),
+      const SizedBox(height: 14),
+      Row(children: [
+        const Icon(Icons.auto_awesome_outlined, size: 18, color: AppColors.green700),
+        const SizedBox(width: 6),
+        Expanded(child: Text('Automatic (${list.automatic.length})', style: text.titleSmall)),
+      ]),
+      Text(rule, style: text.bodySmall),
+      const SizedBox(height: 6),
+      for (final p in list.automatic)
+        row(
+          p,
+          trailing: TextButton.icon(
+            icon: const Icon(Icons.visibility_off_outlined, size: 18),
+            label: const Text('Hide'),
+            onPressed: () {
+              list.hidden.add(p);
+              list.automatic.remove(p);
+              onChanged();
+            },
+          ),
+        ),
+      if (list.hidden.isNotEmpty) ...[
+        const SizedBox(height: 14),
+        Text('Hidden from the automatic list (${list.hidden.length})', style: text.titleSmall),
+        const SizedBox(height: 4),
+        for (final p in list.hidden)
+          row(
+            p,
+            tint: AppColors.bg,
+            trailing: TextButton.icon(
+              icon: const Icon(Icons.visibility_outlined, size: 18),
+              label: const Text('Show again'),
+              onPressed: () {
+                list.hidden.remove(p);
+                onChanged();
+              },
+            ),
+          ),
+      ],
+    ]);
   }
 }
 

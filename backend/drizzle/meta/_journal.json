@@ -113,6 +113,13 @@
       "when": 1791439564430,
       "tag": "0015_photo_check",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1791481357935,
+      "tag": "0016_category_tile_image",
+      "breakpoints": true
     }
   ]
 }

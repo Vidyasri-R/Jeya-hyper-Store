@@ -262,7 +262,15 @@ class _Results extends ConsumerWidget {
                     ]),
                 ]),
                 ])),
-                if (categoryArt(active.name) ?? categoryArt(root.name) case final art?)
+                if (active.tileImageUrl ?? root.tileImageUrl case final picture?)
+                  Container(
+                    width: 150,
+                    height: 130,
+                    margin: const EdgeInsets.only(left: 16),
+                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.92), borderRadius: BorderRadius.circular(16)),
+                    child: CategoryPicture(url: picture, padding: 6, fallback: const SizedBox.shrink()),
+                  )
+                else if (categoryArt(active.name) ?? categoryArt(root.name) case final art?)
                   Container(
                     width: 150,
                     height: 130,

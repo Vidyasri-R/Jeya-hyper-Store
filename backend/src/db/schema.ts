@@ -308,7 +308,10 @@ export const categories = pgTable(
     name: varchar({ length: 150 }).notNull(),
     slug: varchar({ length: 170 }).notNull(),
     parentId: integer().references((): AnyPgColumn => categories.id, { onDelete: 'set null' }),
+    /** General photo of the category — the stand-in for its products that have no photo yet. */
     imageUrl: text(),
+    /** The category's own picture on the shop's category tiles (set by the admin); null = the drawn icon. */
+    tileImageUrl: text(),
     sortOrder: integer().notNull().default(0),
     isActive: boolean().notNull().default(true),
     ...timestamps,

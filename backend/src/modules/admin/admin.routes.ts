@@ -169,6 +169,21 @@ adminRouter.delete('/categories/:id/image', async (req, res) => {
   res.status(204).end();
 });
 
+/** The category's own picture on the shop's tiles (main categories and sub-categories). */
+adminRouter.put('/categories/:id/tile-image', uploadLimiter, express.raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: '8mb' }), async (req, res) => {
+  const { id } = parseParams(productParams, req);
+  if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+    throw new AppError('BAD_REQUEST', 'Send the picture as the request body (JPG, PNG or WebP)', { reason: 'image_missing' });
+  }
+  res.json(await adminCategoriesService.setImage(id, req.body, 'tile'));
+});
+
+adminRouter.delete('/categories/:id/tile-image', async (req, res) => {
+  const { id } = parseParams(productParams, req);
+  await adminCategoriesService.removeImage(id, 'tile');
+  res.status(204).end();
+});
+
 /** The chosen products with details; saved with PUT /settings/home.lists {offers: ids, popular: ids}. */
 adminRouter.get('/home-lists', async (_req, res) => {
   res.json(await adminCategoriesService.homeLists());

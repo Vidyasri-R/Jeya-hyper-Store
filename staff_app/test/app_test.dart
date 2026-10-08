@@ -102,11 +102,9 @@ class FakeRepo extends StaffRepository {
   );
 
   @override
-  Future<({List<AdminProduct> offers, List<AdminProduct> popular, List<AdminProduct> autoOffers, List<AdminProduct> autoPopular})> homeLists() async => (
-    offers: [product(1, 'Aashirvaad Atta 1kg'), product(2, 'Bru 100g', available: '0')],
-    popular: <AdminProduct>[],
-    autoOffers: <AdminProduct>[],
-    autoPopular: [product(7, 'Malli 100 GM'), product(8, 'Taj Mahal Tea Bags 25N')],
+  Future<({HomeList offers, HomeList popular})> homeLists() async => (
+    offers: (pinned: [product(1, 'Aashirvaad Atta 1kg'), product(2, 'Bru 100g', available: '0')], automatic: [product(5, 'Revlon Facewash 100g')], hidden: <AdminProduct>[]),
+    popular: (pinned: <AdminProduct>[], automatic: [product(7, 'Malli 100 GM'), product(8, 'Taj Mahal Tea Bags 25N')], hidden: <AdminProduct>[]),
   );
 
   @override
@@ -307,28 +305,32 @@ void main() {
     expect(find.text('50 products given to Priya'), findsOneWidget);
   });
 
-  testWidgets('admin picks Today\'s offers: sold-out ones are flagged, added products are saved in order', (tester) async {
+  testWidgets('home lists: automatic keeps running; admin adds extras and hides automatic ones', (tester) async {
     final repo = FakeRepo(orderAt('placed'));
     await pumpApp(tester, repo, at: '/more/home-lists');
     expect(find.text('Aashirvaad Atta 1kg'), findsOneWidget);
     expect(find.text('Not shown now — out of stock'), findsOneWidget);
+    expect(find.text('Revlon Facewash 100g'), findsOneWidget);
+    // Hide an automatic product.
+    await tester.tap(find.text('Hide'));
+    await tester.pumpAndSettle();
+    expect(repo.calls.last, {
+      'call': 'saveSetting',
+      'key': 'home.lists',
+      'value': {'offers': [1, 2], 'popular': <int>[], 'hiddenOffers': [5], 'hiddenPopular': <int>[]},
+    });
+    // Add an extra product.
     await tester.tap(find.text('Add product'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'gold');
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
-    expect(find.text('Already in the list'), findsOneWidget);
     await tester.tap(find.text('Gold Winner Oil 1L'));
     await tester.pumpAndSettle();
-    expect(repo.calls.last, {'call': 'saveSetting', 'key': 'home.lists', 'value': {'offers': [1, 2, 3], 'popular': <int>[]}});
-    await tester.tap(find.text('Popular (0)'));
+    expect((repo.calls.last['value'] as Map)['offers'], [1, 2, 3]);
+    await tester.tap(find.text('Popular'));
     await tester.pumpAndSettle();
-    expect(find.text('Automatic — customers see these 2 now'), findsOneWidget);
     expect(find.text('Taj Mahal Tea Bags 25N'), findsOneWidget);
-    await tester.tap(find.text('Customise this list'));
-    await tester.pumpAndSettle();
-    expect(repo.calls.last, {'call': 'saveSetting', 'key': 'home.lists', 'value': {'offers': [1, 2, 3], 'popular': [7, 8]}});
-    expect(find.text('Popular (2)'), findsOneWidget);
   });
 
   testWidgets('admin lists the designs of one POS item; every size gets them', (tester) async {
