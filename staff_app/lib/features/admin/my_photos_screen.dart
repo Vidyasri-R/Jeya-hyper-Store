@@ -55,10 +55,25 @@ class _MyPhotosScreenState extends ConsumerState<MyPhotosScreen> {
     }
   }
 
+  /// Opens [p]; "Next product" / Enter goes straight on to the one after it in the list.
   Future<void> _open(AdminProduct p) async {
     final isAdmin = ref.read(currentStaffProvider)?.isAdmin ?? false;
-    final changed = await showProductSheet(context, ref, p, photoOnly: !isAdmin);
-    if (changed == true) await _load(reset: true);
+    var current = p;
+    while (mounted) {
+      final next = ValueNotifier(false);
+      final was = _items.indexWhere((x) => x.id == current.id);
+      final changed = await showProductSheet(context, ref, current, photoOnly: !isAdmin, next: next);
+      if (changed == true) await _load(reset: true);
+      if (!next.value || !mounted) return;
+      // A product that got its photo leaves the list; the next one then sits where it was.
+      final still = _items.indexWhere((x) => x.id == current.id);
+      final at = still >= 0 ? still + 1 : was;
+      if (at < 0 || at >= _items.length) {
+        showSnack(context, _items.isEmpty ? 'All done — nothing left in your list' : 'That was the last one on this page');
+        return;
+      }
+      current = _items[at];
+    }
   }
 
   @override

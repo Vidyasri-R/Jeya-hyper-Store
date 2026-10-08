@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -164,9 +165,12 @@ class FakeRepo extends StaffRepository {
   }
 
   @override
+  List<AdminProduct> photoList = const [];
+
+  @override
   Future<(ResultPage<AdminProduct>, Map<String, int>)> myPhotos({String? cursor}) async => (
-    ResultPage<AdminProduct>(const [], null),
-    {'open': 0, 'done': 86, 'doneToday': 14},
+    ResultPage<AdminProduct>(photoList, null),
+    {'open': photoList.length, 'done': 86, 'doneToday': 14},
   );
 
   @override
@@ -233,6 +237,23 @@ void main() {
     router.go('/sales');
     await tester.pumpAndSettle();
     expect(router.state.matchedLocation, '/my-photos');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('photo helper: Enter goes straight to the next product', (tester) async {
+    signedInAs = Staff.fromJson({'id': 'p1', 'username': 'priya', 'name': 'Priya', 'role': 'photos', 'mustChangePassword': false, 'isActive': true});
+    final repo = FakeRepo(orderAt('placed'))..photoList = [FakeRepo.product(1, 'Indulekha Shampoo'), FakeRepo.product(2, 'Red Label 100g'), FakeRepo.product(3, 'Malli 500g')];
+    await pumpApp(tester, repo, at: '/my-photos');
+    await tester.tap(find.text('Indulekha Shampoo'));
+    await tester.pumpAndSettle();
+    expect(find.text('Skip to next product →  (Enter)'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    // The sheet now shows the second product (its name appears in the sheet as well as the list).
+    expect(find.text('Red Label 100g'), findsNWidgets(3));
+    await tester.tap(find.text('Skip to next product →  (Enter)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Malli 500g'), findsNWidgets(3));
     expect(tester.takeException(), isNull);
   });
 

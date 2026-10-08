@@ -49,6 +49,22 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     super.dispose();
   }
 
+  /// Opens [p]; "Next product" / Enter goes straight on to the one after it in the list.
+  Future<void> _openFrom(AdminProduct p) async {
+    var current = p;
+    while (mounted) {
+      final next = ValueNotifier(false);
+      final was = _items.indexWhere((x) => x.id == current.id);
+      final changed = await showProductSheet(context, ref, current, next: next);
+      if (changed == true) await _reload();
+      if (!next.value || !mounted) return;
+      final still = _items.indexWhere((x) => x.id == current.id);
+      final at = still >= 0 ? still + 1 : was;
+      if (at < 0 || at >= _items.length) return;
+      current = _items[at];
+    }
+  }
+
   Future<void> _reload() async {
     _cursor = null;
     _done = false;
@@ -176,10 +192,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
               borderRadius: BorderRadius.circular(AppRadius.md),
               child: InkWell(
                 borderRadius: BorderRadius.circular(AppRadius.md),
-                onTap: () async {
-                  final changed = await showProductSheet(context, ref, p);
-                  if (changed == true) _reload();
-                },
+                onTap: () => _openFrom(p),
                 child: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
@@ -230,11 +243,14 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
 
 /// Returns true when something changed (so the list reloads).
 /// [photoOnly]: just the photo (photo helpers and staff); admins also edit the store's product details.
-Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct product, {bool photoOnly = false}) {
+/// [next]: set to true when the user asks for the next product (Enter key or "Next product"), so a
+/// list can open it straight away.
+Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct product, {bool photoOnly = false, ValueNotifier<bool>? next}) {
   var featured = product.sortRank > 0;
   var imageUrl = product.imageUrl;
   var busy = false;
   var changed = false;
+  var nextWhenUploaded = false;
 
   return showActionSheet<bool>(
     context,
@@ -256,6 +272,19 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
           }
         });
         if (url != null) showSnack(context, 'Photo saved — customers see it within a minute');
+        // Enter pressed while it was uploading: go on once it's saved.
+        if (url != null && nextWhenUploaded && context.mounted) Navigator.pop(context, true);
+        nextWhenUploaded = false;
+      }
+
+      void goNext() {
+        if (next == null) return;
+        next.value = true;
+        if (busy) {
+          nextWhenUploaded = true; // still uploading the pasted photo
+        } else {
+          Navigator.pop(context, changed);
+        }
       }
 
       Future<void> pick(ImageSource source) async {
@@ -281,7 +310,21 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
         await upload(image.bytes, type);
       }
 
-      return ImageDropZone(
+      // Typing in Tamil name / description: Enter belongs to the text box.
+      void enterNext() {
+        final focused = FocusManager.instance.primaryFocus?.context;
+        if (focused != null && (focused.widget is EditableText || focused.findAncestorWidgetOfExactType<EditableText>() != null)) return;
+        goNext();
+      }
+
+      // Enter (outside the text fields) → next product: paste, Enter, paste, Enter…
+      return CallbackShortcuts(
+        bindings: next == null
+            ? const {}
+            : {const SingleActivator(LogicalKeyboardKey.enter): enterNext, const SingleActivator(LogicalKeyboardKey.numpadEnter): enterNext},
+        child: Focus(
+        autofocus: true,
+        child: ImageDropZone(
         onImage: dropped,
         child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -420,7 +463,10 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
           ),
           if (photoOnly) ...[
             const SizedBox(height: 12),
-            FilledButton.tonal(onPressed: () => Navigator.pop(context, changed), child: Text(changed ? 'Done — next product' : 'Close')),
+            if (next != null)
+              FilledButton.tonal(onPressed: goNext, child: Text(changed ? 'Next product →  (Enter)' : 'Skip to next product →  (Enter)'))
+            else
+              FilledButton.tonal(onPressed: () => Navigator.pop(context, changed), child: Text(changed ? 'Done' : 'Close')),
           ],
           if (!photoOnly) ...[
           const Divider(height: 28),
@@ -473,8 +519,11 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
                   },
             child: const Text('Save details'),
           ),
+          if (next != null) TextButton(onPressed: goNext, child: const Text('Next product →')),
           ],
         ],
+        ),
+      ),
         ),
       );
     },
