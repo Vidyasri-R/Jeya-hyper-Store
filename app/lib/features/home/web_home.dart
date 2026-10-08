@@ -362,7 +362,7 @@ class _CategoryCirclesState extends State<_CategoryCircles> {
                       clipBehavior: Clip.antiAlias,
                       // Drawn category art (category photos are only stand-ins for products without one).
                       child: c.tileImageUrl != null
-                          ? CategoryPicture(url: c.tileImageUrl!, padding: 10, fallback: Icon(v.icon, color: v.fg, size: 40))
+                          ? CategoryPicture(url: c.tileImageUrl!, padding: 5, fallback: Icon(v.icon, color: v.fg, size: 40))
                           : (categoryArt(c.name) != null ? Padding(padding: const EdgeInsets.all(8), child: Image.asset(categoryArt(c.name)!, fit: BoxFit.contain)) : Icon(v.icon, color: v.fg, size: 40)),
                     ),
                     const SizedBox(height: 8),

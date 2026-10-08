@@ -267,7 +267,8 @@ class _Results extends ConsumerWidget {
                     width: 150,
                     height: 130,
                     margin: const EdgeInsets.only(left: 16),
-                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.92), borderRadius: BorderRadius.circular(16)),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                    clipBehavior: Clip.antiAlias,
                     child: CategoryPicture(url: picture, padding: 6, fallback: const SizedBox.shrink()),
                   )
                 else if (categoryArt(active.name) ?? categoryArt(root.name) case final art?)

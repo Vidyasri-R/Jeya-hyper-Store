@@ -234,10 +234,15 @@ class CategoryPicture extends StatelessWidget {
   final Widget fallback;
   final double padding;
 
+  // Pictures are stored on pure white (server clean-up): a white fill hides the square's edges
+  // inside round tiles and circles.
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.all(padding),
-        child: CachedNetworkImage(imageUrl: url, fit: BoxFit.contain, fadeInDuration: const Duration(milliseconds: 150), placeholder: (_, _) => const SizedBox.shrink(), errorWidget: (_, _, _) => fallback),
+  Widget build(BuildContext context) => ColoredBox(
+        color: Colors.white,
+        child: Padding(
+          padding: EdgeInsets.all(padding),
+          child: CachedNetworkImage(imageUrl: url, fit: BoxFit.contain, fadeInDuration: const Duration(milliseconds: 150), placeholder: (_, _) => const SizedBox.shrink(), errorWidget: (_, _, _) => fallback),
+        ),
       );
 }
 

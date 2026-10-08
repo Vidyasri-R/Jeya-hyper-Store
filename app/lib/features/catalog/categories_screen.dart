@@ -243,7 +243,13 @@ class _Banner extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Stack(children: [
         if (category.tileImageUrl != null)
-          Positioned(right: 8, top: 8, bottom: 8, width: 100, child: CategoryPicture(url: category.tileImageUrl!, fallback: const SizedBox.shrink()))
+          Positioned(
+            right: 8,
+            top: 8,
+            bottom: 8,
+            width: 100,
+            child: ClipRRect(borderRadius: BorderRadius.circular(AppRadius.md), child: CategoryPicture(url: category.tileImageUrl!, fallback: const SizedBox.shrink())),
+          )
         else
           Positioned(right: -10, bottom: -18, child: Icon(v.icon, size: 130, color: v.fg.withValues(alpha: 0.16))),
         Padding(
