@@ -1,19 +1,21 @@
-import 'choices_editor.dart';
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/image_drop.dart';
 import '../../core/money.dart';
 import '../../core/photo_cutout.dart';
 import '../../core/theme.dart';
 import '../../data/models.dart';
 import '../../state/providers.dart';
 import '../../widgets/common.dart';
+import 'choices_editor.dart';
 
 /// Product photos (one per product) and the fields the store owns: Tamil name, description, priority.
 class ProductsScreen extends ConsumerStatefulWidget {
@@ -240,17 +242,7 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
       final nameTa = fields['nameTa']!;
       final description = fields['description']!;
 
-      Future<void> pick(ImageSource source) async {
-        final file = await ImagePicker().pickImage(source: source, maxWidth: 1600, maxHeight: 1600, imageQuality: 85);
-        if (file == null) return;
-        final original = await file.readAsBytes();
-        final originalType = imageTypeOf(original);
-        if (!context.mounted) return;
-        if (originalType == null) return showSnack(context, 'Use a JPG, PNG or WebP photo', error: true);
-        setState(() => busy = true);
-        // Android cuts the product out on the phone; the server then puts it on pure white.
-        final (bytes, type) = await cutOutProduct(file.path, original, originalType);
-        if (!context.mounted) return;
+      Future<void> upload(Uint8List bytes, String type) async {
         final url = await guard(context, () => ref.read(repositoryProvider).uploadPhoto(product.id, bytes, type));
         if (!context.mounted) return;
         setState(() {
@@ -263,9 +255,46 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
         if (url != null) showSnack(context, 'Photo saved — customers see it within a minute');
       }
 
-      return Column(
+      Future<void> pick(ImageSource source) async {
+        final file = await ImagePicker().pickImage(source: source, maxWidth: 1600, maxHeight: 1600, imageQuality: 85);
+        if (file == null) return;
+        final original = await file.readAsBytes();
+        final originalType = imageTypeOf(original);
+        if (!context.mounted) return;
+        if (originalType == null) return showSnack(context, 'Use a JPG, PNG or WebP photo', error: true);
+        setState(() => busy = true);
+        // Android cuts the product out on the phone; the server then puts it on pure white.
+        final (bytes, type) = await cutOutProduct(file.path, original, originalType);
+        if (!context.mounted) return;
+        await upload(bytes, type);
+      }
+
+      /// Website: a picture dragged onto the page or pasted (Ctrl/⌘+V).
+      Future<void> dropped(DroppedImage image) async {
+        if (busy) return;
+        final type = imageTypeOf(image.bytes);
+        if (type == null) return showSnack(context, 'Use a JPG, PNG or WebP picture', error: true);
+        setState(() => busy = true);
+        await upload(image.bytes, type);
+      }
+
+      return ImageDropZone(
+        onImage: dropped,
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Copy the name to search for a free photo (or to paste anywhere).
+          Row(children: [
+            Expanded(child: SelectableText(product.name, style: text.titleSmall)),
+            IconButton(
+              tooltip: 'Copy name',
+              icon: const Icon(Icons.copy_rounded, size: 20),
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: product.name));
+                if (context.mounted) showSnack(context, 'Name copied');
+              },
+            ),
+          ]),
           Text(
             [
               if (product.brand != null) product.brand!,
@@ -336,7 +365,12 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
               icon: const Icon(Icons.delete_outline_rounded),
               label: const Text('Remove photo'),
             ),
-          Text('Tip: product in the light box or on plain white paper. The app removes the background and centres it on white.', style: text.bodySmall),
+          Text(
+            ImageDropZone.supported
+                ? 'Drag a photo onto this window or paste it (Ctrl+V / ⌘+V) — it uploads straight away. The app puts the product on a white background.'
+                : 'Tip: product in the light box or on plain white paper. The app removes the background and centres it on white.',
+            style: text.bodySmall,
+          ),
           if (photoOnly) ...[
             const SizedBox(height: 12),
             FilledButton.tonal(onPressed: () => Navigator.pop(context, changed), child: Text(changed ? 'Done — next product' : 'Close')),
@@ -394,6 +428,7 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
           ),
           ],
         ],
+        ),
       );
     },
   ).then((value) => value ?? changed);

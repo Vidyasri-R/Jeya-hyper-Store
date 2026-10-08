@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/image_drop.dart';
 import '../../core/theme.dart';
 import '../../data/models.dart';
 import '../../state/providers.dart';
@@ -96,7 +98,11 @@ class _MyPhotosScreenState extends ConsumerState<MyPhotosScreen> {
                     child: LinearProgressIndicator(value: total == 0 ? 0 : done / total, minHeight: 8, backgroundColor: AppColors.line, color: AppColors.green700),
                   ),
                   const SizedBox(height: 6),
-                  Text('$done done${total > 0 ? ' of $total' : ''}. Any clear photo works — the app removes the background and puts the product on white.', style: text.bodySmall),
+                  Text(
+                    '$done done${total > 0 ? ' of $total' : ''}. Any clear photo works — the app removes the background and puts the product on white.'
+                    '${ImageDropZone.supported ? ' Tap ⧉ to copy a name; in a product you can drag a photo in or paste it (Ctrl+V).' : ''}',
+                    style: text.bodySmall,
+                  ),
                 ]),
               ),
               const SizedBox(height: 12),
@@ -110,7 +116,17 @@ class _MyPhotosScreenState extends ConsumerState<MyPhotosScreen> {
                     leading: ProductThumb(url: p.imageUrl, placeholderUrl: p.placeholderImageUrl),
                     title: Text(p.name, maxLines: 2, overflow: TextOverflow.ellipsis),
                     subtitle: Text([if (p.brand != null) p.brand!, if (p.category != null) p.category!, 'Code ${p.itemCode}'].join(' · '), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    trailing: const Icon(Icons.add_a_photo_outlined),
+                    trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                      IconButton(
+                        tooltip: 'Copy name',
+                        icon: const Icon(Icons.copy_rounded, size: 20),
+                        onPressed: () async {
+                          await Clipboard.setData(ClipboardData(text: p.name));
+                          if (context.mounted) showSnack(context, 'Copied: ${p.name}');
+                        },
+                      ),
+                      const Icon(Icons.add_a_photo_outlined),
+                    ]),
                     onTap: () => _open(p),
                   ),
                 ),
