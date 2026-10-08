@@ -102,22 +102,30 @@ export function packSizeOf(name: string): string | null {
 
 const SMALL_WORDS = new Set(['OF', 'AND', 'WITH', 'IN', 'FOR']);
 
-/** Strip price tags and tidy capitals: "BRU INSTANT JAR 100G MRP.180/-" → "Bru Instant Jar 100g". */
+/**
+ * Tidy capitals and price tags, keeping the tag (the store names items by it, e.g. "Arun MRP 10"):
+ * "BRU INSTANT JAR 100G MRP.180/-" → "Bru Instant Jar 100g MRP 180", "RS.90/-" → "Rs 90".
+ */
 export function displayName(posName: string): string {
   const cleaned = posName
-    .replace(/\(?\s*\b(?:M\.?R\.?P|RS|RATE)\s*[.:]?\s*\d+(?:\.\d+)?\s*(?:\/-|\/|-)?\s*\)?/gi, ' ')
+    .replace(/\(?\s*\b(M\.?R\.?P|RS|RATE)\s*[.:]?\s*(\d+(?:\.\d+)?)\s*(?:\/-|\/|-)?\s*\)?/gi, (_m, tag: string, amount: string) => {
+      const word = /^m/i.test(tag) ? 'MRP' : /^rs$/i.test(tag) ? 'Rs' : 'Rate';
+      return ` ${word}\u2063${amount.replace(/\.0+$/, '')} `; // kept as one word until the end
+    })
     .replace(/\s+/g, ' ')
     .replace(/[\s,.\-/(]+$/, '')
     .trim();
   return cleaned
     .split(' ')
     .map((w, i) => {
+      if (w.includes('\u2063')) return w; // "MRP 10" / "Rs 90", already written as wanted
       if (/^\d+(\.\d+)?(KGS?|GMS?|G|ML|L|LTR|PCS?)$/i.test(w)) return w.replace(/[A-Z]+$/i, (u) => (u.toUpperCase() === 'L' || u.toUpperCase() === 'LTR' ? 'L' : u.toLowerCase()));
       if (/\d/.test(w) || w.length <= 2 || !/[AEIOU]/i.test(w)) return w.toUpperCase();
       if (i > 0 && SMALL_WORDS.has(w.toUpperCase())) return w.toLowerCase();
       return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
     })
-    .join(' ');
+    .join(' ')
+    .replace(/\u2063/g, ' ');
 }
 
 /**

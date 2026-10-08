@@ -52,7 +52,7 @@ describe('stock file reader', () => {
   it('loose (BULK) items, 40% GST, inactive items, and rejects', () => {
     const f = readStockFile(file, new Set(['SUPERMARKET']));
     expect(f.items.find((i) => i.itemCode === '502')).toMatchObject({ isLoose: true, packSize: null, stock: '5.250' });
-    expect(f.items.find((i) => i.itemCode === '503')).toMatchObject({ name: 'Appy Fizz 160ml', gstRate: '40.00' });
+    expect(f.items.find((i) => i.itemCode === '503')).toMatchObject({ name: 'Appy Fizz 160ml MRP 10', gstRate: '40.00' });
     expect(f.items.find((i) => i.itemCode === '506')?.isActive).toBe(false);
     expect(f.problems.map((p) => [p.itemCode, p.reason])).toEqual([
       ['504', 'free gift / not for sale'],
@@ -67,8 +67,11 @@ describe('stock file reader', () => {
 
 describe('names, pack sizes and categories', () => {
   it('cleans POS names', () => {
-    expect(displayName('BRU INSTANT JAR 100G MRP.180/-')).toBe('Bru Instant Jar 100g');
-    expect(displayName('BANJARAS KASTURI TURMERIC RS.90/- (100G)')).toBe('Banjaras Kasturi Turmeric (100G)'.replace('(100G)', '(100G)'));
+    expect(displayName('BRU INSTANT JAR 100G MRP.180/-')).toBe('Bru Instant Jar 100g MRP 180');
+    expect(displayName('BANJARAS KASTURI TURMERIC RS.90/- (100G)')).toBe('Banjaras Kasturi Turmeric Rs 90 (100G)');
+    expect(displayName('ARUN MRP.10/-')).toBe('Arun MRP 10');
+    expect(displayName('PEN RATE 5')).toBe('Pen Rate 5');
+    expect(displayName('LUX SOAP M.R.P 35.00')).toBe('Lux Soap MRP 35');
     expect(displayName('AASHIRVAAD ATTA 5KG')).toBe('Aashirvaad Atta 5kg');
   });
 

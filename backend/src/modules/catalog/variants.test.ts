@@ -7,6 +7,8 @@ describe('product size groups', () => {
     expect(k('Bru Instant 50 G')).toBe(k('Bru Instant 200gm'));
     expect(k('Boost 200g Jar')).toBe(k('Boost 500g Pouch'));
     expect(k('3 Roses 500g Loose')).toBe(k('3 Roses 100g'));
+    expect(k('Arun MRP 10')).toBe(k('Arun MRP 20'));
+    expect(k('Bru Instant 100g MRP 180')).toBe(k('Bru Instant 50 G'));
     expect(k('Bru Instant 50 G')).not.toBe(k('Bru Gold 50 G'));
     expect(k('Bru 100g', 7)).not.toBe(k('Bru 100g', 8));
     expect(k('100g')).toBeNull();

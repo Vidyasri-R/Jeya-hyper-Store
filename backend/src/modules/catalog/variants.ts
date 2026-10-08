@@ -13,7 +13,7 @@ import { catalogCache } from './catalog.cache';
 
 /** Size / pack words that differ between sizes of the same product. */
 const SIZE_WORDS =
-  /\b\d+(?:\.\d+)?\s*(?:kg|kgs|g|gm|gms|gram|grams|mg|ml|l|lt|ltr|ltrs|litre|litres|liter|pcs|pc|n|nos|no|s|x\s*\d+)\b|\b(?:loose|bulk|pouch|jar|bot|bottle|btl|pkt|packet|pack|refill|tin|can|box|combo)\b/gi;
+  /\b\d+(?:\.\d+)?\s*(?:kg|kgs|g|gm|gms|gram|grams|mg|ml|l|lt|ltr|ltrs|litre|litres|liter|pcs|pc|n|nos|no|s|x\s*\d+)\b|\b(?:loose|bulk|pouch|jar|bot|bottle|btl|pkt|packet|pack|refill|tin|can|box|combo)\b|\b(?:mrp|rs|rate)\s*\d+(?:\.\d+)?\b/gi; // "Arun MRP 10" / "MRP 20" are sizes too
 /** Pack words worth showing next to the size ("200 g Jar" vs "200 g Pouch"). */
 const PACK_WORDS = /\b(loose|pouch|jar|bottle|refill|tin|can|box|combo)\b/i;
 
