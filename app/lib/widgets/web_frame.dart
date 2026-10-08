@@ -53,7 +53,11 @@ class _WebFrameState extends ConsumerState<WebFrame> {
     }
     final max = _readingPages.any(_path.startsWith) ? kReadingWidth : kMaxContentWidth;
     final contentWidth = media.size.width < max ? media.size.width : max;
-    return ColoredBox(
+    // The header sits above the router's Navigator, so it needs its own Overlay for tooltips and
+    // menus (without one, hovering "All Categories" crashed the bar into a grey box).
+    return Overlay.wrap(
+      clipBehavior: Clip.none,
+      child: ColoredBox(
       color: AppColors.bg,
       child: Column(children: [
         const WebHeader(),
@@ -69,6 +73,7 @@ class _WebFrameState extends ConsumerState<WebFrame> {
           ),
         ),
       ]),
+      ),
     );
   }
 }
@@ -279,21 +284,23 @@ class _CategoryBar extends StatelessWidget {
       final shown = roots.take(fits).toList();
       final more = roots.skip(fits).toList();
       return Row(children: [
-        PopupMenuButton<Category>(
-          enabled: roots.isNotEmpty, // an empty menu can't open (categories still loading / offline)
-          tooltip: 'All categories',
-          position: PopupMenuPosition.under,
-          onSelected: onOpen,
-          itemBuilder: (_) => [for (final c in roots) PopupMenuItem(value: c, child: Text(c.name))],
-          child: Container(
-            height: 38,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(color: AppColors.brand700, borderRadius: BorderRadius.circular(8)),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.menu_rounded, color: Colors.white, size: 20),
-              const SizedBox(width: 8),
-              Text('All Categories', style: text.labelLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
-            ]),
+        // MenuAnchor (not PopupMenuButton): the header has no Navigator above it, only an Overlay.
+        _CategoryMenu(
+          categories: roots,
+          onOpen: onOpen,
+          builder: (open) => InkWell(
+            onTap: roots.isEmpty ? null : open, // categories still loading / offline
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              height: 38,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(color: AppColors.brand700, borderRadius: BorderRadius.circular(8)),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.menu_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Text('All Categories', style: text.labelLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+              ]),
+            ),
           ),
         ),
         const SizedBox(width: 8),
@@ -306,23 +313,41 @@ class _CategoryBar extends StatelessWidget {
             ),
           ),
         if (more.isNotEmpty)
-          PopupMenuButton<Category>(
-            tooltip: 'More categories',
-            position: PopupMenuPosition.under,
-            onSelected: onOpen,
-            itemBuilder: (_) => [for (final c in more) PopupMenuItem(value: c, child: Text(c.name))],
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Text('More', style: text.labelLarge?.copyWith(fontWeight: FontWeight.w600)),
-                const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
-              ]),
+          _CategoryMenu(
+            categories: more,
+            onOpen: onOpen,
+            builder: (open) => InkWell(
+              onTap: open,
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Text('More', style: text.labelLarge?.copyWith(fontWeight: FontWeight.w600)),
+                  const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
+                ]),
+              ),
             ),
           ),
         const Spacer(),
       ]);
     });
   }
+}
+
+/// Drop-down list of categories under a header button.
+class _CategoryMenu extends StatelessWidget {
+  const _CategoryMenu({required this.categories, required this.onOpen, required this.builder});
+  final List<Category> categories;
+  final void Function(Category) onOpen;
+  final Widget Function(VoidCallback open) builder;
+
+  @override
+  Widget build(BuildContext context) => MenuAnchor(
+        alignmentOffset: const Offset(0, 4),
+        style: const MenuStyle(maximumSize: WidgetStatePropertyAll(Size(320, 520))),
+        menuChildren: [for (final c in categories) MenuItemButton(onPressed: () => onOpen(c), child: Text(c.name))],
+        builder: (context, controller, _) => builder(() => controller.isOpen ? controller.close() : controller.open()),
+      );
 }
 
 /// Dark-green site footer: brand, links, store details. Used at the end of web shop pages.
