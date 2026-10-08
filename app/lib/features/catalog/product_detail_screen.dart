@@ -21,24 +21,59 @@ final _relatedProvider = FutureProvider.family<List<Product>, ({String category,
   return page.items.where((p) => p.id != arg.exclude).toList();
 });
 
-class ProductDetailScreen extends ConsumerWidget {
+/// Picking another size swaps the product on this same page (no new page); the last product stays
+/// on screen while the new size loads.
+class ProductDetailScreen extends ConsumerStatefulWidget {
   const ProductDetailScreen({super.key, required this.slug});
   final String slug;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final product = ref.watch(productProvider(slug));
-    return product.when(
-      loading: () => Scaffold(body: Center(child: CircularProgressIndicator(color: AppColors.brand700))),
-      error: (e, _) => Scaffold(appBar: AppBar(), body: ErrorRetry(error: e, onRetry: () => ref.invalidate(productProvider(slug)))),
-      data: (p) => _Detail(product: p),
-    );
+  ConsumerState<ProductDetailScreen> createState() => _ProductDetailScreenState();
+}
+
+class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
+  late String _slug = widget.slug;
+  Product? _shown;
+  /// The size just picked, shown at once from the sizes list until its details arrive.
+  Product? _instant;
+
+  @override
+  void didUpdateWidget(covariant ProductDetailScreen old) {
+    super.didUpdateWidget(old);
+    if (old.slug != widget.slug) _slug = widget.slug;
+  }
+
+  void _pickSize(Product v) {
+    if (v.slug == _slug) return;
+    setState(() {
+      _instant = _shown == null ? null : v.onPageOf(_shown!);
+      _slug = v.slug;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final product = ref.watch(productProvider(_slug));
+    if (product.hasValue) {
+      _shown = product.value;
+      _instant = null;
+    }
+    final p = _instant ?? product.valueOrNull ?? _shown;
+    if (p == null) {
+      return product.hasError
+          ? Scaffold(appBar: AppBar(), body: ErrorRetry(error: product.error!, onRetry: () => ref.invalidate(productProvider(_slug))))
+          : Scaffold(body: Center(child: CircularProgressIndicator(color: AppColors.brand700)));
+    }
+    return _Detail(product: p, onPickSize: _pickSize, pickedSlug: _slug);
   }
 }
 
 class _Detail extends ConsumerWidget {
-  const _Detail({required this.product});
+  const _Detail({required this.product, required this.onPickSize, required this.pickedSlug});
   final Product product;
+  final ValueChanged<Product> onPickSize;
+  /// The size just picked (highlighted at once, while its details load).
+  final String pickedSlug;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -62,7 +97,7 @@ class _Detail extends ConsumerWidget {
                   const SizedBox(height: 4),
                   if (p.variants.isNotEmpty) ...[
                     const SizedBox(height: 6),
-                    SizeChips(product: p, onPick: (v) => context.pushReplacement('/product/${v.slug}')),
+                    SizeChips(product: p, selectedSlug: pickedSlug, onPick: onPickSize),
                   ] else
                     Text(p.sizeLabel, style: text.bodySmall),
                   const SizedBox(height: 14),
@@ -89,7 +124,7 @@ class _Detail extends ConsumerWidget {
     final compact = compactProducts(context);
 
     if (wide) {
-      return _WideProductPage(product: p, details: details, related: related, railWidth: railWidth);
+      return _WideProductPage(product: p, details: details, related: related, railWidth: railWidth, onPickSize: onPickSize, pickedSlug: pickedSlug);
     }
 
     return Scaffold(
@@ -229,8 +264,10 @@ class _RoundIcon extends StatelessWidget {
 /// Web shop product page (laptops/tablets): photo · details table and add · delivery & trust cards,
 /// then the description and similar products.
 class _WideProductPage extends ConsumerWidget {
-  const _WideProductPage({required this.product, required this.details, required this.related, required this.railWidth});
+  const _WideProductPage({required this.product, required this.details, required this.related, required this.railWidth, required this.onPickSize, required this.pickedSlug});
   final Product product;
+  final ValueChanged<Product> onPickSize;
+  final String pickedSlug;
   final Widget details; // phone details column (unused here, kept for the shared signature)
   final AsyncValue<List<Product>>? related;
   final double railWidth;
@@ -280,7 +317,7 @@ class _WideProductPage extends ConsumerWidget {
       ],
       const SizedBox(height: 14),
       if (p.brand != null) row('Brand', Text(p.brand!, style: text.bodyMedium)),
-      row('Pack size', p.variants.isNotEmpty ? SizeChips(product: p, onPick: (v) => context.pushReplacement('/product/${v.slug}')) : Text(p.sizeLabel, style: text.bodyMedium)),
+      row('Pack size', p.variants.isNotEmpty ? SizeChips(product: p, selectedSlug: pickedSlug, onPick: onPickSize) : Text(p.sizeLabel, style: text.bodyMedium)),
       if (p.hasDiscount) row('MRP', Text('${formatRupees(p.mrp)} (inclusive of all taxes)', style: text.bodyMedium?.copyWith(decoration: TextDecoration.lineThrough, color: AppColors.inkMuted))),
       row(
         'Selling price',

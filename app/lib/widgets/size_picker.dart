@@ -94,9 +94,11 @@ Future<Product?> showSizeSheet(BuildContext context, WidgetRef ref, List<Product
 
 /// Product page: every size as a chip with its price; picking one opens that size's page.
 class SizeChips extends StatelessWidget {
-  const SizeChips({super.key, required this.product, required this.onPick});
+  const SizeChips({super.key, required this.product, required this.onPick, this.selectedSlug});
   final Product product;
   final ValueChanged<Product> onPick;
+  /// Highlight this size (just picked, still loading); defaults to [product].
+  final String? selectedSlug;
 
   @override
   Widget build(BuildContext context) {
@@ -104,11 +106,15 @@ class SizeChips extends StatelessWidget {
     return Wrap(spacing: 8, runSpacing: 8, children: [
       for (final v in product.variants)
         ChoiceChip(
-          selected: v.id == product.id,
+          selected: v.slug == (selectedSlug ?? product.slug),
           showCheckmark: false,
-          onSelected: v.id == product.id ? null : (_) => onPick(v),
+          // Selected: light brand fill + brand border, so the size and price stay readable.
+          selectedColor: AppColors.brand50,
+          backgroundColor: AppColors.surface,
+          side: BorderSide(color: v.slug == (selectedSlug ?? product.slug) ? AppColors.brand700 : AppColors.line, width: v.slug == (selectedSlug ?? product.slug) ? 2 : 1),
+          onSelected: (_) => onPick(v),
           label: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text(v.variantLabel ?? v.sizeLabel, style: text.labelLarge?.copyWith(fontWeight: FontWeight.w700)),
+            Text(v.variantLabel ?? v.sizeLabel, style: text.labelLarge?.copyWith(fontWeight: FontWeight.w700, color: v.slug == (selectedSlug ?? product.slug) ? AppColors.brand800 : AppColors.ink)),
             if (!v.canBuy || (v.variantLabel ?? '') != formatRupees(v.sellingPrice))
               Text(v.canBuy ? formatRupees(v.sellingPrice) : 'Out of stock', style: text.labelSmall?.copyWith(color: v.canBuy ? AppColors.ink : AppColors.offerRed)),
           ]),

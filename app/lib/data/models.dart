@@ -86,6 +86,34 @@ class Product {
   final List<CategoryRef> breadcrumb;
 
   bool get canBuy => maxMilli > 0;
+
+  /// This size shown on its family's page right away (sizes list, category, description from [family])
+  /// while its own details load.
+  Product onPageOf(Product family) => Product(
+        id: id,
+        slug: slug,
+        name: name,
+        brand: brand,
+        categoryId: categoryId,
+        mrp: mrp,
+        sellingPrice: sellingPrice,
+        discountPercent: discountPercent,
+        unit: unit,
+        packSize: packSize,
+        isLoose: isLoose,
+        minMilli: minMilli,
+        stepMilli: stepMilli,
+        maxMilli: maxMilli,
+        stockStatus: stockStatus,
+        imageUrl: imageUrl,
+        placeholderImageUrl: placeholderImageUrl,
+        variantLabel: variantLabel,
+        variants: family.variants,
+        options: options,
+        description: family.description,
+        gstRate: family.gstRate,
+        breadcrumb: family.breadcrumb,
+      );
   bool get hasDiscount => discountPercent > 0;
 
   /// Label under the name: "500 g", "per kg", "1 pc".
