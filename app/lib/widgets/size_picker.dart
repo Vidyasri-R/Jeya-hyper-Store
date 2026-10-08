@@ -74,7 +74,9 @@ Future<Product?> showSizeSheet(BuildContext context, WidgetRef ref, List<Product
                       padding: const EdgeInsets.only(right: 6),
                       child: Text(formatRupees(v.mrp), style: text.labelSmall?.copyWith(decoration: TextDecoration.lineThrough, color: AppColors.inkFaint)),
                     ),
-                  Text(formatRupees(v.sellingPrice), style: text.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+                  // Price points ("₹10") already say the price.
+                  if ((v.variantLabel ?? '') != formatRupees(v.sellingPrice))
+                    Text(formatRupees(v.sellingPrice), style: text.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
                 ]),
                 onTap: () => Navigator.pop(context, v),
               ),
@@ -102,7 +104,8 @@ class SizeChips extends StatelessWidget {
           onSelected: v.id == product.id ? null : (_) => onPick(v),
           label: Column(mainAxisSize: MainAxisSize.min, children: [
             Text(v.variantLabel ?? v.sizeLabel, style: text.labelLarge?.copyWith(fontWeight: FontWeight.w700)),
-            Text(v.canBuy ? formatRupees(v.sellingPrice) : 'Out of stock', style: text.labelSmall?.copyWith(color: v.canBuy ? AppColors.ink : AppColors.offerRed)),
+            if (!v.canBuy || (v.variantLabel ?? '') != formatRupees(v.sellingPrice))
+              Text(v.canBuy ? formatRupees(v.sellingPrice) : 'Out of stock', style: text.labelSmall?.copyWith(color: v.canBuy ? AppColors.ink : AppColors.offerRed)),
           ]),
         ),
     ]);
