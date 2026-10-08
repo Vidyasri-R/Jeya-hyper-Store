@@ -228,6 +228,15 @@ adminRouter.post('/catalog/import', uploadLimiter, stockFile, async (req, res) =
   else res.json({ applied: false, preview });
 });
 
+/** "Move to": a POS group or single items to a website category (now and on every import). */
+adminRouter.post('/catalog/move', async (req, res) => {
+  const body = parseBody(
+    z.object({ category: z.string().min(1).max(40), itemCodes: z.array(z.string().trim().min(1).max(64)).max(2000), type: z.string().trim().min(1).max(80).optional() }).strict(),
+    req,
+  );
+  res.json(await catalogImportService.move(body));
+});
+
 adminRouter.get('/catalog/import', async (_req, res) => {
   res.json({ last: await catalogImportService.lastImport(), settings: await catalogImportService.settings(), categories: WEB_CATEGORIES });
 });

@@ -26,7 +26,9 @@ class _HomeListsScreenState extends ConsumerState<HomeListsScreen> {
   String? _error;
   bool _saving = false;
 
-  static const _max = {0: 30, 1: 60};
+  static const _max = {0: 100, 1: 100};
+  List<AdminProduct> _autoOffers = const [];
+  List<AdminProduct> _autoPopular = const [];
 
   @override
   void initState() {
@@ -41,6 +43,8 @@ class _HomeListsScreenState extends ConsumerState<HomeListsScreen> {
         setState(() {
           _offers = lists.offers;
           _popular = lists.popular;
+          _autoOffers = lists.autoOffers;
+          _autoPopular = lists.autoPopular;
         });
       }
     } on ApiException catch (e) {
@@ -57,6 +61,14 @@ class _HomeListsScreenState extends ConsumerState<HomeListsScreen> {
       return true;
     });
     if (mounted) setState(() => _saving = false);
+  }
+
+  /// Start a picked list from what the shop shows now, then remove / add / reorder.
+  Future<void> _customise(List<AdminProduct> list, List<AdminProduct> automatic) async {
+    if (automatic.isEmpty) return;
+    setState(() => list.addAll(automatic));
+    await _save();
+    if (mounted) showSnack(context, 'Now your own list — remove, add or drag to reorder');
   }
 
   Future<void> _add(int tab) async {
@@ -99,7 +111,9 @@ class _HomeListsScreenState extends ConsumerState<HomeListsScreen> {
               : TabBarView(children: [
                   _ListTab(
                     items: _offers!,
-                    emptyText: 'Empty: the app shows the biggest discounts automatically.\nAdd products to choose them yourself.',
+                    automatic: _autoOffers,
+                    rule: 'In stock and below MRP, biggest discount first (then "Show first" and fast-moving products). Top 12, one per product.',
+                    onCustomise: () => _customise(_offers!, _autoOffers),
                     onChanged: () {
                       setState(() {});
                       _save();
@@ -107,7 +121,9 @@ class _HomeListsScreenState extends ConsumerState<HomeListsScreen> {
                   ),
                   _ListTab(
                     items: _popular!,
-                    emptyText: 'Empty: the app shows the fastest-moving products automatically.\nAdd products to choose them yourself.',
+                    automatic: _autoPopular,
+                    rule: 'In stock: "Show first" products, then the fastest movers (restocked most often and most recently, daily needs first). Top 20, one per product.',
+                    onCustomise: () => _customise(_popular!, _autoPopular),
                     onChanged: () {
                       setState(() {});
                       _save();
@@ -121,16 +137,51 @@ class _HomeListsScreenState extends ConsumerState<HomeListsScreen> {
 }
 
 class _ListTab extends StatelessWidget {
-  const _ListTab({required this.items, required this.emptyText, required this.onChanged});
+  const _ListTab({required this.items, required this.automatic, required this.rule, required this.onCustomise, required this.onChanged});
   final List<AdminProduct> items;
-  final String emptyText;
+  /// What customers see while [items] is empty.
+  final List<AdminProduct> automatic;
+  final String rule;
+  final VoidCallback onCustomise;
   final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     if (items.isEmpty) {
-      return EmptyView(icon: Icons.auto_awesome_outlined, title: 'Automatic', subtitle: emptyText);
+      return ListView(padding: const EdgeInsets.fromLTRB(12, 12, 12, 96), children: [
+        SectionCard(
+          color: AppColors.green50,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              const Icon(Icons.auto_awesome_outlined, color: AppColors.green700),
+              const SizedBox(width: 8),
+              Expanded(child: Text('Automatic — customers see these ${automatic.length} now', style: text.titleSmall)),
+            ]),
+            const SizedBox(height: 4),
+            Text(rule, style: text.bodySmall),
+            const SizedBox(height: 10),
+            FilledButton.icon(
+              onPressed: automatic.isEmpty ? null : onCustomise,
+              icon: const Icon(Icons.edit_note_rounded),
+              label: const Text('Customise this list'),
+            ),
+            const SizedBox(height: 4),
+            Text('Copies these into your own list so you can remove, add (up to 100) and reorder. Remove all to go back to automatic.', style: text.bodySmall),
+          ]),
+        ),
+        const SizedBox(height: 8),
+        for (final p in automatic)
+          Card(
+            margin: const EdgeInsets.only(bottom: 6),
+            child: ListTile(
+              dense: true,
+              leading: ProductThumb(url: p.imageUrl, placeholderUrl: p.placeholderImageUrl),
+              title: Text(p.name, maxLines: 2, overflow: TextOverflow.ellipsis),
+              subtitle: Text(p.priceLabel, style: text.bodySmall),
+            ),
+          ),
+      ]);
     }
     return ReorderableListView.builder(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 96),

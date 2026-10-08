@@ -9,7 +9,7 @@ describe('home lists setting', () => {
   it('rejects a product twice in one list, unknown keys and oversized lists', () => {
     expect(homeListsSchema.safeParse({ offers: [1, 1], popular: [] }).success).toBe(false);
     expect(homeListsSchema.safeParse({ offers: [], popular: [], extra: [] }).success).toBe(false);
-    expect(homeListsSchema.safeParse({ offers: Array.from({ length: 31 }, (_, i) => i + 1), popular: [] }).success).toBe(false);
+    expect(homeListsSchema.safeParse({ offers: Array.from({ length: 101 }, (_, i) => i + 1), popular: [] }).success).toBe(false);
   });
 
   it('allows the same product in both lists', () => {

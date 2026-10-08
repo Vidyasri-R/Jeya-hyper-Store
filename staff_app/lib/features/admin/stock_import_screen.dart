@@ -94,12 +94,13 @@ class _StockImportScreenState extends ConsumerState<StockImportScreen> {
     }
   }
 
-  /// Move every product of a POS group (TYPE) to a website category, then preview again.
-  Future<void> _moveType(String type, String key) async {
-    final settings = Map<String, dynamic>.from((_status?['settings'] as Map?) ?? const {'departments': [], 'typeMap': {}});
-    final typeMap = Map<String, dynamic>.from((settings['typeMap'] as Map?) ?? const {})..[type] = key;
-    final saved = await guard(context, () => ref.read(repositoryProvider).saveSetting('catalog.import', {...settings, 'typeMap': typeMap}));
-    if (saved == null || !mounted) return;
+  /// Move a whole POS group ([type]) or some of its products to a website category. Remembered for
+  /// future uploads; products already in the shop move right away. Then preview again.
+  Future<void> _move({required String key, required List<String> itemCodes, String? type}) async {
+    final name = ((_status?['categories'] as List? ?? const []).cast<Map>().firstWhere((c) => c['key'] == key, orElse: () => {'name': key}))['name'];
+    final moved = await guard(context, () => ref.read(repositoryProvider).moveProducts(category: key, itemCodes: itemCodes, type: type));
+    if (moved == null || !mounted) return;
+    showSnack(context, '${itemCodes.length} product${itemCodes.length == 1 ? '' : 's'} moved to $name');
     await _loadStatus();
     await _runPreview();
   }
@@ -167,7 +168,7 @@ class _StockImportScreenState extends ConsumerState<StockImportScreen> {
                 const SizedBox(height: 12),
                 _Departments(preview: p, onChanged: _setDepartments),
                 const SizedBox(height: 12),
-                _OtherTypes(preview: p, categories: [for (final c in (_status?['categories'] as List? ?? const [])) Map<String, dynamic>.from(c as Map)], onMove: _moveType),
+                _OtherTypes(preview: p, categories: [for (final c in (_status?['categories'] as List? ?? const [])) Map<String, dynamic>.from(c as Map)], onMove: _move),
                 if ((p['problemCount'] as num? ?? 0) > 0) ...[
                   const SizedBox(height: 12),
                   _Problems(preview: p),
@@ -265,7 +266,7 @@ class _OtherTypes extends StatelessWidget {
   const _OtherTypes({required this.preview, required this.categories, required this.onMove});
   final Map<String, dynamic> preview;
   final List<Map<String, dynamic>> categories;
-  final void Function(String type, String key) onMove;
+  final Future<void> Function({required String key, required List<String> itemCodes, String? type}) onMove;
 
   @override
   Widget build(BuildContext context) {
@@ -276,31 +277,132 @@ class _OtherTypes extends StatelessWidget {
     return SectionCard(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('In "More Items" — move them to a better place', style: text.titleSmall),
-        Text('These POS groups didn’t match a category. Pick one and every product in that group moves (remembered for future uploads).', style: text.bodySmall),
+        Text('These POS groups didn’t match a category. Tap a group to see its products and move some of them, or move the whole group (remembered for future uploads).', style: text.bodySmall),
         const SizedBox(height: 6),
         const Divider(height: 1),
         for (final t in types) ...[
-          Padding(
+          InkWell(
+            onTap: () => showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              showDragHandle: true,
+              builder: (_) => _GroupSheet(group: t, leafs: leafs, onMove: onMove),
+            ),
+            child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(children: [
-              Expanded(child: Text(t['type'] as String, style: text.bodyMedium)),
-              Text('${t['count']} products', style: text.bodySmall),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(t['type'] as String, style: text.bodyMedium),
+                  Text(
+                    [for (final i in (t['items'] as List? ?? const []).take(3)) (i as Map)['name']].join(', ') + ((t['count'] as num) > 3 ? '…' : ''),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.bodySmall,
+                  ),
+                ]),
+              ),
+              Text('${t['count']} ›', style: text.bodySmall),
               const SizedBox(width: 12),
               PopupMenuButton<String>(
-                tooltip: 'Move ${t['type']}',
-                onSelected: (key) => onMove(t['type'] as String, key),
+                tooltip: 'Move all of ${t['type']}',
+                onSelected: (key) => onMove(key: key, itemCodes: [for (final i in (t['items'] as List? ?? const [])) (i as Map)['itemCode'] as String], type: t['type'] as String),
                 itemBuilder: (_) => [for (final c in leafs) PopupMenuItem(value: c['key'] as String, child: Text(c['name'] as String))],
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
                   decoration: BoxDecoration(border: Border.all(color: AppColors.line), borderRadius: BorderRadius.circular(8)),
-                  child: const Row(mainAxisSize: MainAxisSize.min, children: [Text('Move to'), Icon(Icons.arrow_drop_down)]),
+                  child: const Row(mainAxisSize: MainAxisSize.min, children: [Text('Move all'), Icon(Icons.arrow_drop_down)]),
                 ),
               ),
             ]),
           ),
+          ),
           const Divider(height: 1),
         ],
       ]),
+    );
+  }
+}
+
+/// One "More Items" group: its products, each movable on its own (or all together).
+class _GroupSheet extends StatefulWidget {
+  const _GroupSheet({required this.group, required this.leafs, required this.onMove});
+  final Map<String, dynamic> group;
+  final List<Map<String, dynamic>> leafs;
+  final Future<void> Function({required String key, required List<String> itemCodes, String? type}) onMove;
+
+  @override
+  State<_GroupSheet> createState() => _GroupSheetState();
+}
+
+class _GroupSheetState extends State<_GroupSheet> {
+  late final List<Map<String, dynamic>> _items = [for (final i in (widget.group['items'] as List? ?? const [])) Map<String, dynamic>.from(i as Map)];
+  final _picked = <String>{};
+  bool _busy = false;
+
+  Future<void> _moveTo(String key, List<String> codes, {bool all = false}) async {
+    setState(() => _busy = true);
+    await widget.onMove(key: key, itemCodes: codes, type: all ? widget.group['type'] as String : null);
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _items.removeWhere((i) => codes.contains(i['itemCode']));
+      _picked.clear();
+    });
+    if (_items.isEmpty) Navigator.pop(context);
+  }
+
+  Widget _menu(String label, void Function(String key) onSelected) => PopupMenuButton<String>(
+        enabled: !_busy,
+        onSelected: onSelected,
+        itemBuilder: (_) => [for (final c in widget.leafs) PopupMenuItem(value: c['key'] as String, child: Text(c['name'] as String))],
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
+          decoration: BoxDecoration(border: Border.all(color: AppColors.line), borderRadius: BorderRadius.circular(8)),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [Text(label), const Icon(Icons.arrow_drop_down)]),
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return SafeArea(
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.85,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('${widget.group['type']} · ${_items.length} products', style: text.titleMedium),
+              Text('Tick products and move them, or move the whole group.', style: text.bodySmall),
+              const SizedBox(height: 8),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                if (_picked.isNotEmpty) _menu('Move ${_picked.length} ticked', (key) => _moveTo(key, _picked.toList())),
+                _menu('Move all ${_items.length}', (key) => _moveTo(key, [for (final i in _items) i['itemCode'] as String], all: true)),
+              ]),
+            ]),
+          ),
+          if (_busy) const LinearProgressIndicator(minHeight: 2),
+          const Divider(height: 1),
+          Expanded(
+            child: ListView.builder(
+              itemCount: _items.length,
+              itemBuilder: (_, k) {
+                final i = _items[k];
+                final code = i['itemCode'] as String;
+                return CheckboxListTile(
+                  dense: true,
+                  value: _picked.contains(code),
+                  onChanged: _busy ? null : (v) => setState(() => v == true ? _picked.add(code) : _picked.remove(code)),
+                  title: Text(i['name'] as String),
+                  subtitle: Text('MRP ${formatRupees(i['mrp'] as String)} · stock ${double.tryParse(i['stock'] as String)?.toStringAsFixed(0) ?? i['stock']} · code $code'),
+                  secondary: _menu('Move', (key) => _moveTo(key, [code])),
+                );
+              },
+            ),
+          ),
+        ]),
+      ),
     );
   }
 }

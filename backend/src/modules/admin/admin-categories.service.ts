@@ -8,7 +8,7 @@ import { r2 } from '../../infra/r2';
 import { appConfigService } from '../app-config/app-config.service';
 import { catalogCache } from '../catalog/catalog.cache';
 import { withPlaceholders } from '../catalog/catalog.service';
-import { DEFAULT_HOME_LISTS, HOME_LISTS_KEY, homeListsSchema } from '../catalog/home-lists';
+import { automaticOffers, automaticPopular, DEFAULT_HOME_LISTS, HOME_LISTS_KEY, homeListsSchema } from '../catalog/home-lists';
 import { adminProductColumns, loadSharp } from './admin-products.service';
 
 /** Category pictures are real photos (not pack shots): square, cover-cropped, 480 px WebP. */
@@ -89,9 +89,25 @@ export const adminCategoriesService = {
       : [];
     const withPhotos = await withPlaceholders(rows.map((r) => ({ ...r, placeholderImageUrl: null as string | null })));
     const byId = new Map(withPhotos.map((r) => [r.id, r]));
+    // What the shop shows when a list is empty — so the admin sees it and can start from it.
+    const [autoOffers, autoPopular] = await Promise.all([automaticOffers(), automaticPopular()]);
+    const autoIds = [...new Set([...autoOffers, ...autoPopular].map((r) => r.id))];
+    const autoRows = autoIds.length
+      ? await withPlaceholders(
+          (await db.select(adminProductColumns).from(products).leftJoin(categories, eq(categories.id, products.categoryId)).where(inArray(products.id, autoIds))).map((r) => ({
+            ...r,
+            placeholderImageUrl: null as string | null,
+          })),
+        )
+      : [];
+    const autoById = new Map(autoRows.map((r) => [r.id, r]));
     return {
       offers: lists.offers.flatMap((id) => byId.get(id) ?? []),
       popular: lists.popular.flatMap((id) => byId.get(id) ?? []),
+      automatic: {
+        offers: autoOffers.flatMap((r) => autoById.get(r.id) ?? []),
+        popular: autoPopular.flatMap((r) => autoById.get(r.id) ?? []),
+      },
     };
   },
 };

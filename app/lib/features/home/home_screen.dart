@@ -81,7 +81,7 @@ class HomeScreen extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     sliver: SliverGrid(
                       gridDelegate: productGridDelegate(context),
-                      delegate: SliverChildBuilderDelegate((_, i) => ProductCard(product: items[i], compact: compactProducts(context)), childCount: items.length.clamp(0, 21)),
+                      delegate: SliverChildBuilderDelegate((_, i) => ProductCard(product: items[i], compact: compactProducts(context)), childCount: items.length),
                     ),
                   ),
                 ];

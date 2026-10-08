@@ -1,10 +1,10 @@
 import { regroupVariants } from '../catalog/variants';
-import { inArray, sql } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { AppError } from '../../common/errors';
 import { logger } from '../../config/logger';
 import { db } from '../../db/client';
-import { productBarcodes, products } from '../../db/schema';
+import { categories, productBarcodes, products } from '../../db/schema';
 import type { PosCatalogClient } from '../../integrations/gofrugal/types';
 import { appConfigService } from '../app-config/app-config.service';
 import { catalogSyncService } from '../sync/catalog-sync.service';
@@ -19,10 +19,18 @@ export const catalogImportSchema = z
   .object({
     departments: z.array(z.string().trim().max(60)).max(20),
     typeMap: z.record(z.string().trim().min(1).max(80), z.string().refine((k) => WEB_CATEGORY_KEYS.has(k), 'Unknown category')),
+    /** Single items moved by the admin (Item Code → category), for groups that mix different things. */
+    itemMap: z.record(z.string().trim().min(1).max(64), z.string().refine((k) => WEB_CATEGORY_KEYS.has(k), 'Unknown category')).optional(),
   })
   .strict();
 export type CatalogImportSettings = z.infer<typeof catalogImportSchema>;
 export const DEFAULT_CATALOG_IMPORT: CatalogImportSettings = { departments: ['SUPER MARKET', 'SUPERMARKET', ''], typeMap: {} };
+
+/** Where an item goes: the admin's per-item move, else the TYPE rules / overrides. */
+function categoryOf(i: StockItem, s: CatalogImportSettings) {
+  const moved = s.itemMap?.[i.itemCode];
+  return moved && WEB_CATEGORY_KEYS.has(moved) ? (moved as ReturnType<typeof classify>) : classify(i.type, i.posName, s.typeMap, i.brand);
+}
 
 async function settings(): Promise<CatalogImportSettings> {
   const raw = await appConfigService.getRaw(CATALOG_IMPORT_KEY);
@@ -42,10 +50,10 @@ function parse(text: string, s: CatalogImportSettings) {
 }
 
 /** The stock file as a POS source for the existing sync engine (same validation, upserts, photo-keeping, deactivation). */
-function fileClient(items: StockItem[], typeMap: Record<string, string>): PosCatalogClient {
+function fileClient(items: StockItem[], s: CatalogImportSettings): PosCatalogClient {
   const used = new Set<string>();
   const records = items.map((i) => {
-    const key = classify(i.type, i.posName, typeMap, i.brand);
+    const key = categoryOf(i, s);
     used.add(key);
     return {
       externalId: i.itemCode,
@@ -129,12 +137,15 @@ export const catalogImportService = {
     let priceChanged = 0;
     let backInStock = 0;
     const byCategory: Record<string, number> = {};
-    const otherTypes: Record<string, number> = {};
+    const otherTypes: Record<string, { itemCode: string; name: string; mrp: string; stock: string }[]> = {};
     const priceSamples: { name: string; from: string; to: string }[] = [];
     for (const i of file.items) {
-      const key = classify(i.type, i.posName, s.typeMap, i.brand);
+      const key = categoryOf(i, s);
       if (i.isActive) byCategory[key] = (byCategory[key] ?? 0) + 1;
-      if (key === 'other') otherTypes[i.type.trim().toUpperCase() || '(blank)'] = (otherTypes[i.type.trim().toUpperCase() || '(blank)'] ?? 0) + 1;
+      if (key === 'other') {
+        const t = i.type.trim().toUpperCase() || '(blank)';
+        (otherTypes[t] ??= []).push({ itemCode: i.itemCode, name: i.name, mrp: i.mrp, stock: i.stock });
+      }
       const was = byCode.get(i.itemCode);
       if (!was) added++;
       else {
@@ -158,9 +169,11 @@ export const catalogImportService = {
       backInStock,
       goingOut,
       categories: WEB_CATEGORIES.filter((c) => byCategory[c.key]).map((c) => ({ key: c.key, name: c.name, parent: c.parent, products: byCategory[c.key] })),
+      /** Groups that landed in "More Items", with their products (to see what they are before moving them). */
       otherTypes: Object.entries(otherTypes)
-        .sort((a, b) => b[1] - a[1])
-        .map(([type, count]) => ({ type, count })),
+        .sort((a, b) => b[1].length - a[1].length)
+        .map(([type, items]) => ({ type, count: items.length, items: items.sort((a, b) => a.name.localeCompare(b.name)) })),
+      movedItems: Object.keys(s.itemMap ?? {}).length,
       problems: file.problems.slice(0, 50),
       problemCount: file.problems.length,
       looseItems: file.items.filter((i) => i.isLoose).length,
@@ -175,7 +188,7 @@ export const catalogImportService = {
     const file = parse(text, s);
     if (file.items.length === 0) throw new AppError('BAD_REQUEST', 'No products in the selected departments', { reason: 'stock_file_empty' });
     const before = await currentBarcodes(file.items);
-    const result = await catalogSyncService.run('full', fileClient(file.items, s.typeMap));
+    const result = await catalogSyncService.run('full', fileClient(file.items, s));
     if (result.status !== 'success') throw new AppError('CONFLICT', 'Another catalogue update is running. Try again in a minute.', { reason: 'import_busy' });
 
     // Remember every label barcode for the photo mode's scanner.
@@ -189,7 +202,7 @@ export const catalogImportService = {
         .onConflictDoUpdate({ target: productBarcodes.barcode, set: { productId: sql`excluded."product_id"` } });
     }
     // Photo work order: fast movers and daily needs first.
-    const prio = file.items.flatMap((i) => (idByCode.has(i.itemCode) ? [sql`(${idByCode.get(i.itemCode)!}::bigint, ${photoPriority(i, classify(i.type, i.posName, s.typeMap, i.brand))}::int)`] : []));
+    const prio = file.items.flatMap((i) => (idByCode.has(i.itemCode) ? [sql`(${idByCode.get(i.itemCode)!}::bigint, ${photoPriority(i, categoryOf(i, s))}::int)`] : []));
     for (let k = 0; k < prio.length; k += 1000) {
       await db.execute(sql`UPDATE ${products} AS p SET photo_priority = v.prio FROM (VALUES ${sql.join(prio.slice(k, k + 1000), sql`, `)}) AS v(id, prio) WHERE p.id = v.id AND p.photo_priority IS DISTINCT FROM v.prio`);
     }
@@ -215,6 +228,28 @@ export const catalogImportService = {
     const sizes = await regroupVariants();
     logger.info({ items: result.items, barcodes: pairs.length, sizeGroups: sizes.groups, newPackaging: repack.length }, 'stock file imported');
     return { ...result, barcodes: pairs.length, sizeGroups: sizes.groups, newPackaging: repack.length };
+  },
+
+  /**
+   * Admin → Upload stock file → "Move to": a whole POS group ([type]) or single items to a website
+   * category. Remembered for every future import, and the products move in the shop right away.
+   */
+  async move(input: { category: string; itemCodes: string[]; type?: string | undefined }) {
+    if (!WEB_CATEGORY_KEYS.has(input.category)) throw new AppError('BAD_REQUEST', 'Unknown category', { reason: 'category_unknown' });
+    const s = await settings();
+    const next: CatalogImportSettings = input.type
+      ? { ...s, typeMap: { ...s.typeMap, [input.type.trim().toUpperCase()]: input.category } }
+      : { ...s, itemMap: { ...(s.itemMap ?? {}), ...Object.fromEntries(input.itemCodes.map((c) => [c, input.category])) } };
+    await appConfigService.set(CATALOG_IMPORT_KEY, catalogImportSchema.parse(next), { isPublic: false, description: 'Stock-file import: POS departments sold online and TYPE → website category overrides.' });
+    // Move them now if the category already exists in the shop (else at the next import, which creates it).
+    const [cat] = await db.select({ id: categories.id }).from(categories).where(eq(categories.gofrugalCatId, `WEB-${input.category}`)).limit(1);
+    let moved = 0;
+    if (cat && input.itemCodes.length > 0) {
+      const rows = await db.update(products).set({ categoryId: cat.id }).where(inArray(products.gofrugalItemId, input.itemCodes)).returning({ id: products.id });
+      moved = rows.length;
+      await regroupVariants(); // sizes are grouped within a category
+    }
+    return { moved, appliesNow: Boolean(cat) };
   },
 
   async lastImport() {

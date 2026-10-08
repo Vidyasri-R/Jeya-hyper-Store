@@ -12,8 +12,8 @@ export const HOME_LISTS_KEY = 'home.lists';
 
 export const homeListsSchema = z
   .object({
-    offers: z.array(z.number().int().positive()).max(30),
-    popular: z.array(z.number().int().positive()).max(60),
+    offers: z.array(z.number().int().positive()).max(100),
+    popular: z.array(z.number().int().positive()).max(100),
   })
   .strict()
   .refine((v) => new Set(v.offers).size === v.offers.length && new Set(v.popular).size === v.popular.length, 'A product is in a list twice');
@@ -39,28 +39,36 @@ async function picked(ids: number[]): Promise<ProductCardRow[]> {
   return ids.flatMap((id) => byId.get(id) ?? []);
 }
 
+/** Automatic "Today's offers": in stock and below MRP, biggest discount first (then featured, fast movers). */
+export async function automaticOffers(): Promise<ProductCardRow[]> {
+  const rows = (await db
+    .select(productCardColumns)
+    .from(products)
+    .where(and(eq(products.isActive, true), inStock, sql`${products.sellingPrice} < ${products.mrp}`))
+    .orderBy(desc(discount), desc(products.sortRank), desc(products.photoPriority), products.id)
+    .limit(AUTO_OFFERS * 3)) as ProductCardRow[];
+  // One per product (sizes would repeat it).
+  const seen = new Set<string>();
+  return rows.filter((r) => !r.variantGroup || (!seen.has(r.variantGroup) && seen.add(r.variantGroup))).slice(0, AUTO_OFFERS);
+}
+
+/** Automatic "Popular in your store": featured first, then fast movers (restocked often and lately). */
+export async function automaticPopular(): Promise<ProductCardRow[]> {
+  return (await db
+    .select(productCardColumns)
+    .from(products)
+    .where(and(eq(products.isActive, true), inStock, eq(products.isVariantLeader, true)))
+    .orderBy(desc(products.sortRank), desc(products.photoPriority), products.id)
+    .limit(AUTO_POPULAR)) as ProductCardRow[];
+}
+
 async function load() {
   const stored = homeListsSchema.safeParse(await appConfigService.getRaw(HOME_LISTS_KEY));
   const lists = stored.success ? stored.data : DEFAULT_HOME_LISTS;
   let [offers, popular] = await Promise.all([picked(lists.offers), picked(lists.popular)]);
   // Empty list (or everything chosen sold out): fall back to the automatic one.
-  if (offers.length === 0) {
-    offers = (await db
-      .select(productCardColumns)
-      .from(products)
-      .where(and(eq(products.isActive, true), inStock, sql`${products.sellingPrice} < ${products.mrp}`))
-      .orderBy(desc(discount), desc(products.sortRank), desc(products.photoPriority), products.id)
-      .limit(AUTO_OFFERS)) as ProductCardRow[];
-  }
-  if (popular.length === 0) {
-    popular = (await db
-      .select(productCardColumns)
-      .from(products)
-      .where(and(eq(products.isActive, true), inStock, eq(products.isVariantLeader, true)))
-      // Featured first, then fast movers (photo priority = how often and how recently it was restocked).
-      .orderBy(desc(products.sortRank), desc(products.photoPriority), products.id)
-      .limit(AUTO_POPULAR)) as ProductCardRow[];
-  }
+  if (offers.length === 0) offers = await automaticOffers();
+  if (popular.length === 0) popular = await automaticPopular();
   return {
     offers: await presentProducts(offers, { collapse: true }),
     popular: await presentProducts(popular, { collapse: true }),

@@ -137,6 +137,10 @@ class StaffRepository {
   /// Last import, the import settings and the website categories.
   Future<Map<String, dynamic>> stockImportStatus() => _api.get('/admin/catalog/import');
 
+  /// Move a POS group ([type]) or single items to a website category — now and on every import.
+  Future<int> moveProducts({required String category, required List<String> itemCodes, String? type}) async =>
+      ((await _api.post('/admin/catalog/move', body: {'category': category, 'itemCodes': itemCodes, 'type': ?type}))['moved'] as num? ?? 0).toInt();
+
   /// Preview (apply: false) or import (apply: true) a GoFrugal "Current Stock Detail" CSV.
   Future<Map<String, dynamic>> importStockFile(Uint8List csv, {required bool apply}) =>
       _api.postBytes('/admin/catalog/import', csv, 'text/csv', query: {'apply': '$apply'});
@@ -228,10 +232,12 @@ class StaffRepository {
   Future<void> removeCategoryPhoto(int id) => _api.delete('/admin/categories/$id/image');
 
   /// The products picked for "Today's offers" and "Popular in your store", in order.
-  Future<({List<AdminProduct> offers, List<AdminProduct> popular})> homeLists() async {
+  /// The picked lists, and what the shop shows automatically when a list is empty.
+  Future<({List<AdminProduct> offers, List<AdminProduct> popular, List<AdminProduct> autoOffers, List<AdminProduct> autoPopular})> homeLists() async {
     final body = await _api.get('/admin/home-lists');
-    List<AdminProduct> list(String key) => [for (final p in body[key] as List) AdminProduct.fromJson(Map<String, dynamic>.from(p as Map))];
-    return (offers: list('offers'), popular: list('popular'));
+    final auto = Map<String, dynamic>.from((body['automatic'] as Map?) ?? const {});
+    List<AdminProduct> list(Map<String, dynamic> from, String key) => [for (final p in (from[key] as List? ?? const [])) AdminProduct.fromJson(Map<String, dynamic>.from(p as Map))];
+    return (offers: list(body, 'offers'), popular: list(body, 'popular'), autoOffers: list(auto, 'offers'), autoPopular: list(auto, 'popular'));
   }
 
   Future<void> saveHomeLists({required List<int> offers, required List<int> popular}) async =>
