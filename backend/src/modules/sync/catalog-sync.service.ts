@@ -57,6 +57,16 @@ const POS_OWNED = [
 const excluded = (column: string) => sql.raw(`excluded."${column}"`);
 const current = (column: string) => sql.raw(`"products"."${column}"`);
 
+/** POS columns the admin may change by hand; a changed one stays as the admin set it (products.locked_fields). */
+export const ADMIN_LOCKABLE = ['name', 'brand', 'category_id', 'pack_size', 'is_active'] as const;
+export type AdminLockable = (typeof ADMIN_LOCKABLE)[number];
+
+/** The incoming POS value, unless the admin locked this column on the product. */
+const posValue = (column: string) =>
+  (ADMIN_LOCKABLE as readonly string[]).includes(column)
+    ? sql.raw(`CASE WHEN '${column}' = ANY("products"."locked_fields") THEN "products"."${column}" ELSE excluded."${column}" END`)
+    : excluded(column);
+
 function isWeightUnit(unit: ReturnType<typeof mapPosUnit>): boolean {
   return unit === 'kg' || unit === 'g';
 }
@@ -163,7 +173,7 @@ async function loadCategoryIdMap(): Promise<Map<string, number>> {
 
 async function upsertProducts(rows: NewProduct[], mode: SyncMode): Promise<number> {
   if (rows.length === 0) return 0;
-  const set = Object.fromEntries(POS_OWNED.map((column) => [column, excluded(column)]));
+  const set = Object.fromEntries(POS_OWNED.map((column) => [column, posValue(column)]));
   const changed = await db
     .insert(products)
     .values(rows)
@@ -196,7 +206,7 @@ async function upsertProducts(rows: NewProduct[], mode: SyncMode): Promise<numbe
               POS_OWNED.map((column) => current(column)),
               sql`, `,
             )}) IS DISTINCT FROM (${sql.join(
-              POS_OWNED.map((column) => excluded(column)),
+              POS_OWNED.map((column) => posValue(column)),
               sql`, `,
             )})`,
           }

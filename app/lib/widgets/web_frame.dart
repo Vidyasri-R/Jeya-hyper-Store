@@ -12,6 +12,7 @@ import '../core/theme.dart';
 import '../data/models.dart';
 import '../router.dart';
 import '../state/providers.dart';
+import '../state/recent_searches.dart';
 import 'product_image.dart';
 
 /// Web shop on laptops and tablets: the two-row header above every page, the page centred at up
@@ -281,12 +282,35 @@ class _SearchBoxState extends ConsumerState<_SearchBox> {
     super.dispose();
   }
 
+  /// Earlier searches shown above the products (all of them while the box is empty).
+  List<String> get _recent => ref.read(recentSearchesProvider.notifier).matching(widget.controller.text);
+
+  /// Box empty: show the search history, if there is any.
+  void _showHistory() {
+    if (widget.controller.text.trim().isEmpty && _recent.isNotEmpty) {
+      setState(() {
+        _items = const [];
+        _for = '';
+        _highlight = -1;
+      });
+      _portal.show();
+    }
+  }
+
   void _changed(String value) {
     _debounce?.cancel();
     final q = value.trim();
     if (q.length < 2) {
-      setState(() => _items = const []);
-      _portal.hide();
+      setState(() {
+        _items = const [];
+        _for = q;
+        _highlight = -1;
+      });
+      if (q.isEmpty && _recent.isNotEmpty) {
+        _portal.show();
+      } else {
+        _portal.hide();
+      }
       return;
     }
     _debounce = Timer(const Duration(milliseconds: 180), () async {
@@ -298,7 +322,11 @@ class _SearchBoxState extends ConsumerState<_SearchBox> {
           _for = q;
           _highlight = -1;
         });
-        if (_focus.hasFocus) _portal.show();
+        if (_focus.hasFocus && (found.isNotEmpty || _recent.isNotEmpty)) {
+          _portal.show();
+        } else {
+          _portal.hide();
+        }
       } catch (_) {
         // Suggestions are a nicety; the search itself still works.
       }
@@ -308,23 +336,37 @@ class _SearchBoxState extends ConsumerState<_SearchBox> {
   void _open(Suggestion s) {
     _portal.hide();
     _focus.unfocus();
+    ref.read(recentSearchesProvider.notifier).add(widget.controller.text);
     ref.read(routerProvider).push('/product/${s.slug}');
+  }
+
+  void _searchFor(String q) {
+    widget.controller.text = q;
+    _highlight = -1;
+    _search();
   }
 
   void _search() {
     _portal.hide();
-    if (_highlight >= 0 && _highlight < _items.length) return _open(_items[_highlight]);
+    final recent = _recent;
+    if (_highlight >= 0 && _highlight < recent.length) return _searchFor(recent[_highlight]);
+    final at = _highlight - recent.length;
+    if (at >= 0 && at < _items.length) return _open(_items[at]);
+    ref.read(recentSearchesProvider.notifier).add(widget.controller.text);
     widget.onSubmit();
   }
+
+  /// Rows in the list: history, products, then "See all results" (when something is typed).
+  int get _rows => _recent.length + _items.length + (_for.isEmpty ? 0 : 1);
 
   KeyEventResult _key(FocusNode _, KeyEvent e) {
     if (e is! KeyDownEvent || !_portal.isShowing) return KeyEventResult.ignored;
     if (e.logicalKey == LogicalKeyboardKey.arrowDown) {
-      setState(() => _highlight = (_highlight + 1).clamp(0, _items.length));
+      setState(() => _highlight = (_highlight + 1).clamp(0, _rows - 1));
       return KeyEventResult.handled;
     }
     if (e.logicalKey == LogicalKeyboardKey.arrowUp) {
-      setState(() => _highlight = (_highlight - 1).clamp(-1, _items.length));
+      setState(() => _highlight = (_highlight - 1).clamp(-1, _rows - 1));
       return KeyEventResult.handled;
     }
     if (e.logicalKey == LogicalKeyboardKey.escape) {
@@ -337,6 +379,8 @@ class _SearchBoxState extends ConsumerState<_SearchBox> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    ref.watch(recentSearchesProvider);
+    final recent = _recent;
     return CompositedTransformTarget(
       link: _link,
       child: OverlayPortal(
@@ -359,11 +403,47 @@ class _SearchBoxState extends ConsumerState<_SearchBox> {
                   child: ConstrainedBox(
                     constraints: BoxConstraints(maxWidth: width, minWidth: width, maxHeight: 460),
                     child: ListView(shrinkWrap: true, padding: const EdgeInsets.symmetric(vertical: 6), children: [
+                      if (recent.isNotEmpty && _for.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(14, 4, 6, 0),
+                          child: Row(children: [
+                            Expanded(child: Text('Recent searches', style: text.labelLarge?.copyWith(color: AppColors.inkMuted, fontWeight: FontWeight.w700))),
+                            TextButton(
+                              onPressed: () {
+                                ref.read(recentSearchesProvider.notifier).clear();
+                                _portal.hide();
+                              },
+                              child: const Text('Clear'),
+                            ),
+                          ]),
+                        ),
+                      for (final (i, r) in recent.indexed)
+                        InkWell(
+                          onTap: () => _searchFor(r),
+                          child: Container(
+                            color: i == _highlight ? AppColors.brand50 : null,
+                            padding: const EdgeInsets.only(left: 14, right: 4),
+                            child: Row(children: [
+                              const SizedBox(width: 40, child: Icon(Icons.history_rounded, color: AppColors.inkMuted, size: 22)),
+                              const SizedBox(width: 12),
+                              Expanded(child: _Highlighted(text: r, query: _for, style: text.bodyMedium?.copyWith(color: AppColors.brandBlue))),
+                              IconButton(
+                                tooltip: 'Remove from history',
+                                visualDensity: VisualDensity.compact,
+                                icon: const Icon(Icons.close_rounded, size: 16, color: AppColors.inkFaint),
+                                onPressed: () {
+                                  ref.read(recentSearchesProvider.notifier).remove(r);
+                                  if (_recent.isEmpty && _items.isEmpty) _portal.hide();
+                                },
+                              ),
+                            ]),
+                          ),
+                        ),
                       for (final (i, s) in _items.indexed)
                         InkWell(
                           onTap: () => _open(s),
                           child: Container(
-                            color: i == _highlight ? AppColors.brand50 : null,
+                            color: recent.length + i == _highlight ? AppColors.brand50 : null,
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                             child: Row(children: [
                               ProductImage(url: s.imageUrl, placeholderUrl: s.placeholderImageUrl, name: s.name, size: 40, radius: 8),
@@ -373,13 +453,14 @@ class _SearchBoxState extends ConsumerState<_SearchBox> {
                             ]),
                           ),
                         ),
+                      if (_for.isNotEmpty)
                       InkWell(
                         onTap: () {
                           _highlight = -1;
                           _search();
                         },
                         child: Container(
-                          color: _highlight == _items.length ? AppColors.brand50 : null,
+                          color: _highlight == recent.length + _items.length ? AppColors.brand50 : null,
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           child: Row(children: [
                             Icon(Icons.search_rounded, color: AppColors.brand700),
@@ -408,7 +489,11 @@ class _SearchBoxState extends ConsumerState<_SearchBox> {
                 textInputAction: TextInputAction.search,
                 onChanged: _changed,
                 onTap: () {
-                  if (_items.isNotEmpty && widget.controller.text.trim().length >= 2) _portal.show();
+                  if (_items.isNotEmpty && widget.controller.text.trim().length >= 2) {
+                    _portal.show();
+                  } else {
+                    _showHistory();
+                  }
                 },
                 onSubmitted: (_) => _search(),
                 decoration: InputDecoration(

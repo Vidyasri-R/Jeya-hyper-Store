@@ -8,12 +8,15 @@ import { r2 } from '../../infra/r2';
 import { catalogCache } from '../catalog/catalog.cache';
 import { available } from '../catalog/catalog.repository';
 import { withPlaceholders } from '../catalog/catalog.service';
+import { regroupVariants } from '../catalog/variants';
+import type { AdminLockable } from '../sync/catalog-sync.service';
 
 /** Product photos: 800 px on the long side, WebP — ~30–60 KB each, so 30k fit well inside R2's free 10 GB. */
 const MAX_SIDE = 800;
 const MAX_INPUT_PIXELS = 40_000_000;
 
-export type AdminProductFilter = 'all' | 'no_image' | 'with_image' | 'inactive' | 'recheck';
+export const ADMIN_PRODUCT_FILTERS = ['all', 'no_image', 'with_image', 'inactive', 'recheck', 'choices', 'edited'] as const;
+export type AdminProductFilter = (typeof ADMIN_PRODUCT_FILTERS)[number];
 
 const columns = {
   id: products.id,
@@ -38,6 +41,10 @@ const columns = {
   variantLabel: products.variantLabel,
   /** 'new_barcode' when the packaging may have changed since the photo was taken. */
   photoCheckReason: products.photoCheckReason,
+  /** Stock-file fields the admin changed (kept on the next import). */
+  lockedFields: products.lockedFields,
+  /** Other sizes of this product that also have choices (flavours). */
+  otherSizesWithChoices: sql<number>`(CASE WHEN ${products.variantGroup} IS NULL THEN 0 ELSE (SELECT count(*)::int FROM products o WHERE o.variant_group = ${products.variantGroup} AND o.id <> ${products.id} AND o.options IS NOT NULL) END)`,
 };
 
 /** Product fields the admin app shows (also used by the photo work queue). */
@@ -170,13 +177,22 @@ export const adminProductsService = {
     return row ?? null;
   },
 
-  async list(params: { q?: string | undefined; filter: AdminProductFilter; cursor?: string | undefined; limit: number }) {
+  /** [categoryId]: that category and its sub-categories. */
+  async list(params: { q?: string | undefined; filter: AdminProductFilter; categoryId?: number | undefined; cursor?: string | undefined; limit: number }) {
     const where: SQL[] = [];
     if (params.filter === 'inactive') where.push(eq(products.isActive, false));
-    else where.push(eq(products.isActive, true));
+    else if (params.filter !== 'edited') where.push(eq(products.isActive, true));
     if (params.filter === 'no_image') where.push(isNull(products.imageUrl));
     if (params.filter === 'recheck') where.push(isNotNull(products.photoCheckReason));
     if (params.filter === 'with_image') where.push(isNotNull(products.imageUrl));
+    if (params.filter === 'choices') where.push(isNotNull(products.options));
+    if (params.filter === 'edited') where.push(sql`cardinality(${products.lockedFields}) > 0`);
+    if (params.categoryId !== undefined) {
+      where.push(sql`${products.categoryId} IN (
+        WITH RECURSIVE tree AS (SELECT id FROM categories WHERE id = ${params.categoryId}
+          UNION ALL SELECT c.id FROM categories c JOIN tree ON c.parent_id = tree.id)
+        SELECT id FROM tree)`);
+    }
     const q = params.q?.trim();
     if (q) {
       const pattern = `%${q.replace(/[%_\\]/g, '\\$&')}%`;
@@ -221,11 +237,46 @@ export const adminProductsService = {
       safetyStock?: string | undefined;
       options?: ProductOptions | null | undefined;
       optionsForAllSizes?: boolean | undefined;
+      /** Take the choices off every other size of this product (they were added there by mistake). */
+      clearOtherSizesOptions?: boolean | undefined;
+      /** Stock-file fields: the admin's value stays through later imports. */
+      name?: string | undefined;
+      brand?: string | null | undefined;
+      categoryId?: number | undefined;
+      packSize?: string | null | undefined;
+      /** Hidden from the shop (stays hidden after imports) / shown again. */
+      hidden?: boolean | undefined;
+      /** Fields to hand back to the stock file (its value returns on the next import). */
+      useStockFile?: AdminLockable[] | undefined;
     },
   ) {
+    const [before] = await db.select({ locked: products.lockedFields }).from(products).where(eq(products.id, productId)).limit(1);
+    if (!before) throw AppError.notFound('Product');
+    if (patch.categoryId !== undefined) {
+      const [cat] = await db.select({ id: categories.id }).from(categories).where(and(eq(categories.id, patch.categoryId), eq(categories.isActive, true))).limit(1);
+      if (!cat) throw new AppError('BAD_REQUEST', 'That category does not exist', { reason: 'category_unknown' });
+    }
+    const locked = new Set(before.locked);
+    const lock = (field: AdminLockable, changed: unknown) => {
+      if (changed !== undefined) locked.add(field);
+    };
+    lock('name', patch.name);
+    lock('brand', patch.brand);
+    lock('category_id', patch.categoryId);
+    lock('pack_size', patch.packSize);
+    if (patch.hidden === true) locked.add('is_active');
+    if (patch.hidden === false) locked.delete('is_active');
+    for (const field of patch.useStockFile ?? []) locked.delete(field);
     const [row] = await db
       .update(products)
       .set({
+        ...(patch.name !== undefined ? { name: patch.name } : {}),
+        ...(patch.brand !== undefined ? { brand: patch.brand } : {}),
+        ...(patch.categoryId !== undefined ? { categoryId: patch.categoryId } : {}),
+        ...(patch.packSize !== undefined ? { packSize: patch.packSize } : {}),
+        ...(patch.hidden !== undefined ? { isActive: !patch.hidden } : {}),
+        lockedFields: [...locked].sort(),
+        updatedAt: sql`now()`,
         ...(patch.nameTa !== undefined ? { nameTa: patch.nameTa } : {}),
         ...(patch.description !== undefined ? { description: patch.description } : {}),
         ...(patch.sortRank !== undefined ? { sortRank: patch.sortRank } : {}),
@@ -244,8 +295,19 @@ export const adminProductsService = {
         .returning({ id: products.id });
       sizes += others.length;
     }
+    let cleared = 0;
+    if (patch.clearOtherSizesOptions && row.variantGroup) {
+      const others = await db
+        .update(products)
+        .set({ options: null })
+        .where(and(eq(products.variantGroup, row.variantGroup), sql`${products.id} <> ${productId}`, isNotNull(products.options)))
+        .returning({ id: products.id });
+      cleared = others.length;
+    }
+    // Name / category / size decide which products are sizes of one another.
+    if (patch.name !== undefined || patch.categoryId !== undefined || patch.packSize !== undefined || patch.hidden !== undefined) await regroupVariants();
     catalogCache.invalidate();
-    return { id: row.id, sizesUpdated: sizes };
+    return { id: row.id, sizesUpdated: sizes, otherSizesCleared: cleared };
   },
 
   /** [by] = the staff member uploading (photo work tracking). */

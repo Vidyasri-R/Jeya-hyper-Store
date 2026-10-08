@@ -7,6 +7,8 @@ import type { ParsedSearch } from './search-query';
 
 /** Below this length trigram matching is noise ("sam" ≈ "Sakthi"); prefix full-text handles it. */
 const MIN_FUZZY_LENGTH = 4;
+const SHORT_FUZZY_LENGTH = 5;
+const SHORT_FUZZY_MIN = 0.5;
 
 /**
  * Sets the `<%` threshold for this statement only. As an uncorrelated subquery it
@@ -154,7 +156,11 @@ export const catalogRepository = {
     const tsq = search.tsquery ? sql`to_tsquery('simple', ${search.tsquery})` : null;
 
     const fuzzy = search.text.length >= MIN_FUZZY_LENGTH;
-    const matchers: SQL[] = fuzzy ? [sql`${search.text} <% ${products.name}`] : [];
+    // A few typed letters match too much by chance ("webf" ≈ "Set Wet"): short queries need a closer match.
+    const shortFuzzy = search.text.length <= SHORT_FUZZY_LENGTH;
+    const matchers: SQL[] = fuzzy
+      ? [shortFuzzy ? sql`(${search.text} <% ${products.name} AND word_similarity(${search.text}, ${products.name}) >= ${SHORT_FUZZY_MIN})` : sql`${search.text} <% ${products.name}`]
+      : [];
     if (tsq) matchers.push(sql`${products.searchVector} @@ ${tsq}`);
     if (search.code) {
       matchers.push(sql`${products.barcode} = ${search.code}`, sql`upper(${products.itemCode}) = ${search.code}`);

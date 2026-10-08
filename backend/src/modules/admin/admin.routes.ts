@@ -6,7 +6,7 @@ import { requireAdmin, requireStaff, staffOf } from '../../common/staff-auth.mid
 import { parseBody, parseParams, parseQuery } from '../../common/validate';
 import { optionalPhone, username } from '../staff/staff.schemas';
 import { backupService } from '../backup/backup.service';
-import { catalogSyncService } from '../sync/catalog-sync.service';
+import { ADMIN_LOCKABLE, catalogSyncService } from '../sync/catalog-sync.service';
 import { usageService } from '../usage/usage.service';
 import { WEB_CATEGORIES } from '../catalog-import/category-map';
 import { catalogImportService } from '../catalog-import/catalog-import.service';
@@ -14,7 +14,7 @@ import { adminBannersService } from './admin-banners';
 import { adminCategoriesService } from './admin-categories.service';
 import { photoWorkService } from './photo-work.service';
 import { adminDashboardService } from './admin-dashboard.service';
-import { adminProductsService } from './admin-products.service';
+import { ADMIN_PRODUCT_FILTERS, adminProductsService } from './admin-products.service';
 import { adminSettingsService } from './admin-settings.service';
 import { adminStaffService } from './admin-staff.service';
 import { EXPENSE_CATEGORIES, financeService } from './finance.service';
@@ -70,7 +70,8 @@ adminRouter.get('/products', async (req, res) => {
   const query = parseQuery(
     z.object({
       q: z.string().trim().max(80).optional(),
-      filter: z.enum(['all', 'no_image', 'with_image', 'inactive', 'recheck']).default('all'),
+      filter: z.enum(ADMIN_PRODUCT_FILTERS).default('all'),
+      categoryId: z.coerce.number().int().positive().optional(),
       cursor: z.string().max(400).optional(),
       limit: z.coerce.number().int().min(1).max(50).default(30),
     }),
@@ -102,6 +103,14 @@ adminRouter.patch('/products/:id', async (req, res) => {
           .nullable()
           .optional(),
         optionsForAllSizes: z.boolean().optional(),
+        clearOtherSizesOptions: z.boolean().optional(),
+        /** Stock-file fields the admin overrides (kept through later imports). */
+        name: z.string().trim().min(2).max(255).optional(),
+        brand: z.string().trim().max(120).nullable().optional().transform((value) => (value === '' ? null : value)),
+        categoryId: z.number().int().positive().optional(),
+        packSize: z.string().trim().max(40).nullable().optional().transform((value) => (value === '' ? null : value)),
+        hidden: z.boolean().optional(),
+        useStockFile: z.array(z.enum(ADMIN_LOCKABLE)).max(ADMIN_LOCKABLE.length).optional(),
       })
       .strict(),
     req,

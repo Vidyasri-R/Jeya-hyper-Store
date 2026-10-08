@@ -251,6 +251,7 @@ class AdminProduct {
       barcode = j['barcode'] as String?,
       brand = j['brand'] as String?,
       category = j['category'] as String?,
+      categoryId = (j['categoryId'] as num?)?.toInt(),
       packSize = j['packSize'] as String?,
       mrp = _str(j['mrp'], '0.00'),
       sellingPrice = _str(j['sellingPrice'], '0.00'),
@@ -264,7 +265,9 @@ class AdminProduct {
       photoAt = DateTime.tryParse(j['photoAt']?.toString() ?? '')?.toLocal(),
       description = j['description'] as String?,
       sortRank = (j['sortRank'] as num?)?.toInt() ?? 0,
-      isActive = j['isActive'] != false;
+      isActive = j['isActive'] != false,
+      lockedFields = [for (final f in (j['lockedFields'] as List? ?? const [])) f.toString()],
+      otherSizesWithChoices = (j['otherSizesWithChoices'] as num?)?.toInt() ?? 0;
 
   final int id;
   final String name;
@@ -273,6 +276,7 @@ class AdminProduct {
   final String? barcode;
   final String? brand;
   final String? category;
+  final int? categoryId;
   final String? packSize;
   final String mrp;
   final String sellingPrice;
@@ -295,6 +299,11 @@ class AdminProduct {
   final String? description;
   final int sortRank;
   final bool isActive;
+  /// Stock-file fields the admin changed ('name', 'brand', 'category_id', 'pack_size', 'is_active'):
+  /// the next stock upload keeps the admin's value.
+  final List<String> lockedFields;
+  /// Other sizes of this product that also have choices.
+  final int otherSizesWithChoices;
 }
 
 class ResultPage<T> {

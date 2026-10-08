@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jeya_hyper_store/data/models.dart';
 import 'package:jeya_hyper_store/state/providers.dart';
+import 'package:jeya_hyper_store/state/recent_searches.dart';
+import 'package:jeya_hyper_store/widgets/add_to_cart.dart';
 import 'package:jeya_hyper_store/widgets/choices_sheet.dart';
 import 'package:jeya_hyper_store/widgets/product_card.dart';
 
@@ -96,5 +98,33 @@ void main() {
     await tester.tap(find.text('Add 3 · ₹30'));
     await tester.pumpAndSettle();
     expect(picked, {'Vanilla': 2000, 'Chocolate': 1000});
+  });
+
+  testWidgets('product page shows the flavours; tapping one opens the picker', (tester) async {
+    final product = Product.fromJson({
+      ..._size(7, '1 pcs', '10.00'),
+      'name': 'Arun',
+      'options': {'label': 'Flavour', 'values': ['Vanila', 'Chocolate']},
+    });
+    await _pump(tester, ChoicesPreview(product: product));
+    expect(find.text('Available in 2 flavours — pick yours'), findsOneWidget);
+    await tester.tap(find.text('Chocolate'));
+    await tester.pumpAndSettle();
+    expect(find.text('Choose the flavour · ₹10 each'), findsOneWidget);
+  });
+
+  test('recent searches: newest first, no repeats, matching what is typed', () {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    final recent = container.read(recentSearchesProvider.notifier);
+    recent.add('bru coffee');
+    recent.add('atta');
+    recent.add('Bru Coffee');
+    recent.add('x');
+    expect(container.read(recentSearchesProvider), ['Bru Coffee', 'atta']);
+    expect(recent.matching('bru'), ['Bru Coffee']);
+    expect(recent.matching(''), ['Bru Coffee', 'atta']);
+    recent.remove('atta');
+    expect(container.read(recentSearchesProvider), ['Bru Coffee']);
   });
 }

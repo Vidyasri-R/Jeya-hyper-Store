@@ -108,7 +108,7 @@ class FakeRepo extends StaffRepository {
   );
 
   @override
-  Future<(ResultPage<AdminProduct>, Map<String, int>)> products({String? query, String filter = 'all', String? cursor}) async =>
+  Future<(ResultPage<AdminProduct>, Map<String, int>)> products({String? query, String filter = 'all', int? categoryId, String? cursor}) async =>
       (ResultPage([product(1, 'Aashirvaad Atta 1kg'), product(3, 'Gold Winner Oil 1L')], null), {'active': 3, 'withImage': 0});
 
   @override
@@ -145,6 +145,18 @@ class FakeRepo extends StaffRepository {
     calls.add({'call': 'saveChoices', 'id': id, 'options': options, 'allSizes': allSizes});
     return allSizes ? 4 : 1;
   }
+
+  @override
+  Future<int> clearOtherSizesChoices(int id) async {
+    calls.add({'call': 'clearOtherSizesChoices', 'id': id});
+    return 25;
+  }
+
+  @override
+  Future<void> updateProduct(int id, Map<String, dynamic> patch) async => calls.add({'call': 'updateProduct', 'id': id, 'patch': patch});
+
+  @override
+  Future<List<({int id, String name})>> categoryOptions() async => [(id: 1, name: 'Dairy, Bread & Eggs'), (id: 2, name: 'Dairy, Bread & Eggs › Ice Creams'), (id: 3, name: 'Snacks › Chocolates')];
 
   @override
   Future<List<Map<String, dynamic>>> shopCategories() async => [
@@ -333,7 +345,7 @@ void main() {
     expect(find.text('Taj Mahal Tea Bags 25N'), findsOneWidget);
   });
 
-  testWidgets('admin lists the designs of one POS item; every size gets them', (tester) async {
+  testWidgets('admin lists the designs of one POS item; only this size gets them unless ticked', (tester) async {
     final repo = FakeRepo(orderAt('placed'));
     final product = AdminProduct.fromJson({'id': 9, 'name': 'Pen', 'itemCode': 'P9', 'mrp': '10.00', 'sellingPrice': '10.00', 'available': '40', 'variantGroup': '1:pen', 'variantLabel': '₹10'});
     tester.view.physicalSize = const Size(800, 1720);
@@ -353,8 +365,54 @@ void main() {
       'call': 'saveChoices',
       'id': 9,
       'options': {'label': 'Design', 'values': ['Blue gel', 'Black ball'], 'images': <String, String>{}},
-      'allSizes': true,
+      'allSizes': false,
     });
+  });
+
+  testWidgets('choices added to every size by mistake can be taken off the other sizes', (tester) async {
+    final repo = FakeRepo(orderAt('placed'));
+    final product = AdminProduct.fromJson({
+      'id': 1836, 'name': 'Arun MRP 10', 'itemCode': 'A10', 'mrp': '10.00', 'sellingPrice': '10.00', 'available': '40',
+      'variantGroup': '7239:arun', 'variantLabel': '₹10', 'otherSizesWithChoices': 25,
+      'options': {'label': 'Flavour', 'values': ['Vanila', 'chocolate']},
+    });
+    tester.view.physicalSize = const Size(800, 1720);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [repositoryProvider.overrideWithValue(repo)],
+      child: MaterialApp(theme: ThemeData(useMaterial3: true), home: ChoicesEditorScreen(product: product)),
+    ));
+    await tester.scrollUntilVisible(find.text('Remove from the other sizes'), 200, scrollable: find.byType(Scrollable).first);
+    expect(find.text('25 other sizes have choices too'), findsOneWidget);
+    await tester.tap(find.text('Remove from the other sizes'));
+    await tester.pumpAndSettle();
+    expect(repo.calls.last, {'call': 'clearOtherSizesChoices', 'id': 1836});
+    expect(find.text('25 other sizes have choices too'), findsNothing);
+  });
+
+  testWidgets('admin renames a product, moves it to another category and hides it', (tester) async {
+    final repo = FakeRepo(orderAt('placed'));
+    await pumpApp(tester, repo, at: '/products');
+    expect(find.text('Has choices'), findsOneWidget);
+    await tester.tap(find.text('Aashirvaad Atta 1kg'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Name in the shop'), 'Aashirvaad Whole Wheat Atta 1kg');
+    await tester.scrollUntilVisible(find.text('Category — tap to move the product'), 200, scrollable: find.byType(Scrollable).last);
+    await tester.tap(find.text('Category — tap to move the product'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Chocolates'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Hide from the shop'));
+    await tester.pump();
+    await tester.scrollUntilVisible(find.text('Save details'), 200, scrollable: find.byType(Scrollable).last);
+    await tester.tap(find.text('Save details'));
+    await tester.pumpAndSettle();
+    final patch = repo.calls.lastWhere((c) => c['call'] == 'updateProduct')['patch'] as Map;
+    expect(patch['name'], 'Aashirvaad Whole Wheat Atta 1kg');
+    expect(patch['categoryId'], 3);
+    expect(patch['hidden'], true);
+    expect(patch.containsKey('brand'), isFalse);
   });
 
   testWidgets('finance shows profit, margin and loss-making products', (tester) async {

@@ -100,6 +100,10 @@ class _Detail extends ConsumerWidget {
                     SizeChips(product: p, selectedSlug: pickedSlug, onPick: onPickSize),
                   ] else
                     Text(p.sizeLabel, style: text.bodySmall),
+                  if (p.options != null) ...[
+                    const SizedBox(height: 14),
+                    ChoicesPreview(product: p),
+                  ],
                   const SizedBox(height: 14),
                   Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
                     PriceLine(price: p.sellingPrice, mrp: p.mrp, showMrp: p.hasDiscount, large: true),
@@ -318,6 +322,7 @@ class _WideProductPage extends ConsumerWidget {
       const SizedBox(height: 14),
       if (p.brand != null) row('Brand', Text(p.brand!, style: text.bodyMedium)),
       row('Pack size', p.variants.isNotEmpty ? SizeChips(product: p, selectedSlug: pickedSlug, onPick: onPickSize) : Text(p.sizeLabel, style: text.bodyMedium)),
+      if (p.options != null) row(p.options!.label, ChoicesPreview(product: p)),
       if (p.hasDiscount) row('MRP', Text('${formatRupees(p.mrp)} (inclusive of all taxes)', style: text.bodyMedium?.copyWith(decoration: TextDecoration.lineThrough, color: AppColors.inkMuted))),
       row(
         'Selling price',

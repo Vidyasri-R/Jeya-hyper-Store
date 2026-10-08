@@ -104,10 +104,11 @@ class StaffRepository {
   Future<Object?> saveSetting(String key, Object? value) async => (await _api.put('/admin/settings/$key', body: {'value': value}))['value'];
 
   // ── admin: products ──
-  Future<(ResultPage<AdminProduct>, Map<String, int>)> products({String? query, String filter = 'all', String? cursor}) async {
+  /// [categoryId]: that category and its sub-categories.
+  Future<(ResultPage<AdminProduct>, Map<String, int>)> products({String? query, String filter = 'all', int? categoryId, String? cursor}) async {
     final body = await _api.get(
       '/admin/products',
-      query: {if (query != null && query.trim().isNotEmpty) 'q': query.trim(), 'filter': filter, 'cursor': ?cursor, 'limit': 30},
+      query: {if (query != null && query.trim().isNotEmpty) 'q': query.trim(), 'filter': filter, 'categoryId': ?categoryId, 'cursor': ?cursor, 'limit': 30},
     );
     final counts = Map<String, dynamic>.from((body['counts'] as Map?) ?? const {});
     return (
@@ -135,6 +136,10 @@ class StaffRepository {
   Future<int> saveChoices(int id, Map<String, dynamic>? options, {bool allSizes = false}) async =>
       (((await _api.patch('/admin/products/$id', body: {'options': options, 'optionsForAllSizes': allSizes}))['product'] as Map?)?['sizesUpdated'] as num? ?? 1)
           .toInt();
+
+  /// Takes the choices off every other size of the product; returns how many.
+  Future<int> clearOtherSizesChoices(int id) async =>
+      (((await _api.patch('/admin/products/$id', body: {'clearOtherSizesOptions': true}))['product'] as Map?)?['otherSizesCleared'] as num? ?? 0).toInt();
 
   // ── admin: daily stock file ──
   /// Last import, the import settings and the website categories.
@@ -258,6 +263,22 @@ class StaffRepository {
 
   Future<String> uploadBannerImage(Uint8List bytes, String contentType) async =>
       (await _api.putBytes('/admin/banners/image', bytes, contentType))['imageUrl'] as String;
+
+  /// Category picker for products: every shop category ("Dairy › Ice Creams"), children after their parent.
+  Future<List<({int id, String name})>> categoryOptions() async {
+    final body = await _api.get('/categories', auth: false);
+    final out = <({int id, String name})>[];
+    void walk(List<dynamic> list, String prefix) {
+      for (final c in list) {
+        final m = Map<String, dynamic>.from(c as Map);
+        out.add((id: (m['id'] as num).toInt(), name: '$prefix${m['name']}'));
+        walk((m['children'] as List?) ?? const [], '$prefix${m['name']} › ');
+      }
+    }
+
+    walk(body['categories'] as List, '');
+    return out;
+  }
 
   /// Category picker for banner links: every category, children after their parent.
   Future<List<({String slug, String name})>> bannerCategories() async {

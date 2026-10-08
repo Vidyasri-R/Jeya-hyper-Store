@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme.dart';
 import '../../data/models.dart';
 import '../../state/providers.dart';
+import '../../state/recent_searches.dart';
 import '../../widgets/common.dart';
 import '../../widgets/product_image.dart';
 import 'product_grid.dart';
@@ -51,6 +52,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   void _submit(String q) {
     final query = q.trim();
     if (query.isEmpty) return;
+    ref.read(recentSearchesProvider.notifier).add(query);
     _controller.text = query;
     _focus.unfocus();
     setState(() {
@@ -70,6 +72,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    ref.watch(recentSearchesProvider);
+    final recent = ref.read(recentSearchesProvider.notifier).matching(_controller.text);
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
@@ -118,6 +122,25 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             )
           : ListView(
               children: [
+                if (recent.isNotEmpty && _controller.text.trim().isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 8, 0),
+                    child: Row(children: [
+                      Expanded(child: Text('Recent searches', style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700))),
+                      TextButton(onPressed: () => ref.read(recentSearchesProvider.notifier).clear(), child: const Text('Clear')),
+                    ]),
+                  ),
+                for (final r in recent)
+                  ListTile(
+                    leading: const Icon(Icons.history_rounded, color: AppColors.inkMuted),
+                    title: Text(r, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    trailing: IconButton(
+                      tooltip: 'Remove from history',
+                      icon: const Icon(Icons.close_rounded, size: 18, color: AppColors.inkFaint),
+                      onPressed: () => ref.read(recentSearchesProvider.notifier).remove(r),
+                    ),
+                    onTap: () => _submit(r),
+                  ),
                 for (final s in _suggestions)
                   ListTile(
                     leading: ProductImage(url: s.imageUrl, placeholderUrl: s.placeholderImageUrl, name: s.name, size: 44, radius: AppRadius.sm),
@@ -127,9 +150,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       icon: const Icon(Icons.north_west_rounded, size: 18, color: AppColors.inkFaint),
                       onPressed: () => _submit(s.name),
                     ),
-                    onTap: () => context.push('/product/${s.slug}'),
+                    onTap: () {
+                      ref.read(recentSearchesProvider.notifier).add(_controller.text);
+                      context.push('/product/${s.slug}');
+                    },
                   ),
-                if (_suggestions.isEmpty) ...[
+                if (_suggestions.isEmpty && _controller.text.trim().isEmpty) ...[
                   const SectionHeader(title: 'Popular searches'),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),

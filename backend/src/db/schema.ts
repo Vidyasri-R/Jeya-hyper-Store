@@ -387,6 +387,11 @@ export const products = pgTable(
     photoCheckReason: varchar({ length: 40 }),
     photoCheckSince: tstz(),
     isActive: boolean().notNull().default(true),
+    /**
+     * Stock-file / POS columns the admin changed by hand ('name', 'brand', 'category_id', 'pack_size',
+     * 'is_active' = hidden from the shop): later imports keep the admin's value for these.
+     */
+    lockedFields: text().array().notNull().default(sql`'{}'::text[]`),
     /** Pin popular SKUs to the top of listings. */
     sortRank: integer().notNull().default(0),
 

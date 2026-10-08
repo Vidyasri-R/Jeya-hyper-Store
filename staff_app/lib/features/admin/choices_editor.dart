@@ -36,7 +36,9 @@ class _ChoicesEditorScreenState extends ConsumerState<ChoicesEditorScreen> {
     for (final v in (widget.product.options?['values'] as List? ?? const []))
       _Choice(v.toString(), ((widget.product.options?['images'] as Map?) ?? const {})[v]?.toString()),
   ];
-  late bool _allSizes = widget.product.variantGroup != null;
+  /// Off unless the admin ticks it: choices usually belong to one size only (e.g. just Arun ₹10).
+  bool _allSizes = false;
+  late int _othersWithChoices = widget.product.otherSizesWithChoices;
   int? _uploading;
   bool _saving = false;
 
@@ -92,6 +94,20 @@ class _ChoicesEditorScreenState extends ConsumerState<ChoicesEditorScreen> {
       if (!mounted) return;
       showSnack(context, remove ? 'Choices removed' : (n > 1 ? 'Choices saved for $n sizes' : 'Choices saved'));
       Navigator.pop(context, true);
+    } on ApiException catch (e) {
+      if (mounted) showSnack(context, e.friendly, error: true);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _clearOthers() async {
+    setState(() => _saving = true);
+    try {
+      final n = await ref.read(repositoryProvider).clearOtherSizesChoices(widget.product.id);
+      if (!mounted) return;
+      setState(() => _othersWithChoices = 0);
+      showSnack(context, 'Choices removed from $n other ${n == 1 ? 'size' : 'sizes'}');
     } on ApiException catch (e) {
       if (mounted) showSnack(context, e.friendly, error: true);
     } finally {
@@ -173,7 +189,25 @@ class _ChoicesEditorScreenState extends ConsumerState<ChoicesEditorScreen> {
             contentPadding: EdgeInsets.zero,
             value: _allSizes,
             onChanged: (v) => setState(() => _allSizes = v ?? false),
-            title: const Text('Same choices for every size of this product'),
+            title: const Text('Also for every other size / price of this product'),
+            subtitle: Text(_allSizes ? 'Every size gets these choices' : 'Only ${p.variantLabel ?? 'this one'} gets these choices'),
+          ),
+        if (_othersWithChoices > 0)
+          Container(
+            margin: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: AppColors.amberSoft, borderRadius: BorderRadius.circular(AppRadius.md)),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('$_othersWithChoices other ${_othersWithChoices == 1 ? 'size has' : 'sizes have'} choices too', style: text.titleSmall?.copyWith(color: const Color(0xFF7A4D00))),
+              const SizedBox(height: 2),
+              Text('Added there by mistake? Take them off the other sizes — this one keeps its choices.', style: text.bodySmall),
+              const SizedBox(height: 6),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.layers_clear_outlined),
+                label: const Text('Remove from the other sizes'),
+                onPressed: _saving ? null : _clearOthers,
+              ),
+            ]),
           ),
       ]),
       bottomNavigationBar: SafeArea(

@@ -17,7 +17,8 @@ import '../../state/providers.dart';
 import '../../widgets/common.dart';
 import 'choices_editor.dart';
 
-/// Product photos (one per product) and the fields the store owns: Tamil name, description, priority.
+/// Every product: search, filter (photo, choices, category, hidden…) and edit — photo, name, category,
+/// size, brand, hide from the shop, Tamil name, description, choices, priority.
 class ProductsScreen extends ConsumerStatefulWidget {
   const ProductsScreen({super.key});
 
@@ -29,7 +30,8 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
   final _search = TextEditingController();
   final List<AdminProduct> _items = [];
   Map<String, int> _counts = const {};
-  String _filter = 'no_image';
+  String _filter = 'all';
+  ({int id, String name})? _category;
   String? _cursor;
   bool _loading = false;
   bool _done = false;
@@ -75,7 +77,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     if (_loading || (_done && !reset)) return;
     setState(() => _loading = true);
     try {
-      final (page, counts) = await ref.read(repositoryProvider).products(query: _search.text, filter: _filter, cursor: reset ? null : _cursor);
+      final (page, counts) = await ref.read(repositoryProvider).products(query: _search.text, filter: _filter, categoryId: _category?.id, cursor: reset ? null : _cursor);
       if (!mounted) return;
       setState(() {
         if (reset) _items.clear();
@@ -99,7 +101,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     final withImage = _counts['withImage'] ?? 0;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Product photos'),
+        title: const Text('Products'),
         actions: [
           IconButton(onPressed: () => context.push('/scan'), tooltip: 'Scan a barcode', icon: const Icon(Icons.qr_code_scanner_rounded)),
           IconButton(onPressed: () => context.go('/more/photo-work'), tooltip: 'Photo work', icon: const Icon(Icons.assignment_ind_outlined)),
@@ -134,19 +136,49 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    for (final (key, label) in const [('no_image', 'No photo'), ('recheck', 'New packaging'), ('with_image', 'With photo'), ('all', 'All'), ('inactive', 'Hidden')])
-                      ChoiceChip(
-                        label: Text(label),
-                        selected: _filter == key,
-                        onSelected: (_) {
-                          setState(() => _filter = key);
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      InputChip(
+                        avatar: const Icon(Icons.category_outlined, size: 18),
+                        label: Text(_category == null ? 'All categories' : _category!.name.split(' › ').last),
+                        selected: _category != null,
+                        onPressed: () async {
+                          final picked = await pickCategory(context, ref, current: _category?.id);
+                          if (picked == null || !mounted) return;
+                          setState(() => _category = picked);
                           _reload();
                         },
+                        onDeleted: _category == null
+                            ? null
+                            : () {
+                                setState(() => _category = null);
+                                _reload();
+                              },
                       ),
-                  ],
+                      const SizedBox(width: 8),
+                      for (final (key, label) in const [
+                        ('all', 'All'),
+                        ('no_image', 'No photo'),
+                        ('recheck', 'New packaging'),
+                        ('with_image', 'With photo'),
+                        ('choices', 'Has choices'),
+                        ('edited', 'Changed by you'),
+                        ('inactive', 'Hidden'),
+                      ]) ...[
+                        ChoiceChip(
+                          label: Text(label),
+                          selected: _filter == key,
+                          onSelected: (_) {
+                            setState(() => _filter = key);
+                            _reload();
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -214,6 +246,16 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
+                            if (p.category != null) Text(p.category!, style: text.labelSmall?.copyWith(color: AppColors.green800), maxLines: 1, overflow: TextOverflow.ellipsis),
+                            if (!p.isActive || p.options != null || p.lockedFields.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Wrap(spacing: 4, runSpacing: 4, children: [
+                                  if (!p.isActive) const Pill('Hidden', fg: AppColors.inkMuted, bg: AppColors.bg, icon: Icons.visibility_off_outlined),
+                                  if (p.options != null) Pill('${(p.options!['values'] as List).length} ${(p.options!['label'] ?? 'choice').toString().toLowerCase()}s', fg: AppColors.brandBlue, bg: AppColors.brandBlueSoft, icon: Icons.style_outlined),
+                                  if (p.lockedFields.any((f) => f != 'is_active')) const Pill('Changed by you', fg: Color(0xFF8A5A00), bg: AppColors.amberSoft, icon: Icons.edit_outlined),
+                                ]),
+                              ),
                           ],
                         ),
                       ),
@@ -247,6 +289,8 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
 /// list can open it straight away.
 Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct product, {bool photoOnly = false, ValueNotifier<bool>? next}) {
   var featured = product.sortRank > 0;
+  var hidden = !product.isActive;
+  var category = product.categoryId == null ? null : (id: product.categoryId!, name: product.category ?? 'Category ${product.categoryId}');
   var imageUrl = product.imageUrl;
   var busy = false;
   var changed = false;
@@ -255,11 +299,24 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
   return showActionSheet<bool>(
     context,
     title: product.name,
-    fields: {'nameTa': product.nameTa ?? '', 'description': product.description ?? ''},
+    fields: {
+      'nameTa': product.nameTa ?? '',
+      'description': product.description ?? '',
+      'name': product.name,
+      'brand': product.brand ?? '',
+      'packSize': product.packSize ?? '',
+    },
     builder: (context, setState, fields) {
       final text = Theme.of(context).textTheme;
       final nameTa = fields['nameTa']!;
       final description = fields['description']!;
+      final name = fields['name']!;
+      final brand = fields['brand']!;
+      final packSize = fields['packSize']!;
+      final edited = [
+        for (final (f, label) in const [('name', 'name'), ('brand', 'brand'), ('category_id', 'category'), ('pack_size', 'size')])
+          if (product.lockedFields.contains(f)) label,
+      ];
 
       Future<void> upload(Uint8List bytes, String type) async {
         final url = await guard(context, () => ref.read(repositoryProvider).uploadPhoto(product.id, bytes, type));
@@ -470,6 +527,65 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
           ],
           if (!photoOnly) ...[
           const Divider(height: 28),
+          Text('Shop details', style: text.titleSmall),
+          const SizedBox(height: 2),
+          Text('Your changes stay when the next stock file is uploaded. Prices and stock always come from the stock file.', style: text.bodySmall),
+          const SizedBox(height: 10),
+          TextField(
+            controller: name,
+            maxLength: 255,
+            decoration: const InputDecoration(labelText: 'Name in the shop', counterText: ''),
+          ),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(child: TextField(controller: brand, maxLength: 120, decoration: const InputDecoration(labelText: 'Brand', counterText: ''))),
+            const SizedBox(width: 10),
+            Expanded(child: TextField(controller: packSize, maxLength: 40, decoration: const InputDecoration(labelText: 'Size / pack', hintText: 'e.g. 500 g', counterText: ''))),
+          ]),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.category_outlined),
+            title: Text(category?.name ?? 'No category'),
+            subtitle: const Text('Category — tap to move the product'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () async {
+              final picked = await pickCategory(context, ref, current: category?.id);
+              if (picked != null) setState(() => category = picked);
+            },
+          ),
+          SwitchListTile(
+            value: hidden,
+            contentPadding: EdgeInsets.zero,
+            onChanged: (v) => setState(() => hidden = v),
+            title: const Text('Hide from the shop'),
+            subtitle: const Text('Customers don\'t see it, even after the next stock upload'),
+          ),
+          if (edited.isNotEmpty)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                icon: const Icon(Icons.restore_rounded),
+                label: Text('Use the stock file\'s ${edited.join(', ')} again'),
+                onPressed: busy
+                    ? null
+                    : () async {
+                        setState(() => busy = true);
+                        final ok = await guard(context, () async {
+                          await ref.read(repositoryProvider).updateProduct(product.id, {
+                            'useStockFile': [for (final f in product.lockedFields) if (f != 'is_active') f],
+                          });
+                          return true;
+                        });
+                        if (!context.mounted) return;
+                        setState(() => busy = false);
+                        if (ok == true) {
+                          showSnack(context, 'The next stock upload brings back the stock file\'s ${edited.join(', ')}');
+                          Navigator.pop(context, true);
+                        }
+                      },
+              ),
+            ),
+          const SizedBox(height: 4),
           TextField(
             controller: nameTa,
             decoration: const InputDecoration(labelText: 'Tamil name (optional)', hintText: 'e.g. பொன்னி அரிசி'),
@@ -504,12 +620,19 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
             onPressed: busy
                 ? null
                 : () async {
+                    final newName = name.text.trim();
+                    if (newName.length < 2) return showSnack(context, 'Enter the product name', error: true);
                     setState(() => busy = true);
                     final ok = await guard(context, () async {
                       await ref.read(repositoryProvider).updateProduct(product.id, {
                         'nameTa': nameTa.text.trim(),
                         'description': description.text.trim(),
                         'sortRank': featured ? (product.sortRank > 0 ? product.sortRank : 100) : 0,
+                        if (newName != product.name) 'name': newName,
+                        if (brand.text.trim() != (product.brand ?? '')) 'brand': brand.text.trim(),
+                        if (packSize.text.trim() != (product.packSize ?? '')) 'packSize': packSize.text.trim(),
+                        if (category != null && category!.id != product.categoryId) 'categoryId': category!.id,
+                        if (hidden != !product.isActive) 'hidden': hidden,
                       });
                       return true;
                     });
@@ -528,4 +651,73 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
       );
     },
   ).then((value) => value ?? changed);
+}
+
+/// Searchable list of every shop category ("Dairy, Bread & Eggs › Ice Creams").
+Future<({int id, String name})?> pickCategory(BuildContext context, WidgetRef ref, {int? current}) {
+  return showModalBottomSheet<({int id, String name})>(
+    context: context,
+    useRootNavigator: true,
+    isScrollControlled: true,
+    useSafeArea: true,
+    constraints: const BoxConstraints(maxWidth: 640),
+    builder: (_) => _CategoryPicker(current: current),
+  );
+}
+
+class _CategoryPicker extends ConsumerStatefulWidget {
+  const _CategoryPicker({this.current});
+  final int? current;
+
+  @override
+  ConsumerState<_CategoryPicker> createState() => _CategoryPickerState();
+}
+
+class _CategoryPickerState extends ConsumerState<_CategoryPicker> {
+  late Future<List<({int id, String name})>> _all = ref.read(repositoryProvider).categoryOptions();
+  String _q = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return SizedBox(
+      height: MediaQuery.sizeOf(context).height * 0.8,
+      child: Column(children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: TextField(
+            autofocus: true,
+            onChanged: (v) => setState(() => _q = v.trim().toLowerCase()),
+            decoration: const InputDecoration(hintText: 'Find a category', prefixIcon: Icon(Icons.search_rounded), isDense: true),
+          ),
+        ),
+        Expanded(
+          child: FutureBuilder(
+            future: _all,
+            builder: (context, snap) {
+              if (snap.hasError) return ErrorView(message: 'Could not load the categories', onRetry: () => setState(() => _all = ref.read(repositoryProvider).categoryOptions()));
+              if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+              final list = [for (final c in snap.data!) if (_q.isEmpty || c.name.toLowerCase().contains(_q)) c];
+              return ListView.separated(
+                itemCount: list.length,
+                separatorBuilder: (_, _) => const Divider(height: 1),
+                itemBuilder: (context, i) {
+                  final c = list[i];
+                  final sub = c.name.contains(' › ');
+                  return ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.only(left: sub ? 32 : 16, right: 16),
+                    title: Text(sub ? c.name.split(' › ').last : c.name, style: sub ? text.bodyMedium : text.titleSmall),
+                    subtitle: sub ? Text(c.name.substring(0, c.name.lastIndexOf(' › ')), style: text.labelSmall) : null,
+                    trailing: c.id == widget.current ? const Icon(Icons.check_rounded, color: AppColors.green600) : null,
+                    onTap: () => Navigator.pop(context, c),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ]),
+    );
+  }
 }

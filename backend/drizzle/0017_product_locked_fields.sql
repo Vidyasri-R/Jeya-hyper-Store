@@ -1,0 +1,1 @@
+ALTER TABLE "products" ADD COLUMN "locked_fields" text[] DEFAULT '{}'::text[] NOT NULL;

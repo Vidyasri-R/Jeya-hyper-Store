@@ -8,7 +8,72 @@ import '../core/theme.dart';
 import '../data/models.dart';
 import '../state/providers.dart';
 import 'choices_sheet.dart';
+import 'product_image.dart';
 import 'size_picker.dart';
+
+/// Flavour/colour items: the customer splits the quantity across the store's choices, then it goes
+/// into the cart (signed-out customers go to login first).
+Future<void> chooseAndAdd(BuildContext context, WidgetRef ref, Product p) async {
+  if (!ref.read(isSignedInProvider)) {
+    context.push('/login');
+    return;
+  }
+  final picked = await showChoicesSheet(context, p, current: ref.read(cartProvider.notifier).choicesFor(p.id));
+  if (picked == null || !context.mounted) return;
+  final total = picked.values.fold(0, (a, b) => a + b);
+  try {
+    await ref.read(cartProvider.notifier).setQty(p, total, choices: total == 0 ? null : picked);
+  } on ApiException catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(e.message)));
+  }
+}
+
+/// The product's flavours / designs, shown on its page (photo + name); tapping one opens the picker.
+class ChoicesPreview extends ConsumerWidget {
+  const ChoicesPreview({super.key, required this.product});
+  final Product product;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final options = product.options;
+    if (options == null) return const SizedBox.shrink();
+    ref.watch(cartProvider);
+    final inCart = ref.read(cartProvider.notifier).choicesFor(product.id) ?? const {};
+    final text = Theme.of(context).textTheme;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('Available in ${options.values.length} ${options.label.toLowerCase()}s — pick yours', style: text.labelLarge?.copyWith(fontWeight: FontWeight.w700)),
+      const SizedBox(height: 8),
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        for (final v in options.values)
+          InkWell(
+            onTap: product.canBuy ? () => chooseAndAdd(context, ref, product) : null,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            child: Container(
+              width: 92,
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: (inCart[v] ?? 0) > 0 ? AppColors.brand700 : AppColors.line, width: (inCart[v] ?? 0) > 0 ? 1.6 : 1),
+              ),
+              child: Column(children: [
+                if (options.images[v] != null)
+                  AspectRatio(aspectRatio: 1, child: ProductImage(url: options.images[v], name: v, radius: AppRadius.sm))
+                else
+                  const AspectRatio(aspectRatio: 1, child: Icon(Icons.style_outlined, color: AppColors.inkFaint)),
+                const SizedBox(height: 4),
+                Text(v, maxLines: 2, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: text.labelMedium?.copyWith(fontWeight: FontWeight.w600)),
+                if ((inCart[v] ?? 0) > 0) Text('× ${formatQty(inCart[v]!, product.unit)} in cart', style: text.labelSmall?.copyWith(color: AppColors.brand700)),
+              ]),
+            ),
+          ),
+      ]),
+    ]);
+  }
+}
 
 /// "Add" button that turns into a − qty + stepper. Handles login, stock limits and loose (kg) steps.
 class AddToCartControl extends ConsumerWidget {
@@ -38,17 +103,7 @@ class AddToCartControl extends ConsumerWidget {
   }
 
   /// Flavour/colour items: the customer splits the quantity across the store's choices.
-  Future<void> _choose(BuildContext context, WidgetRef ref, [Product? of]) async {
-    final p = of ?? product;
-    if (!ref.read(isSignedInProvider)) {
-      context.push('/login');
-      return;
-    }
-    final picked = await showChoicesSheet(context, p, current: ref.read(cartProvider.notifier).choicesFor(p.id));
-    if (picked == null || !context.mounted) return;
-    final total = picked.values.fold(0, (a, b) => a + b);
-    await _change(context, ref, total, choices: total == 0 ? null : picked, of: p);
-  }
+  Future<void> _choose(BuildContext context, WidgetRef ref, [Product? of]) => chooseAndAdd(context, ref, of ?? product);
 
   /// Several sizes / prices: ask which one, then add it (and its flavours, if it has them).
   Future<void> _pickSize(BuildContext context, WidgetRef ref) async {
