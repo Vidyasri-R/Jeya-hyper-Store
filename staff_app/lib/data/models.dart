@@ -171,6 +171,9 @@ class OrderDetail {
       paymentMethod = _str(j['paymentMethod']),
       paymentStatus = _str(j['paymentStatus']),
       subtotal = _str(j['subtotal'], '0.00'),
+      discountAmount = _str(j['discountAmount'], '0.00'),
+      memberDiscountPercent = double.tryParse(j['memberDiscountPercent']?.toString() ?? '') ?? 0,
+      memberFreeDelivery = j['memberFreeDelivery'] == true,
       deliveryFee = _str(j['deliveryFee'], '0.00'),
       totalAmount = _str(j['totalAmount'], '0.00'),
       finalAmount = j['finalAmount'] as String?,
@@ -199,6 +202,11 @@ class OrderDetail {
   final String paymentMethod;
   final String paymentStatus;
   final String subtotal;
+  /// Premium customer: their discount on the items, and the perks (match them on the POS bill).
+  final String discountAmount;
+  final double memberDiscountPercent;
+  final bool memberFreeDelivery;
+  bool get isPremium => memberFreeDelivery || memberDiscountPercent > 0;
   final String deliveryFee;
   final String totalAmount;
   final String? finalAmount;

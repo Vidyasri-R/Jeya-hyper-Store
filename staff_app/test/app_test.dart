@@ -109,6 +109,35 @@ class FakeRepo extends StaffRepository {
       (ResultPage([product(1, 'Aashirvaad Atta 1kg'), product(3, 'Gold Winner Oil 1L')], null), {'active': 3, 'withImage': 0});
 
   @override
+  Future<Map<String, dynamic>> finance(String from, String to) async => {
+    'period': {'from': from, 'to': to},
+    'orders': {'count': 5, 'customers': 2, 'delivered': 4, 'averageOrder': '993.60', 'freeDeliveryOrders': 3, 'memberOrders': 1},
+    'income': {'sales': '4968.00', 'items': '4848.00', 'deliveryFees': '120.00', 'cod': '1447.00', 'online': '3521.00', 'memberDiscounts': '50.00', 'gstInSales': '222.29', 'refunded': '0.00', 'refunds': 0},
+    'costs': {'goods': '4000.00', 'costCoveragePercent': 100, 'gatewayFees': '95.74', 'expenses': '300.00', 'expensesByCategory': [{'category': 'Fuel & vehicle', 'amount': '300.00'}]},
+    'profit': {'grossMargin': '848.00', 'grossMarginPercent': 17.5, 'net': '572.26', 'netPercent': 11.5},
+    'byCategory': [{'category': 'Staples', 'sales': '3000.00', 'orders': 3, 'marginPercent': 12.0}],
+    'topProducts': <Map<String, dynamic>>[],
+    'lowMargin': [{'id': 1, 'name': 'Sugar 1kg', 'qty': '4', 'sales': '180.00', 'margin': '-4.00', 'marginPercent': -2.2}],
+    'daily': <Map<String, dynamic>>[],
+    'catalog': {'active': 8631, 'withCost': 8500},
+  };
+
+  @override
+  Future<(List<Map<String, dynamic>>, List<String>)> expenses(String from, String to) async => (
+    [{'id': 1, 'spentOn': '2026-10-05', 'category': 'Fuel & vehicle', 'amount': '300.00', 'note': 'Bike petrol'}],
+    ['Delivery staff', 'Fuel & vehicle', 'Other'],
+  );
+
+  @override
+  Future<List<Map<String, dynamic>>> members() async => [
+    {'phone': '919876543210', 'name': 'Kumar', 'freeDelivery': true, 'discountPercent': '5.00', 'note': null, 'isActive': true, 'hasAccount': true, 'orders': 3, 'accountName': null},
+  ];
+
+  @override
+  Future<void> saveMember({required String phone, String? name, required bool freeDelivery, required double discountPercent, String? note, bool isActive = true}) async =>
+      calls.add({'call': 'saveMember', 'phone': phone, 'name': name, 'freeDelivery': freeDelivery, 'discountPercent': discountPercent});
+
+  @override
   Future<int> saveChoices(int id, Map<String, dynamic>? options, {bool allSizes = false}) async {
     calls.add({'call': 'saveChoices', 'id': id, 'options': options, 'allSizes': allSizes});
     return allSizes ? 4 : 1;
@@ -261,6 +290,29 @@ void main() {
       'options': {'label': 'Design', 'values': ['Blue gel', 'Black ball'], 'images': <String, String>{}},
       'allSizes': true,
     });
+  });
+
+  testWidgets('finance shows profit, margin and loss-making products', (tester) async {
+    await pumpApp(tester, FakeRepo(orderAt('placed')), at: '/more/finance');
+    expect(find.text('Net profit'), findsOneWidget);
+    expect(find.text('₹572.26'), findsWidgets);
+    await tester.scrollUntilVisible(find.text('Sugar 1kg'), 300);
+    expect(find.text('-2.2%'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('admin adds a premium customer with free delivery and 10% off', (tester) async {
+    final repo = FakeRepo(orderAt('placed'));
+    await pumpApp(tester, repo, at: '/more/members');
+    expect(find.textContaining('Free delivery · 5% off · 3 orders'), findsOneWidget);
+    await tester.tap(find.text('Add customer'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Mobile number'), '9123456789');
+    await tester.enterText(find.widgetWithText(TextField, 'Name (optional)'), 'Meena');
+    await tester.enterText(find.widgetWithText(TextField, 'Discount on items (%)'), '10');
+    await tester.tap(find.text('Add premium customer'));
+    await tester.pumpAndSettle();
+    expect(repo.calls.last, {'call': 'saveMember', 'phone': '9123456789', 'name': 'Meena', 'freeDelivery': true, 'discountPercent': 10.0});
   });
 
   testWidgets('category photos lists each category with its product count', (tester) async {

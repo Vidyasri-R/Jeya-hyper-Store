@@ -198,10 +198,22 @@ class _FreeDeliveryProgress extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // The quote is the server's live answer for this cart; the store's rules fill in before it arrives.
-    final quoted = ref.watch(cartQuoteProvider).valueOrNull?.freeDeliveryAbove;
+    final quote = ref.watch(cartQuoteProvider).valueOrNull;
+    final quoted = quote?.freeDeliveryAbove;
     final threshold = quoted != null ? toPaise(quoted) : ref.watch(storeRulesProvider).freeAbovePaise;
     if (threshold == null || threshold <= 0) return const SizedBox.shrink();
     final text = Theme.of(context).textTheme;
+    if (quote?.memberFreeDelivery == true) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: AppColors.brand50, borderRadius: BorderRadius.circular(AppRadius.lg)),
+        child: Row(children: [
+          Icon(Icons.workspace_premium_rounded, color: AppColors.brand700),
+          const SizedBox(width: 12),
+          Expanded(child: Text('Premium customer: FREE delivery on every order${quote!.memberDiscountPercent > 0 ? ' + ${quote.memberLabel.split(' · ').last}' : ''}', style: text.titleSmall?.copyWith(color: AppColors.brand800))),
+        ]),
+      );
+    }
     final done = subtotal >= threshold;
     return Container(
       padding: const EdgeInsets.all(14),
@@ -303,6 +315,7 @@ class _BillSummary extends ConsumerWidget {
         Text('Bill Summary', style: text.titleSmall),
         const SizedBox(height: 8),
         row('Item total (${cart.lines.length} items)', formatRupees(cart.subtotal)),
+        if (quote != null && toPaise(quote.discount) > 0) row('Premium discount (${quote.memberLabel})', '− ${formatRupees(quote.discount)}', color: AppColors.brand700),
         row('Delivery charge', delivery, color: delivery == 'FREE' ? AppColors.brand700 : null),
         const Divider(height: 18),
         row('To pay', formatRupees(quote?.total ?? cart.subtotal), bold: true),
@@ -570,6 +583,7 @@ class _WebOrderSummary extends ConsumerWidget {
         const SizedBox(height: 12),
         row('Subtotal (${cart.lines.length} items)', formatRupees(cart.mrpTotal)),
         if (discount > 0) row('Product discount', '− ${formatPaise(discount)}', color: AppColors.brand700),
+        if (quote != null && toPaise(quote.discount) > 0) row('Premium discount (${quote.memberLabel})', '− ${formatRupees(quote.discount)}', color: AppColors.brand700),
         row('Delivery charge', delivery, color: delivery == 'FREE' ? AppColors.brand700 : null),
         const SizedBox(height: 10),
         Container(

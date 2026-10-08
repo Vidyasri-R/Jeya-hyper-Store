@@ -441,7 +441,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           ),
         const Divider(height: 22),
         _BillRow('Item total', formatRupees(q.subtotal)),
-        _BillRow('Delivery charge', free ? 'FREE' : formatRupees(q.deliveryFee)),
+
+        if (toPaise(q.discount) > 0) _BillRow('Premium discount (${q.memberLabel})', '− ${formatRupees(q.discount)}'),
+        _BillRow('Delivery charge', free ? (q.memberFreeDelivery ? 'FREE (premium)' : 'FREE') : formatRupees(q.deliveryFee)),
         const SizedBox(height: 10),
         Container(
           padding: const EdgeInsets.all(14),
@@ -609,7 +611,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               ),
             const Divider(height: 20),
             _BillRow('Item total', formatRupees(q.subtotal)),
-            _BillRow('Delivery charge', q.freeDeliveryApplied || toPaise(q.deliveryFee) == 0 ? 'FREE' : formatRupees(q.deliveryFee)),
+
+            if (toPaise(q.discount) > 0) _BillRow('Premium discount (${q.memberLabel})', '− ${formatRupees(q.discount)}'),
+            _BillRow('Delivery charge', q.freeDeliveryApplied || toPaise(q.deliveryFee) == 0 ? (q.memberFreeDelivery ? 'FREE (premium)' : 'FREE') : formatRupees(q.deliveryFee)),
             const Divider(height: 18),
             _BillRow('Total amount', formatRupees(q.total), bold: true),
             if (toPaise(q.savings) > 0)

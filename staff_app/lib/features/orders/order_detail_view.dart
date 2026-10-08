@@ -401,7 +401,9 @@ class _OrderDetailViewState extends ConsumerState<OrderDetailView> {
       child: Column(
         children: [
           row('Items', formatRupees(order.subtotal)),
-          row('Delivery', toPaise(order.deliveryFee) == 0 ? 'Free' : formatRupees(order.deliveryFee)),
+          if (toPaise(order.discountAmount) > 0)
+            row('Premium discount (${order.memberDiscountPercent.toStringAsFixed(order.memberDiscountPercent % 1 == 0 ? 0 : 1)}%) — give on POS bill', '− ${formatRupees(order.discountAmount)}'),
+          row('Delivery', toPaise(order.deliveryFee) == 0 ? (order.memberFreeDelivery ? 'Free (premium)' : 'Free') : formatRupees(order.deliveryFee)),
           row(
             'Order total',
             formatRupees(order.totalAmount),
@@ -606,11 +608,13 @@ Future<List<Map<String, dynamic>>?> _askPacked(BuildContext context, OrderDetail
     fields: {for (final item in order.items.where((i) => i.isLoose)) 'p${item.productId}': milliToString(item.quantityMilli)},
     builder: (context, setState, fields) {
       final text = Theme.of(context).textTheme;
-      var totalPaise = toPaise(order.deliveryFee);
+      var itemsPaise = 0;
       for (final item in order.items) {
         final milli = packed[item.productId]!;
-        totalPaise += milli == item.quantityMilli ? toPaise(item.totalPrice) : (toPaise(item.unitPrice) * milli / 1000).round();
+        itemsPaise += milli == item.quantityMilli ? toPaise(item.totalPrice) : (toPaise(item.unitPrice) * milli / 1000).round();
       }
+      // Premium customers pay (100 − discount)% of the items.
+      final totalPaise = (itemsPaise * (100 - order.memberDiscountPercent) / 100).round() + toPaise(order.deliveryFee);
       final short = order.items.where((item) => packed[item.productId]! < item.quantityMilli).length;
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

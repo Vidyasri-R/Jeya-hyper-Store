@@ -69,6 +69,8 @@ class MoreScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Column(
                 children: [
+                  tile(Icons.account_balance_outlined, 'Finance (online)', 'Sales, margin, expenses and profit', () => context.go('/more/finance')),
+                  tile(Icons.workspace_premium_outlined, 'Premium customers', 'Free delivery or a discount, by mobile number', () => context.go('/more/members')),
                   tile(
                     Icons.upload_file_rounded,
                     'Upload stock file',

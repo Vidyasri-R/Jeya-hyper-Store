@@ -331,6 +331,9 @@ class Quote {
     required this.deliveryFee,
     required this.freeDeliveryApplied,
     required this.total,
+    this.discount = '0',
+    this.memberDiscountPercent = 0,
+    this.memberFreeDelivery = false,
     this.distanceKm,
     this.freeDeliveryAbove,
     this.freeDeliveryShortBy,
@@ -348,6 +351,12 @@ class Quote {
   final String deliveryFee;
   final bool freeDeliveryApplied;
   final String total;
+  /// Premium customer (set by the store): their discount on the items and free delivery.
+  final String discount;
+  final double memberDiscountPercent;
+  final bool memberFreeDelivery;
+  bool get isMember => memberFreeDelivery || memberDiscountPercent > 0;
+  String get memberLabel => [if (memberFreeDelivery) 'free delivery', if (memberDiscountPercent > 0) '${memberDiscountPercent.toStringAsFixed(memberDiscountPercent % 1 == 0 ? 0 : 1)}% off'].join(' · ');
   final double? distanceKm;
   final String? freeDeliveryAbove;
   final String? freeDeliveryShortBy;
@@ -371,6 +380,9 @@ class Quote {
       deliveryFee: _str(t['deliveryFee'], '0'),
       freeDeliveryApplied: t['freeDeliveryApplied'] == true,
       total: _str(t['total'], '0'),
+      discount: _str(t['discount'], '0'),
+      memberDiscountPercent: ((j['member'] as Map?)?['discountPercent'] as num?)?.toDouble() ?? 0,
+      memberFreeDelivery: (j['member'] as Map?)?['freeDelivery'] == true,
       distanceKm: (d['distanceKm'] as num?)?.toDouble(),
       freeDeliveryAbove: _opt<String>(d['freeDeliveryAbove']),
       freeDeliveryShortBy: _opt<String>(j['freeDeliveryShortBy']),

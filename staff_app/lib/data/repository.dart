@@ -175,6 +175,31 @@ class StaffRepository {
 
   // ── admin: home banners ──
   /// Uploads a banner picture (cropped to 2:1 by the server); returns its URL for the banner.
+  // ── admin: finance (online shop) ──
+  /// Sales, costs, margin and profit between two IST days ("2026-10-01").
+  Future<Map<String, dynamic>> finance(String from, String to) => _api.get('/admin/finance', query: {'from': from, 'to': to});
+
+  Future<(List<Map<String, dynamic>>, List<String>)> expenses(String from, String to) async {
+    final body = await _api.get('/admin/expenses', query: {'from': from, 'to': to});
+    return (
+      [for (final e in body['expenses'] as List) Map<String, dynamic>.from(e as Map)],
+      [for (final c in body['categories'] as List) c.toString()],
+    );
+  }
+
+  Future<void> addExpense({required String spentOn, required String category, required String amount, String? note}) =>
+      _api.post('/admin/expenses', body: {'spentOn': spentOn, 'category': category, 'amount': amount, 'note': ?note});
+
+  Future<void> removeExpense(int id) => _api.delete('/admin/expenses/$id');
+
+  // ── admin: premium customers ──
+  Future<List<Map<String, dynamic>>> members() async => [for (final m in (await _api.get('/admin/members'))['members'] as List) Map<String, dynamic>.from(m as Map)];
+
+  Future<void> saveMember({required String phone, String? name, required bool freeDelivery, required double discountPercent, String? note, bool isActive = true}) =>
+      _api.put('/admin/members', body: {'phone': phone, 'name': ?name, 'freeDelivery': freeDelivery, 'discountPercent': discountPercent, 'note': ?note, 'isActive': isActive});
+
+  Future<void> removeMember(String phone) => _api.delete('/admin/members/$phone');
+
   // ── admin: category photos & customer home lists ──
   /// Shop categories with their photo (parents first, then their children).
   Future<List<Map<String, dynamic>>> shopCategories() async =>
