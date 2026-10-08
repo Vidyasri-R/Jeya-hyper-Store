@@ -36,6 +36,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   Product? _shown;
   /// The size just picked, shown at once from the sizes list until its details arrive.
   Product? _instant;
+  /// The flavour / design picked on the page (Amazon-style swatches); the first one until then.
+  String? _choice;
 
   @override
   void didUpdateWidget(covariant ProductDetailScreen old) {
@@ -64,14 +66,19 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           ? Scaffold(appBar: AppBar(), body: ErrorRetry(error: product.error!, onRetry: () => ref.invalidate(productProvider(_slug))))
           : Scaffold(body: Center(child: CircularProgressIndicator(color: AppColors.brand700)));
     }
-    return _Detail(product: p, onPickSize: _pickSize, pickedSlug: _slug);
+    final values = p.options?.values ?? const <String>[];
+    final choice = values.isEmpty ? null : (values.contains(_choice) ? _choice : values.first);
+    return _Detail(product: p, onPickSize: _pickSize, pickedSlug: _slug, choice: choice, onChoice: (v) => setState(() => _choice = v));
   }
 }
 
 class _Detail extends ConsumerWidget {
-  const _Detail({required this.product, required this.onPickSize, required this.pickedSlug});
+  const _Detail({required this.product, required this.onPickSize, required this.pickedSlug, this.choice, required this.onChoice});
   final Product product;
   final ValueChanged<Product> onPickSize;
+  /// Selected flavour / design (products with choices): its photo is shown and Add adds it.
+  final String? choice;
+  final ValueChanged<String> onChoice;
   /// The size just picked (highlighted at once, while its details load).
   final String pickedSlug;
 
@@ -95,15 +102,17 @@ class _Detail extends ConsumerWidget {
                     Text(p.brand!, style: text.bodyMedium?.copyWith(color: AppColors.brandBlue, fontWeight: FontWeight.w600)),
                   ],
                   const SizedBox(height: 4),
+                  // Flavours first: a long row of sizes (e.g. 26 Arun prices) would push them out of sight.
+                  if (p.options != null && choice != null) ...[
+                    const SizedBox(height: 8),
+                    ChoiceSwatches(product: p, selected: choice!, onSelected: onChoice),
+                    const SizedBox(height: 6),
+                  ],
                   if (p.variants.isNotEmpty) ...[
                     const SizedBox(height: 6),
                     SizeChips(product: p, selectedSlug: pickedSlug, onPick: onPickSize),
                   ] else
                     Text(p.sizeLabel, style: text.bodySmall),
-                  if (p.options != null) ...[
-                    const SizedBox(height: 14),
-                    ChoicesPreview(product: p),
-                  ],
                   const SizedBox(height: 14),
                   Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
                     PriceLine(price: p.sellingPrice, mrp: p.mrp, showMrp: p.hasDiscount, large: true),
@@ -128,7 +137,7 @@ class _Detail extends ConsumerWidget {
     final compact = compactProducts(context);
 
     if (wide) {
-      return _WideProductPage(product: p, details: details, related: related, railWidth: railWidth, onPickSize: onPickSize, pickedSlug: pickedSlug);
+      return _WideProductPage(product: p, details: details, related: related, railWidth: railWidth, onPickSize: onPickSize, pickedSlug: pickedSlug, choice: choice, onChoice: onChoice);
     }
 
     return Scaffold(
@@ -149,7 +158,7 @@ class _Detail extends ConsumerWidget {
               background: Container(
                 color: AppColors.brandTint,
                 padding: EdgeInsets.fromLTRB(32, MediaQuery.paddingOf(context).top + 56, 32, 24),
-                child: Hero(tag: 'p${p.id}', child: ProductImage(url: p.imageUrl, placeholderUrl: p.placeholderImageUrl, name: p.name, radius: AppRadius.lg)),
+                child: Hero(tag: 'p${p.id}', child: ProductImage(url: p.choiceImage(choice) ?? p.imageUrl, placeholderUrl: p.placeholderImageUrl, name: p.name, radius: AppRadius.lg)),
               ),
             ),
           ),
@@ -191,10 +200,10 @@ class _Detail extends ConsumerWidget {
             Expanded(
               child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
                 PriceLine(price: p.sellingPrice, mrp: p.mrp, showMrp: p.hasDiscount),
-                Text('${p.name.length > 22 ? '${p.name.substring(0, 22)}…' : p.name} (${p.sizeLabel})', style: text.labelSmall, maxLines: 1),
+                Text('${p.name.length > 22 ? '${p.name.substring(0, 22)}…' : p.name} (${choice ?? p.sizeLabel})', style: text.labelSmall, maxLines: 1),
               ]),
             ),
-            SizedBox(width: width * 0.48, child: AddToCartControl(product: p, height: 50, big: true)),
+            SizedBox(width: width * 0.48, child: AddToCartControl(product: p, height: 50, big: true, choice: choice)),
           ]),
         ),
       ),
@@ -268,8 +277,10 @@ class _RoundIcon extends StatelessWidget {
 /// Web shop product page (laptops/tablets): photo · details table and add · delivery & trust cards,
 /// then the description and similar products.
 class _WideProductPage extends ConsumerWidget {
-  const _WideProductPage({required this.product, required this.details, required this.related, required this.railWidth, required this.onPickSize, required this.pickedSlug});
+  const _WideProductPage({required this.product, required this.details, required this.related, required this.railWidth, required this.onPickSize, required this.pickedSlug, this.choice, required this.onChoice});
   final Product product;
+  final String? choice;
+  final ValueChanged<String> onChoice;
   final ValueChanged<Product> onPickSize;
   final String pickedSlug;
   final Widget details; // phone details column (unused here, kept for the shared signature)
@@ -310,7 +321,7 @@ class _WideProductPage extends ConsumerWidget {
     final photo = Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.line)),
-      child: AspectRatio(aspectRatio: 1, child: Hero(tag: 'p${p.id}', child: ProductImage(url: p.imageUrl, placeholderUrl: p.placeholderImageUrl, name: p.name, radius: 12))),
+      child: AspectRatio(aspectRatio: 1, child: Hero(tag: 'p${p.id}', child: ProductImage(url: p.choiceImage(choice) ?? p.imageUrl, placeholderUrl: p.placeholderImageUrl, name: p.name, radius: 12))),
     );
 
     final info = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -321,8 +332,12 @@ class _WideProductPage extends ConsumerWidget {
       ],
       const SizedBox(height: 14),
       if (p.brand != null) row('Brand', Text(p.brand!, style: text.bodyMedium)),
+      if (p.options != null && choice != null) ...[
+        const SizedBox(height: 6),
+        ChoiceSwatches(product: p, selected: choice!, onSelected: onChoice),
+        const SizedBox(height: 6),
+      ],
       row('Pack size', p.variants.isNotEmpty ? SizeChips(product: p, selectedSlug: pickedSlug, onPick: onPickSize) : Text(p.sizeLabel, style: text.bodyMedium)),
-      if (p.options != null) row(p.options!.label, ChoicesPreview(product: p)),
       if (p.hasDiscount) row('MRP', Text('${formatRupees(p.mrp)} (inclusive of all taxes)', style: text.bodyMedium?.copyWith(decoration: TextDecoration.lineThrough, color: AppColors.inkMuted))),
       row(
         'Selling price',
@@ -336,7 +351,7 @@ class _WideProductPage extends ConsumerWidget {
       row('Availability', _StockLine(product: p)),
       const SizedBox(height: 18),
       Row(children: [
-        SizedBox(width: 240, child: AddToCartControl(product: p, height: 50, big: true)),
+        SizedBox(width: 240, child: AddToCartControl(product: p, height: 50, big: true, choice: choice)),
         const SizedBox(width: 12),
         OutlinedButton.icon(
           onPressed: () => openCart(context),

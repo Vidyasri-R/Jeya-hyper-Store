@@ -115,6 +115,8 @@ class Product {
         breadcrumb: family.breadcrumb,
       );
   bool get hasDiscount => discountPercent > 0;
+  /// Photo of one flavour / design, when the store added one.
+  String? choiceImage(String? choice) => choice == null ? null : options?.images[choice];
 
   /// Label under the name: "500 g", "per kg", "1 pc".
   String get sizeLabel => packSize ?? (isLoose ? 'per $unit' : '1 $unit');

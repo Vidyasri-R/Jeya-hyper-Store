@@ -10,12 +10,16 @@ import 'package:jeya_hyper_store/widgets/product_card.dart';
 
 class _EmptyCart extends CartController {
   final added = <String>[];
+  Choices? lastChoices;
 
   @override
   Future<Cart> build() async => Cart.empty;
 
   @override
-  Future<void> setQty(Product product, int milli, {Choices? choices}) async => added.add('${product.name} × $milli');
+  Future<void> setQty(Product product, int milli, {Choices? choices}) async {
+    added.add('${product.name} × $milli');
+    lastChoices = choices;
+  }
 }
 
 Map<String, dynamic> _size(int id, String label, String price) => {
@@ -100,17 +104,29 @@ void main() {
     expect(picked, {'Vanilla': 2000, 'Chocolate': 1000});
   });
 
-  testWidgets('product page shows the flavours; tapping one opens the picker', (tester) async {
+  testWidgets('product page: flavour swatches pick the flavour, Add adds that one', (tester) async {
     final product = Product.fromJson({
       ..._size(7, '1 pcs', '10.00'),
       'name': 'Arun',
       'options': {'label': 'Flavour', 'values': ['Vanila', 'Chocolate']},
     });
-    await _pump(tester, ChoicesPreview(product: product));
-    expect(find.text('Available in 2 flavours — pick yours'), findsOneWidget);
+    var choice = 'Vanila';
+    await _pump(
+      tester,
+      StatefulBuilder(
+        builder: (context, setState) => Column(mainAxisSize: MainAxisSize.min, children: [
+          ChoiceSwatches(product: product, selected: choice, onSelected: (v) => setState(() => choice = v)),
+          SizedBox(width: 260, child: AddToCartControl(product: product, height: 50, big: true, choice: choice)),
+        ]),
+      ),
+    );
+    expect(find.textContaining('Vanila'), findsWidgets);
     await tester.tap(find.text('Chocolate'));
     await tester.pumpAndSettle();
-    expect(find.text('Choose the flavour · ₹10 each'), findsOneWidget);
+    expect(choice, 'Chocolate');
+    await tester.tap(find.text('Add to Cart'));
+    await tester.pumpAndSettle();
+    expect(_cart.lastChoices, {'Chocolate': 1000});
   });
 
   test('recent searches: newest first, no repeats, matching what is typed', () {
