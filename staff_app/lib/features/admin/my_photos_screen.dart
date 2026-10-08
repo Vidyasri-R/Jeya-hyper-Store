@@ -35,6 +35,18 @@ class _MyPhotosScreenState extends ConsumerState<MyPhotosScreen> {
     _load(reset: true);
   }
 
+  bool _taking = false;
+
+  Future<void> _takeMore() async {
+    setState(() => _taking = true);
+    final n = await guard(context, () => ref.read(repositoryProvider).takeMorePhotos());
+    if (!mounted) return;
+    setState(() => _taking = false);
+    if (n == null) return;
+    showSnack(context, n == 0 ? 'No products left without photos 🎉' : '$n products added to your list');
+    await _load(reset: true);
+  }
+
   Future<void> _load({bool reset = false}) async {
     if (_loading || (_done && !reset)) return;
     setState(() => _loading = true);
@@ -129,8 +141,23 @@ class _MyPhotosScreenState extends ConsumerState<MyPhotosScreen> {
               ),
               const SizedBox(height: 12),
               if (_error != null) ErrorView(message: _error!, onRetry: () => _load(reset: true)),
-              if (_items.isEmpty && !_loading && _error == null)
-                const EmptyView(icon: Icons.photo_camera_back_outlined, title: 'Nothing assigned to you', subtitle: 'The store admin hands out products in Photo work. Pull down to refresh.'),
+              if (_items.isEmpty && !_loading && _error == null) ...[
+                EmptyView(
+                  icon: done > 0 ? Icons.celebration_outlined : Icons.photo_camera_back_outlined,
+                  title: done > 0 ? 'Your list is done — great work!' : 'Nothing assigned to you',
+                  subtitle: (_counts['canTakeMore'] ?? 0) == 1
+                      ? 'Take the next products yourself — the most important ones come first.'
+                      : 'The store admin hands out products in Photo work. Pull down to refresh.',
+                ),
+                if ((_counts['canTakeMore'] ?? 0) == 1)
+                  Center(
+                    child: FilledButton.icon(
+                      onPressed: _taking ? null : _takeMore,
+                      icon: const Icon(Icons.playlist_add_rounded),
+                      label: Text('Get ${_counts['takeMoreBatch'] ?? 25} more products'),
+                    ),
+                  ),
+              ],
               for (final p in _items)
                 Card(
                   margin: const EdgeInsets.only(bottom: 8),

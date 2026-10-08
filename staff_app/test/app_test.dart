@@ -174,8 +174,15 @@ class FakeRepo extends StaffRepository {
   @override
   Future<(ResultPage<AdminProduct>, Map<String, int>)> myPhotos({String? cursor}) async => (
     ResultPage<AdminProduct>(photoList, null),
-    {'open': photoList.length, 'done': 86, 'doneToday': 14},
+    {'open': photoList.length, 'done': 86, 'doneToday': 14, 'canTakeMore': photoList.isEmpty ? 1 : 0, 'takeMoreBatch': 25},
   );
+
+  @override
+  Future<int> takeMorePhotos() async {
+    calls.add({'call': 'takeMorePhotos'});
+    photoList = [FakeRepo.product(9, 'Gold Winner Oil 1L')];
+    return 25;
+  }
 
   @override
   Future<Map<String, dynamic>> stockImportStatus() async => {
@@ -271,10 +278,22 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('a helper who finished takes the next batch themselves', (tester) async {
+    signedInAs = Staff.fromJson({'id': 'p1', 'username': 'priya', 'name': 'Priya', 'role': 'photos', 'mustChangePassword': false, 'isActive': true});
+    final repo = FakeRepo(orderAt('placed'));
+    await pumpApp(tester, repo, at: '/my-photos');
+    expect(find.text('Your list is done — great work!'), findsOneWidget);
+    await tester.tap(find.text('Get 25 more products'));
+    await tester.pumpAndSettle();
+    expect(repo.calls.last, {'call': 'takeMorePhotos'});
+    expect(find.text('Gold Winner Oil 1L'), findsOneWidget);
+  });
+
   testWidgets('admin hands out photo work in priority batches', (tester) async {
     final repo = FakeRepo(orderAt('placed'));
     await pumpApp(tester, repo, at: '/more/photo-work');
     expect(find.text('1.4% of products have photos'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Give more'), 200);
     expect(find.textContaining('25 to do'), findsOneWidget);
     await tester.tap(find.text('Give more'));
     await tester.pumpAndSettle();

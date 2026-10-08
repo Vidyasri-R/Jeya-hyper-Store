@@ -6,6 +6,7 @@ import { CATALOG_IMPORT_KEY, catalogImportSchema, DEFAULT_CATALOG_IMPORT } from 
 import { catalogCache } from '../catalog/catalog.cache';
 import { DEFAULT_HOME_LISTS, HOME_LISTS_KEY, homeListsSchema } from '../catalog/home-lists';
 import { adminBannersService, bannersSchema, type Banner } from './admin-banners';
+import { DEFAULT_SELF_ASSIGN, SELF_ASSIGN_KEY, selfAssignSchema } from './photo-work.service';
 import { DEFAULT_DELIVERY_RULES, deliveryRulesSchema } from '../delivery/delivery.service';
 import { DEFAULT_USAGE_LIMITS, usageLimitsSchema } from '../usage/usage.limits';
 
@@ -88,6 +89,12 @@ const SETTINGS = {
     fallback: [],
     isPublic: true,
     description: 'Home-screen banners (image or text, link to a search/category/product, order and dates).',
+  },
+  [SELF_ASSIGN_KEY]: {
+    schema: selfAssignSchema,
+    fallback: DEFAULT_SELF_ASSIGN,
+    isPublic: false,
+    description: 'Photo helpers who finish their list may take the next batch (size) of products themselves.',
   },
   [HOME_LISTS_KEY]: {
     schema: homeListsSchema,

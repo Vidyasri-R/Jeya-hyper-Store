@@ -6,7 +6,7 @@ import { requireStaff, requireStaffAllowingPasswordChange, requireStaffRole, sta
 import { parseBody, parseParams, parseQuery } from '../../common/validate';
 import { orderStatus } from '../../db/schema';
 import { adminProductsService } from '../admin/admin-products.service';
-import { photoWorkService } from '../admin/photo-work.service';
+import { photoWorkService, selfAssignSetting } from '../admin/photo-work.service';
 import { usageService } from '../usage/usage.service';
 import { changePasswordSchema, staffLoginSchema, staffRefreshSchema } from './staff.schemas';
 import { staffAuthService } from './staff-auth.service';
@@ -141,7 +141,27 @@ staffPhotos.get('/mine', async (req, res) => {
   const me = staffOf(req).staffId;
   const [queue, summary] = await Promise.all([photoWorkService.queue({ assignee: me, cursor, limit: 30 }), photoWorkService.summary()]);
   const mine = summary.people.find((p) => p.staffId === me);
-  res.json({ ...queue, open: mine?.open ?? 0, done: mine?.done ?? 0, doneToday: mine?.doneToday ?? 0 });
+  const self = await selfAssignSetting();
+  res.json({
+    ...queue,
+    open: mine?.open ?? 0,
+    done: mine?.done ?? 0,
+    doneToday: mine?.doneToday ?? 0,
+    /** "Get N more" when the list is empty (if the admin allows it and products are left). */
+    canTakeMore: self.enabled && (mine?.open ?? 0) === 0 && summary.totals.unassigned > 0,
+    takeMoreBatch: self.batch,
+  });
+});
+
+/** My list is done: take the next batch myself (most important first), if the admin allows it. */
+staffPhotos.post('/mine/more', async (req, res) => {
+  const me = staffOf(req).staffId;
+  const self = await selfAssignSetting();
+  if (!self.enabled) throw new AppError('FORBIDDEN', 'Ask the store admin to give you more products', { reason: 'self_assign_off' });
+  const summary = await photoWorkService.summary();
+  const mine = summary.people.find((p) => p.staffId === me);
+  if ((mine?.open ?? 0) > 0) throw new AppError('CONFLICT', 'Finish the products in your list first', { reason: 'list_not_done', open: mine?.open });
+  res.json(await photoWorkService.assign({ staffId: me, count: self.batch }));
 });
 
 /** Photos I added, newest first (to check and replace). */

@@ -180,9 +180,15 @@ class StaffRepository {
     final body = await _api.get('/staff/photos/mine', query: {'cursor': ?cursor});
     return (
       ResultPage([for (final p in body['products'] as List) AdminProduct.fromJson(Map<String, dynamic>.from(p as Map))], body['nextCursor'] as String?),
-      {for (final k in ['open', 'done', 'doneToday']) k: (body[k] as num? ?? 0).toInt()},
+      {
+        for (final k in ['open', 'done', 'doneToday', 'takeMoreBatch']) k: (body[k] as num? ?? 0).toInt(),
+        'canTakeMore': body['canTakeMore'] == true ? 1 : 0,
+      },
     );
   }
+
+  /// My list is done: take the next batch myself. Returns how many I got.
+  Future<int> takeMorePhotos() async => ((await _api.post('/staff/photos/mine/more'))['assigned'] as num).toInt();
 
   // ── admin: home banners ──
   /// Uploads a banner picture (cropped to 2:1 by the server); returns its URL for the banner.

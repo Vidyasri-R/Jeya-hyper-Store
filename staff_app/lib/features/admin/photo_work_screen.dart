@@ -21,6 +21,8 @@ class PhotoWorkScreen extends ConsumerStatefulWidget {
 class _PhotoWorkScreenState extends ConsumerState<PhotoWorkScreen> {
   Map<String, dynamic>? _data;
   String? _error;
+  /// photos.self_assign: helpers who finish may take the next batch themselves.
+  Map<String, dynamic> _self = const {'enabled': true, 'batch': 25};
 
   @override
   void initState() {
@@ -30,11 +32,25 @@ class _PhotoWorkScreenState extends ConsumerState<PhotoWorkScreen> {
 
   Future<void> _load() async {
     try {
-      final data = await ref.read(repositoryProvider).photoWork();
-      if (mounted) setState(() => _data = data);
+      final repo = ref.read(repositoryProvider);
+      final results = await Future.wait([repo.photoWork(), repo.settings()]);
+      final self = results[1]['photos.self_assign'];
+      if (mounted) {
+        setState(() {
+          _data = results[0];
+          if (self is Map) _self = Map<String, dynamic>.from(self);
+        });
+      }
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.friendly);
     }
+  }
+
+  Future<void> _saveSelf(Map<String, dynamic> value) async {
+    final before = _self;
+    setState(() => _self = value);
+    final saved = await guard(context, () => ref.read(repositoryProvider).saveSetting('photos.self_assign', value));
+    if (saved == null && mounted) setState(() => _self = before);
   }
 
   Future<void> _assign(Map<String, dynamic> person) async {
@@ -91,6 +107,24 @@ class _PhotoWorkScreenState extends ConsumerState<PhotoWorkScreen> {
                 const SizedBox(height: 16),
                 Text('People', style: text.titleMedium),
                 Text('Give each person a batch; they see it under Photos → My photos and the list shrinks as they add pictures.', style: text.bodySmall),
+                const SizedBox(height: 8),
+                SectionCard(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: _self['enabled'] == true,
+                      onChanged: (v) => _saveSelf({..._self, 'enabled': v}),
+                      title: const Text('Helpers can take more when they finish'),
+                      subtitle: const Text('An empty list shows "Get more products" (most important first)'),
+                    ),
+                    if (_self['enabled'] == true)
+                      Wrap(spacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                        Text('Batch size', style: text.bodySmall),
+                        for (final n in const [25, 50, 100])
+                          ChoiceChip(label: Text('$n'), selected: (_self['batch'] as num?)?.toInt() == n, onSelected: (_) => _saveSelf({..._self, 'batch': n})),
+                      ]),
+                  ]),
+                ),
                 const SizedBox(height: 8),
                 for (final raw in d['people'] as List)
                   _PersonCard(

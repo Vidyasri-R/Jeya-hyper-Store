@@ -1,11 +1,24 @@
 import { and, desc, eq, isNotNull, isNull, or, sql, type SQL } from 'drizzle-orm';
+import { z } from 'zod';
 import { AppError } from '../../common/errors';
+import { appConfigService } from '../app-config/app-config.service';
 import { db } from '../../db/client';
 import { categories, products, staffUsers } from '../../db/schema';
 import { withPlaceholders } from '../catalog/catalog.service';
 import { adminProductColumns } from './admin-products.service';
 
 /** Active products still missing a photo. */
+/** Admin → Photo work: helpers who finish their list may take the next batch themselves. */
+export const SELF_ASSIGN_KEY = 'photos.self_assign';
+export const selfAssignSchema = z.object({ enabled: z.boolean(), batch: z.number().int().min(5).max(200) }).strict();
+export type SelfAssign = z.infer<typeof selfAssignSchema>;
+export const DEFAULT_SELF_ASSIGN: SelfAssign = { enabled: true, batch: 25 };
+
+export async function selfAssignSetting(): Promise<SelfAssign> {
+  const parsed = selfAssignSchema.safeParse(await appConfigService.getRaw(SELF_ASSIGN_KEY));
+  return parsed.success ? parsed.data : DEFAULT_SELF_ASSIGN;
+}
+
 /** Active products still missing a photo — or whose photo may be out of date (new packaging). */
 const needsPhoto = and(eq(products.isActive, true), or(isNull(products.imageUrl), isNotNull(products.photoCheckReason)))!;
 
