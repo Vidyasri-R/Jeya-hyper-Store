@@ -16,3 +16,9 @@ export function parseQuery<T extends z.ZodType>(schema: T, req: Request): z.infe
 export function parseParams<T extends z.ZodType>(schema: T, req: Request): z.infer<T> {
   return schema.parse(req.params);
 }
+
+/** Photo uploads: `?clean=0` keeps the picture as it is (no white-background clean-up). */
+export function wantsCleanUp(req: Request): boolean {
+  const value = req.query.clean;
+  return !(value === '0' || value === 'false');
+}

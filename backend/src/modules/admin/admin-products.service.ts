@@ -133,11 +133,26 @@ export function whitenBackground(data: Buffer, width: number, height: number, ch
 }
 
 /**
+ * The picture as it is (the clean-up switched off for this photo): EXIF-rotated, at most 800 px on
+ * the long side, transparent parts on white, WebP — no background whitening and no trimming.
+ */
+export async function asIsPhoto(input: Buffer): Promise<Buffer> {
+  const sharp = await loadSharp();
+  return sharp(input, { limitInputPixels: MAX_INPUT_PIXELS, failOn: 'error' })
+    .rotate()
+    .resize(MAX_SIDE, MAX_SIDE, { fit: 'inside', withoutEnlargement: true })
+    .flatten({ background: '#ffffff' })
+    .webp({ quality: 82, effort: 4 })
+    .toBuffer();
+}
+
+/**
  * Product photo → shop-ready catalogue image: EXIF-rotated, transparent or near-white background made
  * pure white, empty borders trimmed, product centred on an 800 × 800 white square, WebP.
  * Phone photos taken in a light box (or cut out on the phone) come out like brand pack shots.
  */
-export async function catalogPhoto(input: Buffer): Promise<Buffer> {
+export async function catalogPhoto(input: Buffer, options: { clean?: boolean } = {}): Promise<Buffer> {
+  if (options.clean === false) return asIsPhoto(input);
   const sharp = await loadSharp();
   const base = await sharp(input, { limitInputPixels: MAX_INPUT_PIXELS, failOn: 'error' })
     .rotate() // honour the phone camera's EXIF orientation
@@ -311,14 +326,15 @@ export const adminProductsService = {
   },
 
   /** [by] = the staff member uploading (photo work tracking). */
-  async setImage(productId: number, input: Buffer, by?: string) {
+  /** [clean]: false keeps the picture as it is (no white-background clean-up). */
+  async setImage(productId: number, input: Buffer, by?: string, clean = true) {
     if (!r2.isConfigured()) throw new AppError('UPSTREAM_UNAVAILABLE', 'Image storage is not configured');
     const [product] = await db.select({ id: products.id, itemCode: products.itemCode, imageUrl: products.imageUrl }).from(products).where(eq(products.id, productId)).limit(1);
     if (!product) throw AppError.notFound('Product');
 
     let output: Buffer;
     try {
-      output = await catalogPhoto(input);
+      output = await catalogPhoto(input, { clean });
     } catch (error) {
       logger.warn({ err: error, productId }, 'product photo could not be processed');
       throw new AppError('BAD_REQUEST', 'This file is not a supported photo (use JPG, PNG or WebP)', { reason: 'image_invalid' });

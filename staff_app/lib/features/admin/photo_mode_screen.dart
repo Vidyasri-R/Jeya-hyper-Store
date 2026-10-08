@@ -1,7 +1,11 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../../core/camera_fix.dart';
 import '../../core/theme.dart';
 import '../../state/providers.dart';
 import '../../widgets/common.dart';
@@ -18,19 +22,36 @@ class PhotoModeScreen extends ConsumerStatefulWidget {
 
 class _PhotoModeScreenState extends ConsumerState<PhotoModeScreen> {
   final _scanner = MobileScannerController(detectionSpeed: DetectionSpeed.noDuplicates, formats: const [BarcodeFormat.all]);
+  /// Website: a USB barcode scanner (it types the code + Enter) or typing it by hand.
+  final _typed = TextEditingController();
+  Timer? _cameraFix;
   bool _busy = false;
   int _done = 0;
   String? _last;
 
   @override
+  void initState() {
+    super.initState();
+    // The camera <video> appears a moment after the screen opens (and again after a restart).
+    if (kIsWeb) _cameraFix = Timer.periodic(const Duration(milliseconds: 700), (_) => fixCameraPreview());
+  }
+
+  @override
   void dispose() {
+    _cameraFix?.cancel();
+    _typed.dispose();
     _scanner.dispose();
     super.dispose();
   }
 
   Future<void> _onDetect(BarcodeCapture capture) async {
     final code = capture.barcodes.map((b) => b.rawValue?.trim()).whereType<String>().firstWhere((c) => c.isNotEmpty, orElse: () => '');
-    if (_busy || code.isEmpty || code == _last) return;
+    if (code == _last) return;
+    await _lookup(code);
+  }
+
+  Future<void> _lookup(String code) async {
+    if (_busy || code.isEmpty) return;
     setState(() {
       _busy = true;
       _last = code;
@@ -70,7 +91,12 @@ class _PhotoModeScreenState extends ConsumerState<PhotoModeScreen> {
               errorBuilder: (context, error) => Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
-                  child: Text('Camera not available: ${error.errorCode.name}. Allow camera access for Jeya Staff in your phone settings.', textAlign: TextAlign.center),
+                  child: Text(
+                    kIsWeb
+                        ? 'Camera not available (${error.errorCode.name}). Allow the camera for this site (the icon at the left of the address bar), close other apps using the camera, then reopen this page — or type the barcode below.'
+                        : 'Camera not available: ${error.errorCode.name}. Allow camera access for Jeya Staff in your phone settings.',
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
             ),
@@ -97,6 +123,22 @@ class _PhotoModeScreenState extends ConsumerState<PhotoModeScreen> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Text('Point at the barcode on the product or its price label.', style: text.titleSmall, textAlign: TextAlign.center),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _typed,
+                autofocus: kIsWeb,
+                textInputAction: TextInputAction.search,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  prefixIcon: Icon(Icons.keyboard_alt_outlined),
+                  hintText: 'Or type the barcode / use a USB barcode scanner',
+                ),
+                onSubmitted: (value) {
+                  final code = value.trim();
+                  _typed.clear();
+                  _lookup(code);
+                },
+              ),
               const SizedBox(height: 4),
               Text(
                 _done == 0 ? 'Then take the photo inside the light box — the background is removed automatically.' : '$_done photo${_done == 1 ? '' : 's'} saved in this session.',

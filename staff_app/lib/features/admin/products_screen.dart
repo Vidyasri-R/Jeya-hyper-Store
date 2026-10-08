@@ -295,6 +295,8 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
   var busy = false;
   var changed = false;
   var nextWhenUploaded = false;
+  /// White-background clean-up for the next upload (switch off for pictures it spoils).
+  var clean = true;
 
   return showActionSheet<bool>(
     context,
@@ -319,7 +321,7 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
       ];
 
       Future<void> upload(Uint8List bytes, String type) async {
-        final url = await guard(context, () => ref.read(repositoryProvider).uploadPhoto(product.id, bytes, type));
+        final url = await guard(context, () => ref.read(repositoryProvider).uploadPhoto(product.id, bytes, type, clean: clean));
         if (!context.mounted) return;
         setState(() {
           busy = false;
@@ -353,7 +355,7 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
         if (originalType == null) return showSnack(context, 'Use a JPG, PNG or WebP photo', error: true);
         setState(() => busy = true);
         // Android cuts the product out on the phone; the server then puts it on pure white.
-        final (bytes, type) = await cutOutProduct(file.path, original, originalType);
+        final (bytes, type) = clean ? await cutOutProduct(file.path, original, originalType) : (original, originalType);
         if (!context.mounted) return;
         await upload(bytes, type);
       }
@@ -489,6 +491,15 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
                 ),
               ),
             ],
+          ),
+          // Some pictures look worse after the clean-up (white parts of the product get eaten): off = as it is.
+          SwitchListTile(
+            value: clean,
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            onChanged: busy ? null : (v) => setState(() => clean = v),
+            title: const Text('Clean up background (make it white)'),
+            subtitle: Text(clean ? 'On: background turned white, picture centred' : 'Off: the next picture is saved exactly as it is'),
           ),
           if (imageUrl != null && !photoOnly)
             TextButton.icon(

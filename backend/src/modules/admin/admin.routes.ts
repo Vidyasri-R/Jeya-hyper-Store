@@ -3,7 +3,7 @@ import { rateLimit } from 'express-rate-limit';
 import { z } from 'zod';
 import { AppError } from '../../common/errors';
 import { requireAdmin, requireStaff, staffOf } from '../../common/staff-auth.middleware';
-import { parseBody, parseParams, parseQuery } from '../../common/validate';
+import { parseBody, parseParams, parseQuery, wantsCleanUp } from '../../common/validate';
 import { optionalPhone, username } from '../staff/staff.schemas';
 import { backupService } from '../backup/backup.service';
 import { ADMIN_LOCKABLE, catalogSyncService } from '../sync/catalog-sync.service';
@@ -137,7 +137,7 @@ adminRouter.put(
     if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
       throw new AppError('BAD_REQUEST', 'Send the photo as the request body (JPG, PNG or WebP)', { reason: 'image_missing' });
     }
-    res.json(await adminProductsService.setImage(id, req.body, staffOf(req).staffId));
+    res.json(await adminProductsService.setImage(id, req.body, staffOf(req).staffId, wantsCleanUp(req)));
   },
 );
 
@@ -184,7 +184,7 @@ adminRouter.put('/categories/:id/tile-image', uploadLimiter, express.raw({ type:
   if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
     throw new AppError('BAD_REQUEST', 'Send the picture as the request body (JPG, PNG or WebP)', { reason: 'image_missing' });
   }
-  res.json(await adminCategoriesService.setImage(id, req.body, 'tile'));
+  res.json(await adminCategoriesService.setImage(id, req.body, 'tile', wantsCleanUp(req)));
 });
 
 adminRouter.delete('/categories/:id/tile-image', async (req, res) => {

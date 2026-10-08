@@ -21,6 +21,21 @@ describe('catalogue photo cleanup', () => {
     expect(px(400, 60)[1] ?? 255).toBeLessThan(80);
   });
 
+  it('clean-up off: the picture stays as it is (background, shape), only resized', async () => {
+    const photo = Buffer.from(
+      '<svg width="1600" height="1000" xmlns="http://www.w3.org/2000/svg"><rect width="1600" height="1000" fill="#E8E2D8"/><rect x="600" y="300" width="400" height="400" fill="#C62828"/></svg>',
+    );
+    const out = await catalogPhoto(await sharp(photo).png().toBuffer(), { clean: false });
+    const { data, info } = await sharp(out).raw().toBuffer({ resolveWithObject: true });
+    expect([info.width, info.height]).toEqual([800, 500]);
+    const [r = 0, g = 0, b = 0] = [...data.subarray(0, 3)];
+    // the light backdrop is kept, not turned white
+    expect(r).toBeLessThan(245);
+    expect(Math.abs(r - 0xe8)).toBeLessThan(8);
+    expect(Math.abs(g - 0xe2)).toBeLessThan(8);
+    expect(Math.abs(b - 0xd8)).toBeLessThan(8);
+  });
+
   it('rejects files that are not images', async () => {
     await expect(catalogPhoto(Buffer.from('not an image'))).rejects.toThrow();
   });

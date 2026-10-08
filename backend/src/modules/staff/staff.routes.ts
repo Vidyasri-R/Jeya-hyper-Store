@@ -3,7 +3,7 @@ import { rateLimit } from 'express-rate-limit';
 import { z } from 'zod';
 import { AppError } from '../../common/errors';
 import { requireStaff, requireStaffAllowingPasswordChange, requireStaffRole, staffOf } from '../../common/staff-auth.middleware';
-import { parseBody, parseParams, parseQuery } from '../../common/validate';
+import { parseBody, parseParams, parseQuery, wantsCleanUp } from '../../common/validate';
 import { orderStatus } from '../../db/schema';
 import { adminProductsService } from '../admin/admin-products.service';
 import { photoWorkService, selfAssignSetting } from '../admin/photo-work.service';
@@ -250,7 +250,7 @@ staffPhotos.put('/:id/image', photoUploads, express.raw({ type: ['image/jpeg', '
   if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
     throw new AppError('BAD_REQUEST', 'Send the photo as the request body (JPG, PNG or WebP)', { reason: 'image_missing' });
   }
-  res.json(await adminProductsService.setImage(id, req.body, me.staffId));
+  res.json(await adminProductsService.setImage(id, req.body, me.staffId, wantsCleanUp(req)));
 });
 
 /** "The photo is still right" after a barcode change (assigned helpers, or admins). */

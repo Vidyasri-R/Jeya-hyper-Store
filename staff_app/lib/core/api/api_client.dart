@@ -223,9 +223,10 @@ class ApiClient {
   );
 
   /// Raw upload (product photos): the body is the file itself.
-  Future<Map<String, dynamic>> putBytes(String path, Uint8List bytes, String contentType) => _send(
+  Future<Map<String, dynamic>> putBytes(String path, Uint8List bytes, String contentType, {Map<String, dynamic>? query}) => _send(
     () => _dio.put(
       path,
+      queryParameters: query,
       data: Stream.fromIterable([bytes]),
       options: Options(
         contentType: contentType,

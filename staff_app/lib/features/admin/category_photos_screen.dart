@@ -77,6 +77,8 @@ class _CategoryPhotosScreenState extends ConsumerState<CategoryPhotosScreen> {
     var busy = false;
     var changed = false;
     var nextWhenUploaded = false;
+    /// White-background clean-up for the next tile picture (switch off for pictures it spoils).
+    var clean = true;
 
     return showActionSheet<bool>(
       context,
@@ -86,7 +88,7 @@ class _CategoryPhotosScreenState extends ConsumerState<CategoryPhotosScreen> {
 
         Future<void> upload(Uint8List bytes, String type) async {
           setState(() => busy = true);
-          final url = await guard(context, () => tiles ? repo.uploadCategoryTile(id, bytes, type) : repo.uploadCategoryPhoto(id, bytes, type));
+          final url = await guard(context, () => tiles ? repo.uploadCategoryTile(id, bytes, type, clean: clean) : repo.uploadCategoryPhoto(id, bytes, type));
           if (!context.mounted) return;
           setState(() {
             busy = false;
@@ -194,6 +196,15 @@ class _CategoryPhotosScreenState extends ConsumerState<CategoryPhotosScreen> {
                     ),
                   ),
                 ]),
+                if (tiles)
+                  SwitchListTile(
+                    value: clean,
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    onChanged: busy ? null : (v) => setState(() => clean = v),
+                    title: const Text('Clean up background (make it white)'),
+                    subtitle: Text(clean ? 'On: background turned white, picture centred' : 'Off: the next picture is saved exactly as it is'),
+                  ),
                 if (imageUrl != null)
                   TextButton.icon(
                     onPressed: busy

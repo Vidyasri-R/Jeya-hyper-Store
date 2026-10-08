@@ -120,8 +120,9 @@ class StaffRepository {
   Future<void> updateProduct(int id, Map<String, dynamic> patch) => _api.patch('/admin/products/$id', body: patch);
 
   /// Any staff role: admins for any product, others for products assigned to them.
-  Future<String> uploadPhoto(int id, Uint8List bytes, String contentType) async =>
-      (await _api.putBytes('/staff/photos/$id/image', bytes, contentType))['imageUrl'] as String;
+  /// [clean]: false keeps the picture as it is (no white-background clean-up on the server).
+  Future<String> uploadPhoto(int id, Uint8List bytes, String contentType, {bool clean = true}) async =>
+      (await _api.putBytes('/staff/photos/$id/image', bytes, contentType, query: clean ? null : {'clean': '0'}))['imageUrl'] as String;
 
   Future<void> removePhoto(int id) => _api.delete('/admin/products/$id/image');
 
@@ -258,8 +259,8 @@ class StaffRepository {
   Future<void> removeCategoryPhoto(int id) => _api.delete('/admin/categories/$id/image');
 
   /// The category's own picture on the shop's tiles (main and sub-categories).
-  Future<String> uploadCategoryTile(int id, Uint8List bytes, String contentType) async =>
-      (await _api.putBytes('/admin/categories/$id/tile-image', bytes, contentType))['imageUrl'] as String;
+  Future<String> uploadCategoryTile(int id, Uint8List bytes, String contentType, {bool clean = true}) async =>
+      (await _api.putBytes('/admin/categories/$id/tile-image', bytes, contentType, query: clean ? null : {'clean': '0'}))['imageUrl'] as String;
 
   Future<void> removeCategoryTile(int id) => _api.delete('/admin/categories/$id/tile-image');
 

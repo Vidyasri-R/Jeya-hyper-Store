@@ -47,7 +47,8 @@ export const adminCategoriesService = {
   },
 
   /** [kind]: 'tile' = the category's picture on the shop's tiles; 'photo' = stand-in for its products. */
-  async setImage(categoryId: number, input: Buffer, kind: 'photo' | 'tile' = 'photo') {
+  /** [clean]: false keeps a tile picture as it is (no white-background clean-up). */
+  async setImage(categoryId: number, input: Buffer, kind: 'photo' | 'tile' = 'photo', clean = true) {
     if (!r2.isConfigured()) throw new AppError('UPSTREAM_UNAVAILABLE', 'Image storage is not configured');
     const [found] = await db.select({ id: categories.id, imageUrl: categories.imageUrl, tileImageUrl: categories.tileImageUrl }).from(categories).where(eq(categories.id, categoryId)).limit(1);
     if (!found) throw AppError.notFound('Category');
@@ -55,7 +56,7 @@ export const adminCategoriesService = {
     let output: Buffer;
     try {
       // Tile pictures are product-style (white background, centred); stand-ins are cover-cropped photos.
-      output = kind === 'tile' ? await catalogPhoto(input) : await categoryPhoto(input);
+      output = kind === 'tile' ? await catalogPhoto(input, { clean }) : await categoryPhoto(input);
     } catch (error) {
       logger.warn({ err: error, categoryId }, 'category photo could not be processed');
       throw new AppError('BAD_REQUEST', 'This file is not a supported photo (use JPG, PNG or WebP)', { reason: 'image_invalid' });
