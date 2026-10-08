@@ -168,6 +168,11 @@ export const catalogImportService = {
     for (let k = 0; k < prio.length; k += 1000) {
       await db.execute(sql`UPDATE ${products} AS p SET photo_priority = v.prio FROM (VALUES ${sql.join(prio.slice(k, k + 1000), sql`, `)}) AS v(id, prio) WHERE p.id = v.id AND p.photo_priority IS DISTINCT FROM v.prio`);
     }
+    // Unit cost for the admin's margin report (kept off the product cards and the public API).
+    const costs = file.items.flatMap((i) => (idByCode.has(i.itemCode) && i.costPrice ? [sql`(${idByCode.get(i.itemCode)!}::bigint, ${i.costPrice}::numeric)`] : []));
+    for (let k = 0; k < costs.length; k += 1000) {
+      await db.execute(sql`UPDATE ${products} AS p SET cost_price = v.cost FROM (VALUES ${sql.join(costs.slice(k, k + 1000), sql`, `)}) AS v(id, cost) WHERE p.id = v.id AND p.cost_price IS DISTINCT FROM v.cost`);
+    }
     // Sizes of one product → one card with a size picker (new sizes, names and stock change daily).
     const sizes = await regroupVariants();
     logger.info({ items: result.items, barcodes: pairs.length, sizeGroups: sizes.groups }, 'stock file imported');

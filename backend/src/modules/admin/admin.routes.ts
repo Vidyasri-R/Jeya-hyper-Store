@@ -17,6 +17,8 @@ import { adminDashboardService } from './admin-dashboard.service';
 import { adminProductsService } from './admin-products.service';
 import { adminSettingsService } from './admin-settings.service';
 import { adminStaffService } from './admin-staff.service';
+import { EXPENSE_CATEGORIES, financeService } from './finance.service';
+import { perksService } from '../perks/perks.service';
 
 /** Back office for the Jeya Staff app — staff/admin accounts only (customer tokens are rejected). */
 export const adminRouter = Router();
@@ -234,6 +236,74 @@ adminRouter.get('/products/by-barcode/:code', async (req, res) => {
 adminRouter.delete('/products/:id/image', async (req, res) => {
   const { id } = parseParams(productParams, req);
   await adminProductsService.removeImage(id);
+  res.status(204).end();
+});
+
+/* ── finance (online shop): sales, costs, margin, expenses, profit ── */
+
+const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD');
+const range = z
+  .object({ from: day, to: day })
+  .refine((r) => r.from <= r.to, 'The end date is before the start date')
+  .refine((r) => (Date.parse(r.to) - Date.parse(r.from)) / 86_400_000 <= 400, 'Pick at most about a year');
+
+adminRouter.get('/finance', async (req, res) => {
+  const { from, to } = parseQuery(range, req);
+  res.json(await financeService.report(from, to));
+});
+
+adminRouter.get('/expenses', async (req, res) => {
+  const { from, to } = parseQuery(range, req);
+  res.json({ expenses: await financeService.listExpenses(from, to), categories: EXPENSE_CATEGORIES });
+});
+
+adminRouter.post('/expenses', async (req, res) => {
+  const body = parseBody(
+    z
+      .object({
+        spentOn: day,
+        category: z.enum(EXPENSE_CATEGORIES),
+        amount: z.union([z.string(), z.number()]).transform(String).refine((v) => /^\d{1,9}(\.\d{1,2})?$/.test(v) && Number(v) > 0, 'Enter an amount like 450 or 450.50'),
+        note: z.string().trim().max(200).nullable().optional(),
+      })
+      .strict(),
+    req,
+  );
+  res.status(201).json({ expense: await financeService.addExpense(staffOf(req).staffId, body) });
+});
+
+adminRouter.delete('/expenses/:id', async (req, res) => {
+  const { id } = parseParams(productParams, req);
+  await financeService.removeExpense(id);
+  res.status(204).end();
+});
+
+/* ── premium customers: free delivery and / or a discount, by phone number ── */
+
+adminRouter.get('/members', async (_req, res) => {
+  res.json({ members: await perksService.list() });
+});
+
+adminRouter.put('/members', async (req, res) => {
+  const body = parseBody(
+    z
+      .object({
+        phone: z.string().trim().min(10).max(16),
+        name: z.string().trim().max(120).nullable().optional(),
+        freeDelivery: z.boolean(),
+        discountPercent: z.number().min(0).max(50),
+        note: z.string().trim().max(200).nullable().optional(),
+        isActive: z.boolean().optional(),
+      })
+      .strict(),
+    req,
+  );
+  res.json({ member: await perksService.save(staffOf(req).staffId, body) });
+});
+
+adminRouter.delete('/members/:phone', async (req, res) => {
+  const { phone } = parseParams(z.object({ phone: z.string().regex(/^\d{10,15}$/) }), req);
+  await perksService.remove(phone);
   res.status(204).end();
 });
 

@@ -11,6 +11,8 @@ export const cartProductColumns = {
   hsnCode: products.hsnCode,
   itemCode: products.itemCode,
   gofrugalItemId: products.gofrugalItemId,
+  /** For the order line's cost snapshot (margin report); never sent to the app. */
+  costPrice: products.costPrice,
 };
 
 export type CartProduct = ProductCardRow & {
@@ -19,6 +21,7 @@ export type CartProduct = ProductCardRow & {
   hsnCode: string | null;
   itemCode: string;
   gofrugalItemId: string;
+  costPrice: string | null;
 };
 
 export type CartLineRow = { quantity: string; choices: Record<string, string> | null; addedAt: Date; product: CartProduct };

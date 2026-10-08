@@ -20,7 +20,7 @@ const file = [
   HEADER,
   ',,,,,,,,,,,,,,,,,"233,867.35",,,,,,',
   row({ DEPT: 'SUPER MARKET', TYPE: 'TEA', BRAND: '3 ROSES', 'Item Code': '501', 'Item Name': '3 ROSES 100G', Selling: '91', MRP: '92', 'Current Stock': '3', 'Sales Tax %': '5', 'Barcode Value': '0050107241', 'Transaction Date': '07/24/26', 'EAN Code': '8.90103E+12', Status: 'Regular' }),
-  row({ DEPT: 'SUPER MARKET', TYPE: 'TEA', BRAND: '3 ROSES', 'Item Code': '501', 'Item Name': '3 ROSES 100G', Selling: '94', MRP: '95', 'Current Stock': '19', 'Sales Tax %': '5', 'Barcode Value': '0050109161', 'Transaction Date': '09/16/26', 'EAN Code': '8901030123456', Status: 'Regular' }),
+  row({ DEPT: 'SUPER MARKET', TYPE: 'TEA', BRAND: '3 ROSES', 'Item Code': '501', 'Item Name': '3 ROSES 100G', Selling: '94', MRP: '95', 'Current Stock': '19', 'Sales Tax %': '5', 'Barcode Value': '0050109161', 'Transaction Date': '09/16/26', 'EAN Code': '8901030123456', 'Landing Cost': '81.5', 'Purchase Price': '78', Status: 'Regular' }),
   row({ DEPT: 'SUPERMARKET', TYPE: 'GROCERY', 'Item Code': '502', 'Item Name': 'ULUNTHAM PARUPPU BULK', Selling: '160', MRP: '170', 'Current Stock': '5.25', 'Sales Tax %': '0', 'Barcode Value': '0050201011', 'Transaction Date': '01/02/26', Status: 'Regular' }),
   row({ DEPT: 'SUPER MARKET', TYPE: 'COOL DRINKS', 'Item Code': '503', 'Item Name': 'APPY FIZZ 160ML MRP.10', Selling: '10', MRP: '10', 'Current Stock': '24', 'Sales Tax %': '40', 'Transaction Date': '09/01/26', Status: 'Regular' }),
   row({ DEPT: 'SUPER MARKET', TYPE: 'FREE GIFT', 'Item Code': '504', 'Item Name': 'FREE GIFT : SS PLATE', Selling: '0.01', MRP: '0.01', 'Current Stock': '58', 'Sales Tax %': '0', Status: 'Regular' }),
@@ -41,6 +41,8 @@ describe('stock file reader', () => {
     const tea = f.items.find((i) => i.itemCode === '501')!;
     expect(tea).toMatchObject({ name: '3 Roses 100g', sellingPrice: '94.00', mrp: '95.00', stock: '22.000', packSize: '100 g', ean: '8901030123456', gstRate: '5.00', isLoose: false });
     expect(tea.labelBarcodes.sort()).toEqual(['0050107241', '0050109161']);
+    expect(tea.costPrice).toBe('81.50'); // latest batch's Landing Cost
+    expect(f.items.find((i) => i.itemCode === '503')?.costPrice).toBeNull(); // no cost in the file
   });
 
   it('keeps only the chosen departments (SUPER MARKET = SUPERMARKET)', () => {

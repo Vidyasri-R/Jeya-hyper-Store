@@ -150,6 +150,10 @@ export const staffOrdersService = {
       paymentMethod: order.paymentMethod,
       paymentStatus: order.paymentStatus,
       subtotal: order.subtotal,
+      /** Premium customer: the discount given and the perks (so the POS bill matches). */
+      discountAmount: order.discountAmount,
+      memberDiscountPercent: order.memberDiscountPercent,
+      memberFreeDelivery: order.memberFreeDelivery,
       deliveryFee: order.deliveryFee,
       totalAmount: order.totalAmount,
       finalAmount: order.finalAmount,
@@ -249,6 +253,9 @@ export const staffOrdersService = {
           throw new AppError('CONFLICT', 'Nothing was packed. Cancel the order instead.', { reason: 'nothing_packed' });
         }
         await staffOrdersRepository.setPackedQuantities(tx, rows);
+        // Premium customer: they were only paying (100 − discount)% of the items, so the refund / new total follows.
+        const memberPercent = Number(current.memberDiscountPercent ?? 0);
+        if (memberPercent > 0) shortfallPaise = Math.round((shortfallPaise * (100 - memberPercent)) / 100);
         if (shortfallPaise > 0) {
           patch.finalAmount = fromPaise(toPaise(current.totalAmount) - shortfallPaise);
           const changes = rows

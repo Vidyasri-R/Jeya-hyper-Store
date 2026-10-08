@@ -61,6 +61,11 @@ export type StockItem = {
   updatedAt: Date;
   /** Open purchase batches — restocked often = sells fast. */
   batches: number;
+  /**
+   * What one unit cost the store (latest batch's Landing Cost, else Purchase Price) — for the admin's
+   * margin report only; never shown to customers. Null when the file has no cost for it.
+   */
+  costPrice: string | null;
 };
 
 export type ParsedStockFile = {
@@ -75,6 +80,12 @@ const REQUIRED = ['DEPT', 'TYPE', 'Item Code', 'Item Name', 'Selling', 'MRP', 'C
 export class StockFileError extends Error {}
 
 export const normDept = (d: string) => d.replace(/\s+/g, '').toUpperCase();
+
+/** A believable unit cost: positive and not wildly above the selling price (typos, case costs). */
+function costOf(landing: number, purchase: number, selling: number): string | null {
+  for (const c of [landing, purchase]) if (c > 0 && c <= selling * 3) return c.toFixed(2);
+  return null;
+}
 
 const num = (v: string | undefined) => {
   const n = Number(String(v ?? '').replace(/,/g, '').trim());
@@ -141,7 +152,7 @@ export function readStockFile(text: string, departments: Set<string> | null): Pa
   if (missing.length > 0) throw new StockFileError(`The file is missing columns: ${missing.join(', ')}`);
   const col = (name: string) => header.indexOf(name);
   const C = Object.fromEntries(
-    ['DEPT', 'TYPE', 'BRAND', 'Item Code', 'Item Name', 'Selling', 'MRP', 'Current Stock', 'Sales Tax %', 'HSN_SAC Code', 'HSN_SAC Code (Transaction)', 'EAN Code', 'Barcode Value', 'Status', 'Transaction Date'].map((n) => [n, col(n)]),
+    ['DEPT', 'TYPE', 'BRAND', 'Item Code', 'Item Name', 'Selling', 'MRP', 'Current Stock', 'Sales Tax %', 'HSN_SAC Code', 'HSN_SAC Code (Transaction)', 'EAN Code', 'Barcode Value', 'Status', 'Transaction Date', 'Landing Cost', 'Purchase Price'].map((n) => [n, col(n)]),
   ) as Record<string, number>;
   const get = (r: string[], name: string) => (C[name]! >= 0 ? (r[C[name]!] ?? '').trim() : '');
 
@@ -225,6 +236,7 @@ export function readStockFile(text: string, departments: Set<string> | null): Pa
       isActive: anyActive,
       updatedAt: latestAt.getTime() > 0 ? latestAt : new Date(),
       batches: batches.length,
+      costPrice: costOf(num(get(latest, 'Landing Cost')), num(get(latest, 'Purchase Price')), selling),
     });
   }
   return { items, rows: dataRows, departments: deptCount, problems };

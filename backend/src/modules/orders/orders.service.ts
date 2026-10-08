@@ -6,6 +6,7 @@ import type { DeliveryAddressSnapshot, Order, OrderItem, OrderStatus, OrderStatu
 import { addressesRepository } from '../addresses/addresses.repository';
 import { appConfigService, CONFIG_KEYS } from '../app-config/app-config.service';
 import { cartRepository } from '../cart/cart.repository';
+import { memberDiscountPaise, perksService, type Perks } from '../perks/perks.service';
 import { priceLine, publicLines, summarize, toPublicLine, type PricedLine } from '../cart/pricing';
 import { deliveryRules, deliveryService, expectedDeliveryBy, type DeliveryQuote, type DeliveryTarget } from '../delivery/delivery.service';
 import { paymentsService } from '../payments/payments.service';
@@ -33,14 +34,18 @@ type Evaluation = {
   mrpTotalPaise: number;
   deliveryFeePaise: number;
   freeDeliveryApplied: boolean;
+  /** Premium customer (Admin → Premium customers): their perks and the discount they get. */
+  perks: Perks | null;
+  discountPaise: number;
   totalPaise: number;
   blockers: Blocker[];
 };
 
 async function evaluate(executor: Transaction | typeof db, userId: string, target: DeliveryTarget): Promise<Evaluation> {
-  const [rows, delivery] = await Promise.all([
+  const [rows, delivery, perks] = await Promise.all([
     cartRepository.lines(executor, userId),
     deliveryService.quote(target, executor),
+    perksService.forUser(executor, userId),
   ]);
   const lines = rows.map((row) => priceLine(row.product, toMilli(row.quantity), row.choices));
   const summary = summarize(lines);
@@ -78,9 +83,12 @@ async function evaluate(executor: Transaction | typeof db, userId: string, targe
     });
   }
 
-  const charge = delivery.serviceable
+  const standard = delivery.serviceable
     ? deliveryService.charge(delivery, summary.subtotalPaise)
     : { feePaise: 0, freeDeliveryApplied: false };
+  // Premium customers: free delivery always, and their discount on the items.
+  const charge = perks?.freeDelivery && delivery.serviceable ? { feePaise: 0, freeDeliveryApplied: true } : standard;
+  const discountPaise = memberDiscountPaise(summary.subtotalPaise, perks);
   return {
     lines,
     delivery,
@@ -88,7 +96,9 @@ async function evaluate(executor: Transaction | typeof db, userId: string, targe
     mrpTotalPaise: summary.mrpTotalPaise,
     deliveryFeePaise: charge.feePaise,
     freeDeliveryApplied: charge.freeDeliveryApplied,
-    totalPaise: summary.subtotalPaise + charge.feePaise,
+    perks,
+    discountPaise,
+    totalPaise: summary.subtotalPaise - discountPaise + charge.feePaise,
     blockers,
   };
 }
@@ -126,6 +136,8 @@ function toPublicOrder(order: Order, itemCount?: number) {
     paymentMethod: order.paymentMethod,
     subtotal: order.subtotal,
     discountAmount: order.discountAmount,
+    memberDiscountPercent: order.memberDiscountPercent,
+    memberFreeDelivery: order.memberFreeDelivery,
     deliveryFee: order.deliveryFee,
     taxTotal: order.taxTotal,
     totalAmount: order.totalAmount,
@@ -202,14 +214,19 @@ export const ordersService = {
         savings: fromPaise(Math.max(0, evaluation.mrpTotalPaise - evaluation.subtotalPaise)),
         deliveryFee: fromPaise(evaluation.deliveryFeePaise),
         freeDeliveryApplied: evaluation.freeDeliveryApplied,
+        /** Premium-customer discount on the items ("0.00" for everyone else). */
+        discount: fromPaise(evaluation.discountPaise),
         total: fromPaise(evaluation.totalPaise),
       },
+      /** Shown as "Premium customer: free delivery · 10% off". */
+      member: evaluation.perks ? { freeDelivery: evaluation.perks.freeDelivery, discountPercent: evaluation.perks.discountPercent } : null,
       delivery: deliveryService.toPublic(evaluation.delivery),
       /** "Add ₹X more for free delivery" nudge; null when already free or not applicable. */
       freeDeliveryShortBy:
         evaluation.delivery.serviceable &&
         evaluation.delivery.freeDeliveryAbovePaise !== null &&
-        evaluation.deliveryFeePaise > 0
+        evaluation.deliveryFeePaise > 0 &&
+        !evaluation.perks?.freeDelivery
           ? fromPaise(evaluation.delivery.freeDeliveryAbovePaise - evaluation.subtotalPaise)
           : null,
       paymentMethods: methods,
@@ -282,6 +299,9 @@ export const ordersService = {
           addressId: address.id,
           deliveryAddress: snapshot,
           subtotal: fromPaise(evaluation.subtotalPaise),
+          discountAmount: fromPaise(evaluation.discountPaise),
+          memberDiscountPercent: evaluation.perks && evaluation.perks.discountPercent > 0 ? evaluation.perks.discountPercent.toFixed(2) : null,
+          memberFreeDelivery: evaluation.perks?.freeDelivery ?? false,
           deliveryFee: fromPaise(evaluation.deliveryFeePaise),
           taxTotal: fromPaise(
             evaluation.lines.reduce((sum, line) => sum + includedGstPaise(line.lineTotalPaise, line.product.gstRate), 0),
@@ -315,6 +335,7 @@ export const ordersService = {
             hsnCode: line.product.hsnCode,
             quantity: fromMilli(line.qtyMilli),
             choices: line.choices,
+            unitCost: line.product.costPrice,
             totalPrice: fromPaise(line.lineTotalPaise),
           })),
         );

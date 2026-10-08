@@ -372,6 +372,8 @@ export const products = pgTable(
     isVariantLeader: boolean().notNull().default(true),
     /** Choices the customer must pick, set by the store: one POS item sold in several flavours/colours. */
     options: jsonb().$type<ProductOptions>(),
+    /** Unit cost from the stock file (Landing Cost) — admin margin report only, never sent to the shop. */
+    costPrice: money(),
     /** Photo work assigned to this staff member (until the product has a photo). */
     photoAssigneeId: uuid().references(() => staffUsers.id, { onDelete: 'set null' }),
     photoAssignedAt: tstz(),
@@ -456,6 +458,44 @@ export const cartItems = pgTable(
   ],
 );
 
+/**
+ * Premium customers, by phone number (they may not have signed up yet): free delivery on every order
+ * and/or a discount on the items, set by the store admin.
+ */
+export const customerPerks = pgTable(
+  'customer_perks',
+  {
+    /** E.164 without '+', e.g. 919876543210 (same as users.phone). */
+    phone: varchar({ length: 15 }).primaryKey(),
+    name: varchar({ length: 120 }),
+    freeDelivery: boolean().notNull().default(false),
+    discountPercent: numeric({ precision: 5, scale: 2 }).notNull().default('0'),
+    note: varchar({ length: 200 }),
+    isActive: boolean().notNull().default(true),
+    updatedBy: uuid().references(() => staffUsers.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (t) => [
+    check('customer_perks_discount_ck', sql`${t.discountPercent} >= 0 AND ${t.discountPercent} <= 50`),
+    check('customer_perks_phone_ck', sql`${t.phone} ~ '^[0-9]{10,15}$'`),
+  ],
+);
+
+/** Running costs of the online shop the admin records (delivery staff, fuel, packing…), for the finance report. */
+export const expenses = pgTable(
+  'expenses',
+  {
+    id: bigint({ mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+    spentOn: date({ mode: 'string' }).notNull(),
+    category: varchar({ length: 40 }).notNull(),
+    amount: money().notNull(),
+    note: varchar({ length: 200 }),
+    createdBy: uuid().references(() => staffUsers.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (t) => [index('expenses_spent_on_idx').on(t.spentOn), check('expenses_amount_ck', sql`${t.amount} > 0`)],
+);
+
 /* ───────────────────────────── Orders ───────────────────────────── */
 
 /** Feeds the human-facing order number JHS-<yymmdd>-<seq>; gaps are fine. */
@@ -488,7 +528,11 @@ export const orders = pgTable(
     deliveryAddress: jsonb().$type<DeliveryAddressSnapshot>().notNull(),
 
     subtotal: money().notNull(),
+    /** Premium-customer discount on the items (see customer_perks). */
     discountAmount: money().notNull().default('0'),
+    /** The perks this order got, kept so later changes to the customer's perks don't alter it. */
+    memberDiscountPercent: numeric({ precision: 5, scale: 2 }),
+    memberFreeDelivery: boolean().notNull().default(false),
     deliveryFee: money().notNull().default('0'),
     taxTotal: money().notNull().default('0'),
     totalAmount: money().notNull(),
@@ -583,6 +627,8 @@ export const orderItems = pgTable(
     quantity: quantity().notNull(),
     /** Flavour/colour split chosen by the customer (products with options), e.g. {"Vanilla": "2"}. */
     choices: jsonb().$type<Record<string, string>>(),
+    /** The product's cost when ordered (for margin); NULL when the stock file had none. */
+    unitCost: money(),
     /** Actual packed qty for loose items / short-picks; NULL until packed. */
     packedQuantity: quantity(),
     totalPrice: money().notNull(),

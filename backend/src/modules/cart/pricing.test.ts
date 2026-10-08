@@ -46,6 +46,7 @@ const product = (overrides: Partial<CartProduct> = {}): CartProduct => ({
   variantGroup: null,
   variantLabel: null,
   options: null,
+  costPrice: null,
   slug: 'p',
   name: 'Toor Dal 1 kg',
   nameTa: null,
