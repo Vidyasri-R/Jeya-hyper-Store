@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, isNull, or, sql, type SQL } from 'drizzle-orm';
 import { AppError } from '../../common/errors';
 import { db } from '../../db/client';
 import { categories, products, staffUsers } from '../../db/schema';
@@ -6,7 +6,8 @@ import { withPlaceholders } from '../catalog/catalog.service';
 import { adminProductColumns } from './admin-products.service';
 
 /** Active products still missing a photo. */
-const needsPhoto = and(eq(products.isActive, true), isNull(products.imageUrl))!;
+/** Active products still missing a photo — or whose photo may be out of date (new packaging). */
+const needsPhoto = and(eq(products.isActive, true), or(isNull(products.imageUrl), isNotNull(products.photoCheckReason)))!;
 
 function encode(row: { photoPriority: number; id: number }) {
   return Buffer.from(JSON.stringify([row.photoPriority, row.id])).toString('base64url');
@@ -62,6 +63,7 @@ export const photoWorkService = {
         active: sql<number>`count(*) filter (where ${products.isActive})::int`,
         withPhoto: sql<number>`count(*) filter (where ${products.isActive} and ${products.imageUrl} is not null)::int`,
         unassigned: sql<number>`count(*) filter (where ${needsPhoto} and ${products.photoAssigneeId} is null)::int`,
+        toRecheck: sql<number>`count(*) filter (where ${products.isActive} and ${products.photoCheckReason} is not null)::int`,
         today: sql<number>`count(*) filter (where ${products.photoAt} >= date_trunc('day', now() at time zone 'Asia/Kolkata') at time zone 'Asia/Kolkata')::int`,
       })
       .from(products);
@@ -72,7 +74,7 @@ export const photoWorkService = {
         username: staffUsers.username,
         role: staffUsers.role,
         isActive: staffUsers.isActive,
-        open: sql<number>`(select count(*) from ${products} p where p.photo_assignee_id = ${staffIdRef} and p.is_active and p.image_url is null)::int`,
+        open: sql<number>`(select count(*) from ${products} p where p.photo_assignee_id = ${staffIdRef} and p.is_active and (p.image_url is null or p.photo_check_reason is not null))::int`,
         done: sql<number>`(select count(*) from ${products} p where p.photo_by_id = ${staffIdRef} and p.image_url is not null)::int`,
         doneToday: sql<number>`(select count(*) from ${products} p where p.photo_by_id = ${staffIdRef} and p.photo_at >= date_trunc('day', now() at time zone 'Asia/Kolkata') at time zone 'Asia/Kolkata')::int`,
         lastPhotoAt: sql<string | null>`(select max(p.photo_at) from ${products} p where p.photo_by_id = ${staffIdRef})`,
@@ -85,6 +87,8 @@ export const photoWorkService = {
         withPhoto: Number(totals?.withPhoto ?? 0),
         withoutPhoto: Number(totals?.active ?? 0) - Number(totals?.withPhoto ?? 0),
         unassigned: Number(totals?.unassigned ?? 0),
+        /** Has a photo, but the packaging changed (new barcode): needs a new one or "still right". */
+        toRecheck: Number(totals?.toRecheck ?? 0),
         today: Number(totals?.today ?? 0),
       },
       people: people.filter((p) => p.isActive && (p.role === 'photos' || p.open > 0 || p.done > 0 || p.role === 'admin' || p.role === 'staff')),
@@ -102,7 +106,7 @@ export const photoWorkService = {
       UPDATE ${products} SET photo_assignee_id = ${params.staffId}, photo_assigned_at = now()
       WHERE id IN (
         SELECT id FROM ${products}
-        WHERE is_active AND image_url IS NULL AND photo_assignee_id IS NULL ${scope}
+        WHERE is_active AND (image_url IS NULL OR photo_check_reason IS NOT NULL) AND photo_assignee_id IS NULL ${scope}
         ORDER BY photo_priority DESC, id
         LIMIT ${params.count}
         FOR UPDATE SKIP LOCKED

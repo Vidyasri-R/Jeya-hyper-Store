@@ -214,6 +214,8 @@ class _PreviewSummary extends StatelessWidget {
         if (n('backInStock') > 0) line(Icons.restore_rounded, '${f.format(n('backInStock'))} back in stock', AppColors.green700),
         if (n('goingOut') > 0) line(Icons.remove_shopping_cart_outlined, '${f.format(n('goingOut'))} not in this file → out of stock (photos kept)', AppColors.offerRed),
         if (n('looseItems') > 0) line(Icons.scale_outlined, '${n('looseItems')} sold by weight (BULK / loose)', AppColors.inkMuted),
+        if (n('newPackaging') > 0)
+          line(Icons.published_with_changes_rounded, '${n('newPackaging')} with a new barcode (packaging changed?) → photo to re-check in Photo work', const Color(0xFF8A5A00)),
         const Divider(height: 20),
         Text('Categories in the shop', style: text.titleSmall),
         const SizedBox(height: 6),

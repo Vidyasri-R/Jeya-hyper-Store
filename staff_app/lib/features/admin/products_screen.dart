@@ -121,7 +121,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                 Wrap(
                   spacing: 8,
                   children: [
-                    for (final (key, label) in const [('no_image', 'No photo'), ('with_image', 'With photo'), ('all', 'All'), ('inactive', 'Hidden')])
+                    for (final (key, label) in const [('no_image', 'No photo'), ('recheck', 'New packaging'), ('with_image', 'With photo'), ('all', 'All'), ('inactive', 'Hidden')])
                       ChoiceChip(
                         label: Text(label),
                         selected: _filter == key,
@@ -211,7 +211,9 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                           Text('MRP ${formatRupees(p.mrp)}', style: text.titleSmall),
                           if (p.sellingPrice != p.mrp) Text('Sells ${formatRupees(p.sellingPrice)}', style: text.labelSmall),
                           if (p.imageUrl == null)
-                            const Pill('Add photo', fg: AppColors.brandBlue, bg: AppColors.brandBlueSoft, icon: Icons.add_a_photo_outlined),
+                            const Pill('Add photo', fg: AppColors.brandBlue, bg: AppColors.brandBlueSoft, icon: Icons.add_a_photo_outlined)
+                          else if (p.needsRecheck)
+                            const Pill('New packaging', fg: Color(0xFF8A5A00), bg: AppColors.amberSoft, icon: Icons.published_with_changes_rounded),
                         ],
                       ),
                     ],
@@ -309,6 +311,35 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
             style: text.bodySmall,
           ),
           const SizedBox(height: 12),
+          if (product.needsRecheck && imageUrl == product.imageUrl) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 10),
+              decoration: BoxDecoration(color: AppColors.amberSoft, borderRadius: BorderRadius.circular(AppRadius.md)),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('New barcode in the stock file — the packaging may have changed.', style: text.titleSmall?.copyWith(color: const Color(0xFF7A4D00))),
+                const SizedBox(height: 2),
+                Text('Compare with the pack on the shelf: take a new photo, or keep this one.', style: text.bodySmall),
+                const SizedBox(height: 6),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.check_rounded),
+                  label: const Text('Photo is still right'),
+                  onPressed: busy
+                      ? null
+                      : () async {
+                          setState(() => busy = true);
+                          final ok = await guard(context, () async {
+                            await ref.read(repositoryProvider).confirmPhoto(product.id);
+                            return true;
+                          });
+                          if (!context.mounted) return;
+                          setState(() => busy = false);
+                          if (ok == true) Navigator.pop(context, true);
+                        },
+                ),
+              ]),
+            ),
+          ],
           // Right-click (website) / long-press (phone) → Paste photo.
           PastePhotoTarget(
             enabled: !busy,

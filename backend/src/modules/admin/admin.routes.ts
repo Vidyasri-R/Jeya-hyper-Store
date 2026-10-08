@@ -70,7 +70,7 @@ adminRouter.get('/products', async (req, res) => {
   const query = parseQuery(
     z.object({
       q: z.string().trim().max(80).optional(),
-      filter: z.enum(['all', 'no_image', 'with_image', 'inactive']).default('all'),
+      filter: z.enum(['all', 'no_image', 'with_image', 'inactive', 'recheck']).default('all'),
       cursor: z.string().max(400).optional(),
       limit: z.coerce.number().int().min(1).max(50).default(30),
     }),

@@ -131,6 +131,7 @@ class _Totals extends StatelessWidget {
           _Stat('With photo', withPhoto, AppColors.green700),
           _Stat('Without photo', n('withoutPhoto'), AppColors.offerRed),
           _Stat('Not given to anyone', n('unassigned'), AppColors.inkMuted),
+          if (n('toRecheck') > 0) _Stat('New packaging to re-check', n('toRecheck'), const Color(0xFF8A5A00)),
           _Stat('Added today', n('today'), AppColors.brandBlue),
         ]),
         const SizedBox(height: 6),

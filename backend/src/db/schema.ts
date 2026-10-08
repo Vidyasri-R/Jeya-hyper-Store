@@ -380,6 +380,9 @@ export const products = pgTable(
     /** Who uploaded the current photo, and when. */
     photoById: uuid().references(() => staffUsers.id, { onDelete: 'set null' }),
     photoAt: tstz(),
+    /** Set when the photo may be out of date — e.g. 'new_barcode': same item code, new EAN (new packaging). */
+    photoCheckReason: varchar({ length: 40 }),
+    photoCheckSince: tstz(),
     isActive: boolean().notNull().default(true),
     /** Pin popular SKUs to the top of listings. */
     sortRank: integer().notNull().default(0),

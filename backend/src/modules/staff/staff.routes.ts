@@ -163,4 +163,15 @@ staffPhotos.put('/:id/image', photoUploads, express.raw({ type: ['image/jpeg', '
   res.json(await adminProductsService.setImage(id, req.body, me.staffId));
 });
 
+/** "The photo is still right" after a barcode change (assigned helpers, or admins). */
+staffPhotos.post('/:id/photo-ok', async (req, res) => {
+  const { id } = parseParams(z.object({ id: z.coerce.number().int().positive() }), req);
+  const me = staffOf(req);
+  if (!(await photoWorkService.canUpload(id, me.staffId, me.role))) {
+    throw new AppError('FORBIDDEN', 'This product is not assigned to you', { reason: 'not_assigned' });
+  }
+  await adminProductsService.confirmPhoto(id);
+  res.status(204).end();
+});
+
 staffRouter.use('/photos', staffPhotos);

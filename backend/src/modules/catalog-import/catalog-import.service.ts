@@ -91,6 +91,28 @@ function fileClient(items: StockItem[], typeMap: Record<string, string>): PosCat
   };
 }
 
+type Existing = Map<string, { id: number; barcode: string | null; hasPhoto: boolean }>;
+
+/** EAN / product barcode and photo of the file's products as they are now (before importing). */
+async function currentBarcodes(items: StockItem[]): Promise<Existing> {
+  const rows = await db
+    .select({ id: products.id, code: products.gofrugalItemId, barcode: products.barcode, image: products.imageUrl })
+    .from(products)
+    .where(inArray(products.gofrugalItemId, items.map((i) => i.itemCode)));
+  return new Map(rows.map((r) => [r.code, { id: r.id, barcode: r.barcode, hasPhoto: r.image !== null }]));
+}
+
+const gtin = (code: string) => code.replace(/\D/g, '').replace(/^0+/, '');
+
+/** Products with a photo whose EAN changed under the same item code (repackaged), with the old EAN. */
+export function packagingChanges(before: Existing, items: StockItem[]): { id: number; oldBarcode: string }[] {
+  return items.flatMap((i) => {
+    const was = before.get(i.itemCode);
+    if (!was || !was.hasPhoto || !was.barcode || !i.ean || gtin(was.barcode) === gtin(i.ean)) return [];
+    return [{ id: was.id, oldBarcode: was.barcode }];
+  });
+}
+
 export const catalogImportService = {
   settings,
 
@@ -142,6 +164,8 @@ export const catalogImportService = {
       problems: file.problems.slice(0, 50),
       problemCount: file.problems.length,
       looseItems: file.items.filter((i) => i.isLoose).length,
+      /** Same item code, new EAN, and it has a photo: flagged for a new photo when imported. */
+      newPackaging: packagingChanges(await currentBarcodes(file.items), file.items).length,
     };
   },
 
@@ -150,6 +174,7 @@ export const catalogImportService = {
     const s = await settings();
     const file = parse(text, s);
     if (file.items.length === 0) throw new AppError('BAD_REQUEST', 'No products in the selected departments', { reason: 'stock_file_empty' });
+    const before = await currentBarcodes(file.items);
     const result = await catalogSyncService.run('full', fileClient(file.items, s.typeMap));
     if (result.status !== 'success') throw new AppError('CONFLICT', 'Another catalogue update is running. Try again in a minute.', { reason: 'import_busy' });
 
@@ -173,10 +198,23 @@ export const catalogImportService = {
     for (let k = 0; k < costs.length; k += 1000) {
       await db.execute(sql`UPDATE ${products} AS p SET cost_price = v.cost FROM (VALUES ${sql.join(costs.slice(k, k + 1000), sql`, `)}) AS v(id, cost) WHERE p.id = v.id AND p.cost_price IS DISTINCT FROM v.cost`);
     }
+    // Same item code, new EAN = new packaging: its photo may be out of date. Flag it for Photo work, and
+    // keep the old EAN so packs still on the shelf scan.
+    const repack = packagingChanges(before, file.items);
+    if (repack.length > 0) {
+      await db
+        .update(products)
+        .set({ photoCheckReason: 'new_barcode', photoCheckSince: sql`now()` })
+        .where(inArray(products.id, repack.map((r) => r.id)));
+      await db
+        .insert(productBarcodes)
+        .values(repack.map((r) => ({ barcode: r.oldBarcode, productId: r.id })))
+        .onConflictDoNothing();
+    }
     // Sizes of one product → one card with a size picker (new sizes, names and stock change daily).
     const sizes = await regroupVariants();
-    logger.info({ items: result.items, barcodes: pairs.length, sizeGroups: sizes.groups }, 'stock file imported');
-    return { ...result, barcodes: pairs.length, sizeGroups: sizes.groups };
+    logger.info({ items: result.items, barcodes: pairs.length, sizeGroups: sizes.groups, newPackaging: repack.length }, 'stock file imported');
+    return { ...result, barcodes: pairs.length, sizeGroups: sizes.groups, newPackaging: repack.length };
   },
 
   async lastImport() {

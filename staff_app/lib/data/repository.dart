@@ -121,6 +121,9 @@ class StaffRepository {
 
   Future<void> removePhoto(int id) => _api.delete('/admin/products/$id/image');
 
+  /// After a barcode change: the photo still matches the pack on the shelf.
+  Future<void> confirmPhoto(int id) => _api.post('/staff/photos/$id/photo-ok');
+
   /// Photo of one choice (a flavour / pen design); returns its URL for the product's options.
   Future<String> uploadChoicePhoto(int id, Uint8List bytes, String contentType) async =>
       (await _api.putBytes('/admin/products/$id/choice-image', bytes, contentType))['imageUrl'] as String;

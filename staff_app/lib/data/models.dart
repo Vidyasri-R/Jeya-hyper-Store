@@ -260,6 +260,7 @@ class AdminProduct {
       options = j['options'] is Map ? Map<String, dynamic>.from(j['options'] as Map) : null,
       variantGroup = j['variantGroup'] as String?,
       variantLabel = j['variantLabel'] as String?,
+      photoCheckReason = j['photoCheckReason'] as String?,
       description = j['description'] as String?,
       sortRank = (j['sortRank'] as num?)?.toInt() ?? 0,
       isActive = j['isActive'] != false;
@@ -285,6 +286,9 @@ class AdminProduct {
   /// Set when the product is one size of several (they share options with "all sizes").
   final String? variantGroup;
   final String? variantLabel;
+  /// 'new_barcode': same item code, new EAN in the stock file — the packaging (and photo) may have changed.
+  final String? photoCheckReason;
+  bool get needsRecheck => photoCheckReason != null;
   final String? description;
   final int sortRank;
   final bool isActive;

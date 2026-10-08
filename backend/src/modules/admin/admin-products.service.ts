@@ -13,7 +13,7 @@ import { withPlaceholders } from '../catalog/catalog.service';
 const MAX_SIDE = 800;
 const MAX_INPUT_PIXELS = 40_000_000;
 
-export type AdminProductFilter = 'all' | 'no_image' | 'with_image' | 'inactive';
+export type AdminProductFilter = 'all' | 'no_image' | 'with_image' | 'inactive' | 'recheck';
 
 const columns = {
   id: products.id,
@@ -36,6 +36,8 @@ const columns = {
   options: products.options,
   variantGroup: products.variantGroup,
   variantLabel: products.variantLabel,
+  /** 'new_barcode' when the packaging may have changed since the photo was taken. */
+  photoCheckReason: products.photoCheckReason,
 };
 
 /** Product fields the admin app shows (also used by the photo work queue). */
@@ -173,6 +175,7 @@ export const adminProductsService = {
     if (params.filter === 'inactive') where.push(eq(products.isActive, false));
     else where.push(eq(products.isActive, true));
     if (params.filter === 'no_image') where.push(isNull(products.imageUrl));
+    if (params.filter === 'recheck') where.push(isNotNull(products.photoCheckReason));
     if (params.filter === 'with_image') where.push(isNotNull(products.imageUrl));
     const q = params.q?.trim();
     if (q) {
@@ -263,7 +266,7 @@ export const adminProductsService = {
     const safeCode = product.itemCode.toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || String(product.id);
     const key = `products/${safeCode}/${hash}.webp`;
     const stored = await r2.put(key, output, { contentType: 'image/webp', metadata: { product: String(product.id) } });
-    await db.update(products).set({ imageUrl: stored.url, photoById: by ?? null, photoAt: sql`now()` }).where(eq(products.id, productId));
+    await db.update(products).set({ imageUrl: stored.url, photoById: by ?? null, photoAt: sql`now()`, photoCheckReason: null, photoCheckSince: null }).where(eq(products.id, productId));
     catalogCache.invalidate();
 
     // The old photo is no longer referenced; free its storage (DeleteObject is free on R2).
@@ -290,6 +293,13 @@ export const adminProductsService = {
     const safeCode = product.itemCode.toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || String(product.id);
     const stored = await r2.put(`products/${safeCode}/choice-${hash}.webp`, output, { contentType: 'image/webp', metadata: { product: String(product.id) } });
     return { imageUrl: stored.url };
+  },
+
+  /** The photo still matches the pack on the shelf (after a barcode change). */
+  async confirmPhoto(productId: number) {
+    const rows = await db.update(products).set({ photoCheckReason: null, photoCheckSince: null }).where(eq(products.id, productId)).returning({ id: products.id });
+    if (rows.length === 0) throw AppError.notFound('Product');
+    catalogCache.invalidate();
   },
 
   async removeImage(productId: number) {

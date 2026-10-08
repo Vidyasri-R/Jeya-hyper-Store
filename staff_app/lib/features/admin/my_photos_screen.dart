@@ -120,6 +120,8 @@ class _MyPhotosScreenState extends ConsumerState<MyPhotosScreen> {
                         [p.priceLabel, if (p.packSize != null) p.packSize!].join(' · '),
                         style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.green800),
                       ),
+                      if (p.needsRecheck)
+                        Text('New packaging — check the photo', style: text.bodySmall?.copyWith(color: const Color(0xFF8A5A00), fontWeight: FontWeight.w700)),
                       Text([if (p.brand != null) p.brand!, if (p.category != null) p.category!, 'Code ${p.itemCode}'].join(' · '), maxLines: 1, overflow: TextOverflow.ellipsis),
                     ]),
                     trailing: Row(mainAxisSize: MainAxisSize.min, children: [
