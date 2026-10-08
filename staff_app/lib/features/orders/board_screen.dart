@@ -12,6 +12,7 @@ import '../../core/theme.dart';
 import '../../data/models.dart';
 import '../../state/providers.dart';
 import '../../widgets/common.dart';
+import '../../widgets/order_alerts_card.dart';
 import 'order_detail_view.dart';
 
 /// The store's order board: tabs by stage, oldest first, with a chime when new orders arrive.
@@ -69,6 +70,7 @@ class _BoardScreenState extends ConsumerState<BoardScreen> with SingleTickerProv
     final list = Column(
       children: [
         if (staff?.isAdmin == true && summary != null && summary.alertsOpen > 0) _AlertBanner(summary: summary),
+        const OrderAlertsCard(compact: true),
         if (board.error != null && summary == null)
           Expanded(
             child: ErrorView(message: board.error!, onRetry: () => ref.read(boardProvider.notifier).refresh()),

@@ -11,6 +11,7 @@ import { usageService } from '../usage/usage.service';
 import { changePasswordSchema, staffLoginSchema, staffRefreshSchema } from './staff.schemas';
 import { staffAuthService } from './staff-auth.service';
 import { STAFF_TABS, staffOrdersService, type StaffTab } from './staff-orders.service';
+import { orderAlerts } from './order-alerts.service';
 
 const context = (req: Request) => ({ ipAddress: req.ip ?? null });
 
@@ -121,6 +122,69 @@ staffOrders.post('/:id/cancel', async (req, res) => {
 });
 
 staffRouter.use('/orders', staffOrders);
+
+/* ── new-order alerts when the app is closed ── */
+
+/** Android background service: asks about once every 20 s per phone. */
+const alertPollLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: 30,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  handler: (_req, _res, next) => next(new AppError('RATE_LIMITED', 'Too many requests', { retryAfterSec: 60 })),
+});
+
+// Device key instead of a login: the phone's background service has no session, and the answer
+// holds only order numbers and totals.
+staffRouter.get('/alerts/new-orders', alertPollLimiter, async (req, res) => {
+  const key = req.get('x-device-key')?.trim();
+  if (!key || key.length > 100) throw new AppError('UNAUTHORIZED', 'Device key missing', { reason: 'alert_device_unknown' });
+  const { after } = parseQuery(z.object({ after: z.iso.datetime({ offset: true }).optional() }), req);
+  res.set('Cache-Control', 'no-store');
+  res.json(await orderAlerts.newOrdersFor(key, after ? new Date(after) : undefined));
+});
+
+const staffAlerts = Router();
+staffAlerts.use(requireStaff, requireStaffRole('staff', 'admin'));
+
+staffAlerts.get('/web-push', async (_req, res) => {
+  res.json({ publicKey: await orderAlerts.webPushKey() });
+});
+
+staffAlerts.post('/web-push', async (req, res) => {
+  const input = parseBody(
+    z
+      .object({
+        endpoint: z.url().max(1000).refine((u) => u.startsWith('https://'), 'Push address must be https'),
+        keys: z.object({ p256dh: z.string().min(20).max(200), auth: z.string().min(8).max(100) }),
+        label: z.string().trim().max(160).optional(),
+      })
+      .strict(),
+    req,
+  );
+  await orderAlerts.saveWebPush(staffOf(req).staffId, { endpoint: input.endpoint, ...input.keys, label: input.label });
+  res.status(204).end();
+});
+
+staffAlerts.post('/web-push/remove', async (req, res) => {
+  const { endpoint } = parseBody(z.object({ endpoint: z.string().max(1000) }).strict(), req);
+  await orderAlerts.removeWebPush(staffOf(req).staffId, endpoint);
+  res.status(204).end();
+});
+
+staffAlerts.post('/android', async (req, res) => {
+  const { label } = parseBody(z.object({ label: z.string().trim().max(160).optional() }).strict(), req);
+  res.status(201).json({ deviceKey: await orderAlerts.addAndroid(staffOf(req).staffId, label) });
+});
+
+// The device key is its own proof (works after signing out too).
+staffRouter.post('/alerts/android/remove', alertPollLimiter, async (req, res) => {
+  const { deviceKey } = parseBody(z.object({ deviceKey: z.string().trim().min(20).max(100) }).strict(), req);
+  await orderAlerts.removeAndroid(deviceKey);
+  res.status(204).end();
+});
+
+staffRouter.use('/alerts', staffAlerts);
 
 /* ── photo work (any staff role: their assigned products) ── */
 

@@ -127,6 +127,13 @@
       "when": 1791482145719,
       "tag": "0017_product_locked_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791482716066,
+      "tag": "0018_order_alerts",
+      "breakpoints": true
     }
   ]
 }

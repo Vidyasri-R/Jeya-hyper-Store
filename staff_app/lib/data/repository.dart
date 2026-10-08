@@ -137,6 +137,24 @@ class StaffRepository {
       (((await _api.patch('/admin/products/$id', body: {'options': options, 'optionsForAllSizes': allSizes}))['product'] as Map?)?['sizesUpdated'] as num? ?? 1)
           .toInt();
 
+  // ── new-order alerts while the app is closed ──
+  /// Browser / iPhone home-screen app: the server's Web Push key.
+  Future<String> webPushKey() async => (await _api.get('/staff/alerts/web-push'))['publicKey'] as String;
+
+  /// [subscription]: the browser's PushSubscription as JSON ({endpoint, keys: {p256dh, auth}}).
+  Future<void> saveWebPush(Map<String, dynamic> subscription, String label) => _api.post('/staff/alerts/web-push', body: {
+    'endpoint': subscription['endpoint'],
+    'keys': {'p256dh': (subscription['keys'] as Map)['p256dh'], 'auth': (subscription['keys'] as Map)['auth']},
+    'label': label,
+  });
+
+  Future<void> removeWebPush(String endpoint) => _api.post('/staff/alerts/web-push/remove', body: {'endpoint': endpoint});
+
+  /// Android: a device key for the background service (it asks for new orders with it).
+  Future<String> registerAlertPhone(String label) async => (await _api.post('/staff/alerts/android', body: {'label': label}))['deviceKey'] as String;
+
+  Future<void> removeAlertPhone(String deviceKey) => _api.post('/staff/alerts/android/remove', body: {'deviceKey': deviceKey}, auth: false);
+
   /// Takes the choices off every other size of the product; returns how many.
   Future<int> clearOtherSizesChoices(int id) async =>
       (((await _api.patch('/admin/products/$id', body: {'clearOtherSizesOptions': true}))['product'] as Map?)?['otherSizesCleared'] as num? ?? 0).toInt();

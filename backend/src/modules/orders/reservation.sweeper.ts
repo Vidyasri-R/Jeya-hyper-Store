@@ -1,5 +1,6 @@
 import { logger } from '../../config/logger';
 import { paymentsService } from '../payments/payments.service';
+import { orderAlerts } from '../staff/order-alerts.service';
 import { ordersService } from './orders.service';
 
 const SWEEP_EVERY_MS = 60_000;
@@ -19,6 +20,8 @@ async function tick(): Promise<void> {
       for (let batch = 0; batch < MAX_BATCHES_PER_TICK; batch++) {
         if ((await ordersService.expireUnpaid()) === 0) break;
       }
+      // Safety net for new-order alerts (normally sent right after the order change).
+      await orderAlerts.check();
     } catch (error) {
       logger.error({ err: error }, 'reservation sweep failed');
     }

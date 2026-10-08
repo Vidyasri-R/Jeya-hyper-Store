@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/api/api_client.dart';
 import '../core/api/token_store.dart';
 import '../core/config.dart';
+import '../core/order_alerts.dart';
 import '../data/models.dart';
 import '../data/repository.dart';
 
@@ -90,6 +91,8 @@ class SessionController extends Notifier<SessionState> {
   }
 
   Future<void> logout() async {
+    // A shared phone must not keep ringing for someone who signed out.
+    await OrderAlerts.disable(_repo).catchError((_) {});
     await _repo.logout();
     state = const SignedOut();
   }
@@ -141,6 +144,8 @@ class BoardController extends Notifier<BoardState> with WidgetsBindingObserver {
     });
     if (signedIn) {
       Future.microtask(refresh);
+      // New-order alerts while the app is closed: bring the service / subscription back.
+      Future.microtask(() => OrderAlerts.resume(ref.read(repositoryProvider)).catchError((_) {}));
       _timer = Timer.periodic(AppConfig.boardPoll, (_) {
         if (_foreground) refresh();
       });

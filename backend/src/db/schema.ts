@@ -222,6 +222,36 @@ export const staffUsers = pgTable(
   ],
 );
 
+/**
+ * Where new-order alerts go when the store app is closed: a browser / iPhone home-screen app
+ * (Web Push subscription) or an Android phone (its background service asks with a device key).
+ */
+export const staffAlertDevices = pgTable(
+  'staff_alert_devices',
+  {
+    id: bigint({ mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+    staffId: uuid().notNull().references(() => staffUsers.id, { onDelete: 'cascade' }),
+    /** 'web_push' | 'android' */
+    kind: varchar({ length: 16 }).notNull(),
+    /** Android: SHA-256 of the device key (the phone keeps the key itself). */
+    keyHash: varchar({ length: 64 }),
+    /** Web Push subscription. */
+    endpoint: text(),
+    p256dh: text(),
+    auth: text(),
+    label: varchar({ length: 160 }),
+    lastSeenAt: tstz(),
+    /** Web Push sends that failed in a row (the subscription is dropped after a few). */
+    failures: smallint().notNull().default(0),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex('staff_alert_devices_key_hash_uq').on(t.keyHash),
+    uniqueIndex('staff_alert_devices_endpoint_uq').on(t.endpoint),
+    index('staff_alert_devices_staff_idx').on(t.staffId),
+  ],
+);
+
 export const staffSessions = pgTable(
   'staff_sessions',
   {
@@ -581,6 +611,8 @@ export const orders = pgTable(
     codCollectedAt: tstz(),
     codCollectedBy: uuid().references(() => staffUsers.id, { onDelete: 'set null' }),
     placedAt: tstz(),
+    /** When the shop's phones were told about this new order (placed: COD at once, online once paid). */
+    alertedAt: tstz(),
     /** Delivery promised to the customer at checkout (end of that IST day); stored so later setting changes don't move it. */
     promisedBy: tstz(),
     deliveredAt: tstz(),
@@ -594,6 +626,7 @@ export const orders = pgTable(
     uniqueIndex('orders_gofrugal_order_ref_uq').on(t.gofrugalOrderRef),
     index('orders_user_created_idx').on(t.userId, t.createdAt.desc()),
     index('orders_status_created_idx').on(t.orderStatus, t.createdAt.desc()),
+    index('orders_alerted_idx').on(t.alertedAt),
     // Worker queue scan: only rows that still need pushing to GoFrugal.
     index('orders_gofrugal_pending_idx')
       .on(t.gofrugalSyncStatus, t.updatedAt)

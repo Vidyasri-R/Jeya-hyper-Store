@@ -6,6 +6,7 @@ import '../../core/config.dart';
 import '../../core/theme.dart';
 import '../../state/providers.dart';
 import '../../widgets/common.dart';
+import '../../widgets/order_alerts_card.dart';
 
 /// Admin tools (admins) + the signed-in account (everyone).
 class MoreScreen extends ConsumerWidget {
@@ -61,6 +62,10 @@ class MoreScreen extends ConsumerWidget {
               ],
             ),
           ),
+          if (!staff.isPhotoHelper) ...[
+            const SizedBox(height: 12),
+            const OrderAlertsCard(),
+          ],
           if (staff.isAdmin) ...[
             const SizedBox(height: 20),
             Text('Store admin', style: text.titleSmall?.copyWith(color: AppColors.inkMuted)),
