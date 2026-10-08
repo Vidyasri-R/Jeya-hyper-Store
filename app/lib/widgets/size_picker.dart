@@ -46,7 +46,8 @@ class SizePill extends ConsumerWidget {
 }
 
 /// Bottom sheet listing every size: label, price (MRP struck), stock, and how many are in the cart.
-Future<Product?> showSizeSheet(BuildContext context, WidgetRef ref, List<Product> sizes, Product selected) {
+/// [addMode]: opened from Add — "Which one do you want?" and out-of-stock sizes can't be picked.
+Future<Product?> showSizeSheet(BuildContext context, WidgetRef ref, List<Product> sizes, Product selected, {bool addMode = false}) {
   return showModalBottomSheet<Product>(
     context: context,
     showDragHandle: true,
@@ -58,7 +59,10 @@ Future<Product?> showSizeSheet(BuildContext context, WidgetRef ref, List<Product
         child: ConstrainedBox(
           constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.7),
           child: ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(8, 0, 8, 12), children: [
-            Padding(padding: const EdgeInsets.fromLTRB(12, 0, 12, 8), child: Text('Choose a size', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              child: Text(addMode ? 'Which one do you want?' : 'Choose a size', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+            ),
             for (final v in sizes)
               ListTile(
                 selected: v.id == selected.id,
@@ -78,6 +82,7 @@ Future<Product?> showSizeSheet(BuildContext context, WidgetRef ref, List<Product
                   if ((v.variantLabel ?? '') != formatRupees(v.sellingPrice))
                     Text(formatRupees(v.sellingPrice), style: text.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
                 ]),
+                enabled: !addMode || v.canBuy,
                 onTap: () => Navigator.pop(context, v),
               ),
           ]),

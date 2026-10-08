@@ -8,23 +8,27 @@ import '../core/theme.dart';
 import '../data/models.dart';
 import '../state/providers.dart';
 import 'choices_sheet.dart';
+import 'size_picker.dart';
 
 /// "Add" button that turns into a − qty + stepper. Handles login, stock limits and loose (kg) steps.
 class AddToCartControl extends ConsumerWidget {
-  const AddToCartControl({super.key, required this.product, this.height = 34, this.expanded = true, this.big = false});
+  const AddToCartControl({super.key, required this.product, this.height = 34, this.expanded = true, this.big = false, this.sizes = const [], this.onSizeChosen});
 
   final Product product;
+  /// Every size of the product (cards that stand for several): Add first asks which one.
+  final List<Product> sizes;
+  final ValueChanged<Product>? onSizeChosen;
   final double height;
   final bool expanded;
   final bool big;
 
-  Future<void> _change(BuildContext context, WidgetRef ref, int milli, {Choices? choices}) async {
+  Future<void> _change(BuildContext context, WidgetRef ref, int milli, {Choices? choices, Product? of}) async {
     if (!ref.read(isSignedInProvider)) {
       context.push('/login');
       return;
     }
     try {
-      await ref.read(cartProvider.notifier).setQty(product, milli, choices: choices);
+      await ref.read(cartProvider.notifier).setQty(of ?? product, milli, choices: choices);
     } on ApiException catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context)
@@ -34,15 +38,30 @@ class AddToCartControl extends ConsumerWidget {
   }
 
   /// Flavour/colour items: the customer splits the quantity across the store's choices.
-  Future<void> _choose(BuildContext context, WidgetRef ref) async {
+  Future<void> _choose(BuildContext context, WidgetRef ref, [Product? of]) async {
+    final p = of ?? product;
     if (!ref.read(isSignedInProvider)) {
       context.push('/login');
       return;
     }
-    final picked = await showChoicesSheet(context, product, current: ref.read(cartProvider.notifier).choicesFor(product.id));
+    final picked = await showChoicesSheet(context, p, current: ref.read(cartProvider.notifier).choicesFor(p.id));
     if (picked == null || !context.mounted) return;
     final total = picked.values.fold(0, (a, b) => a + b);
-    await _change(context, ref, total, choices: total == 0 ? null : picked);
+    await _change(context, ref, total, choices: total == 0 ? null : picked, of: p);
+  }
+
+  /// Several sizes / prices: ask which one, then add it (and its flavours, if it has them).
+  Future<void> _pickSize(BuildContext context, WidgetRef ref) async {
+    if (!ref.read(isSignedInProvider)) {
+      context.push('/login');
+      return;
+    }
+    final size = await showSizeSheet(context, ref, sizes, product, addMode: true);
+    if (size == null || !context.mounted) return;
+    onSizeChosen?.call(size);
+    if (!size.canBuy) return;
+    if (size.options != null) return _choose(context, ref, size);
+    if (ref.read(cartProvider.notifier).qtyFor(size.id) == 0) await _change(context, ref, size.minMilli, of: size);
   }
 
   @override
@@ -52,7 +71,8 @@ class AddToCartControl extends ConsumerWidget {
     final text = Theme.of(context).textTheme;
     final hasOptions = product.options != null;
 
-    if (!product.canBuy && qty == 0) {
+    // Other sizes in stock: Add (pick one) instead of "Out of stock".
+    if (!product.canBuy && qty == 0 && !sizes.any((s) => s.canBuy)) {
       return SizedBox(
         height: height,
         width: expanded ? double.infinity : null,
@@ -75,7 +95,7 @@ class AddToCartControl extends ConsumerWidget {
         width: expanded ? double.infinity : null,
         child: FilledButton(
           clipBehavior: Clip.antiAlias,
-          onPressed: () => hasOptions ? _choose(context, ref) : _change(context, ref, product.minMilli),
+          onPressed: () => sizes.length > 1 ? _pickSize(context, ref) : (hasOptions ? _choose(context, ref) : _change(context, ref, product.minMilli)),
           style: FilledButton.styleFrom(
             minimumSize: Size(0, height),
             padding: EdgeInsets.symmetric(horizontal: big ? 22 : 12),

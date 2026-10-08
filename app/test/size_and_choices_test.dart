@@ -7,8 +7,13 @@ import 'package:jeya_hyper_store/widgets/choices_sheet.dart';
 import 'package:jeya_hyper_store/widgets/product_card.dart';
 
 class _EmptyCart extends CartController {
+  final added = <String>[];
+
   @override
   Future<Cart> build() async => Cart.empty;
+
+  @override
+  Future<void> setQty(Product product, int milli, {Choices? choices}) async => added.add('${product.name} × $milli');
 }
 
 Map<String, dynamic> _size(int id, String label, String price) => {
@@ -25,12 +30,17 @@ Map<String, dynamic> _size(int id, String label, String price) => {
       'variantLabel': label,
     };
 
+late _EmptyCart _cart;
+
 Future<void> _pump(WidgetTester tester, Widget child) async {
   tester.view.physicalSize = const Size(390, 844);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(ProviderScope(
-    overrides: [cartProvider.overrideWith(_EmptyCart.new)],
+    overrides: [
+      cartProvider.overrideWith(() => _cart = _EmptyCart()),
+      isSignedInProvider.overrideWith((ref) => true),
+    ],
     child: MaterialApp(home: Scaffold(body: Center(child: child))),
   ));
   await tester.pumpAndSettle();
@@ -49,6 +59,19 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('₹189'), findsOneWidget);
     expect(find.text('Bru 200 g'), findsOneWidget);
+  });
+
+  testWidgets('Add on a product with several sizes asks which one first', (tester) async {
+    final sizes = [_size(1, '100 g', '98.00'), _size(2, '200 g', '189.00')];
+    final product = Product.fromJson({...sizes[0], 'variants': sizes});
+    await _pump(tester, SizedBox(width: 160, height: 300, child: ProductCard(product: product)));
+    await tester.tap(find.text('Add'));
+    await tester.pumpAndSettle();
+    expect(find.text('Which one do you want?'), findsOneWidget);
+    await tester.tap(find.text('200 g').last);
+    await tester.pumpAndSettle();
+    expect(_cart.added, ['Bru 200 g × 1000']);
+    expect(find.text('₹189'), findsOneWidget);
   });
 
   testWidgets('flavour picker splits the quantity across flavours', (tester) async {

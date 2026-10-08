@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../core/money.dart';
 import '../core/theme.dart';
 import '../data/models.dart';
+import '../state/providers.dart';
 import 'add_to_cart.dart';
 import 'product_image.dart';
 import 'size_picker.dart';
@@ -25,11 +26,16 @@ class ProductCard extends ConsumerStatefulWidget {
 
 class _ProductCardState extends ConsumerState<ProductCard> {
   late Product _selected = initialSize(ref, widget.product);
+  /// The customer picked a size (size button, Add's question, or one is in the cart): Add adds it.
+  late bool _chosen = _selected.id != widget.product.id || ref.read(cartProvider.notifier).qtyFor(widget.product.id) > 0;
 
   @override
   void didUpdateWidget(covariant ProductCard old) {
     super.didUpdateWidget(old);
-    if (old.product.id != widget.product.id) _selected = initialSize(ref, widget.product);
+    if (old.product.id != widget.product.id) {
+      _selected = initialSize(ref, widget.product);
+      _chosen = _selected.id != widget.product.id || ref.read(cartProvider.notifier).qtyFor(widget.product.id) > 0;
+    }
   }
 
   @override
@@ -78,13 +84,24 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                     style: (compact ? text.labelMedium : text.labelLarge)?.copyWith(height: 1.2, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 2),
                 if (widget.product.variants.isNotEmpty)
-                  SizePill(product: widget.product, selected: product, compact: compact, onSelected: (v) => setState(() => _selected = v))
+                  SizePill(product: widget.product, selected: product, compact: compact, onSelected: (v) => setState(() {
+                    _selected = v;
+                    _chosen = true;
+                  }))
                 else
                   Text(product.sizeLabel, maxLines: 1, overflow: TextOverflow.ellipsis, style: text.labelSmall),
                 const Spacer(),
                 PriceLine(price: product.sellingPrice, mrp: product.mrp, showMrp: product.hasDiscount, compact: compact),
                 SizedBox(height: compact ? 4 : 6),
-                AddToCartControl(product: product, height: compact ? 30 : 34),
+                AddToCartControl(
+                  product: product,
+                  height: compact ? 30 : 34,
+                  sizes: _chosen ? const [] : widget.product.variants,
+                  onSizeChosen: (v) => setState(() {
+                    _selected = v;
+                    _chosen = true;
+                  }),
+                ),
               ],
             ),
           ),
