@@ -193,6 +193,12 @@ adminRouter.get('/photo-work/queue', async (req, res) => {
   res.json(await photoWorkService.queue(q));
 });
 
+/** One person's finished photos (admin review). */
+adminRouter.get('/photo-work/done', async (req, res) => {
+  const q = parseQuery(z.object({ staffId: z.uuid(), cursor: z.string().max(400).optional() }), req);
+  res.json(await photoWorkService.done({ ...q, limit: 30 }));
+});
+
 adminRouter.post('/photo-work/assign', async (req, res) => {
   const body = parseBody(z.object({ staffId: z.uuid(), count: z.number().int().min(1).max(1000), categoryId: z.number().int().positive().optional() }).strict(), req);
   res.json(await photoWorkService.assign(body));

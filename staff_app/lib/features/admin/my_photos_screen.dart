@@ -9,6 +9,7 @@ import '../../core/theme.dart';
 import '../../data/models.dart';
 import '../../state/providers.dart';
 import '../../widgets/common.dart';
+import 'done_photos.dart';
 import 'products_screen.dart';
 
 /// My photo work: the products the admin assigned to me, most important first. Tap one (or scan
@@ -81,8 +82,13 @@ class _MyPhotosScreenState extends ConsumerState<MyPhotosScreen> {
     final text = Theme.of(context).textTheme;
     final open = _counts['open'] ?? 0, done = _counts['done'] ?? 0, today = _counts['doneToday'] ?? 0;
     final total = open + done;
-    return Scaffold(
-      appBar: AppBar(title: const Text('My photos')),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+      appBar: AppBar(
+        title: const Text('My photos'),
+        bottom: TabBar(tabs: [Tab(text: 'To do ($open)'), Tab(text: 'Done ($done)')]),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           await context.push('/scan');
@@ -91,7 +97,8 @@ class _MyPhotosScreenState extends ConsumerState<MyPhotosScreen> {
         icon: const Icon(Icons.qr_code_scanner_rounded),
         label: const Text('Scan barcode'),
       ),
-      body: RefreshIndicator(
+      body: TabBarView(children: [
+      RefreshIndicator(
         onRefresh: () => _load(reset: true),
         child: NotificationListener<ScrollNotification>(
           onNotification: (n) {
@@ -157,6 +164,16 @@ class _MyPhotosScreenState extends ConsumerState<MyPhotosScreen> {
             ],
           ),
         ),
+      ),
+      // Photos I added: check them and replace any that came out wrong.
+      DonePhotosList(
+        key: ValueKey('done-$done'),
+        header: Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Text('Your photos, newest first. Tap one to replace it if it came out wrong.', style: text.bodySmall),
+        ),
+      ),
+      ]),
       ),
     );
   }

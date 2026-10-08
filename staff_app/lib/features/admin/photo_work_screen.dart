@@ -7,6 +7,7 @@ import '../../core/api/api_client.dart';
 import '../../core/theme.dart';
 import '../../state/providers.dart';
 import '../../widgets/common.dart';
+import 'done_photos.dart';
 
 /// Admin → Photo work: how many products still need photos, who is working on which, and
 /// "give N more" in priority order (fast movers and daily needs first).
@@ -191,6 +192,12 @@ class _PersonCard extends StatelessWidget {
           Wrap(children: [
             TextButton.icon(onPressed: onAssign, icon: const Icon(Icons.playlist_add_rounded), label: const Text('Give more')),
             if (open > 0) TextButton.icon(onPressed: onRelease, icon: const Icon(Icons.undo_rounded), label: const Text('Take back')),
+            if (done > 0)
+              TextButton.icon(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PersonPhotosScreen(staffId: person['staffId'] as String, name: '${person['name']}'))),
+                icon: const Icon(Icons.photo_library_outlined),
+                label: Text('Their photos ($done)'),
+              ),
           ]),
         ]),
       ),

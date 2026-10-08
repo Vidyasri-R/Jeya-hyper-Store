@@ -167,6 +167,14 @@ class StaffRepository {
 
   Future<int> unassignPhotos(String staffId) async => ((await _api.post('/admin/photo-work/unassign', body: {'staffId': staffId}))['released'] as num).toInt();
 
+  /// Photos added by me ([staffId] null) or by someone (admin review), newest first.
+  Future<ResultPage<AdminProduct>> donePhotos({String? staffId, String? cursor}) async {
+    final body = staffId == null
+        ? await _api.get('/staff/photos/mine/done', query: {'cursor': ?cursor})
+        : await _api.get('/admin/photo-work/done', query: {'staffId': staffId, 'cursor': ?cursor});
+    return ResultPage([for (final p in body['products'] as List) AdminProduct.fromJson(Map<String, dynamic>.from(p as Map))], body['nextCursor'] as String?);
+  }
+
   /// My products to photograph, and my counts (any staff role).
   Future<(ResultPage<AdminProduct>, Map<String, int>)> myPhotos({String? cursor}) async {
     final body = await _api.get('/staff/photos/mine', query: {'cursor': ?cursor});

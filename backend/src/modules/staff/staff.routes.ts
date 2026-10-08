@@ -144,6 +144,12 @@ staffPhotos.get('/mine', async (req, res) => {
   res.json({ ...queue, open: mine?.open ?? 0, done: mine?.done ?? 0, doneToday: mine?.doneToday ?? 0 });
 });
 
+/** Photos I added, newest first (to check and replace). */
+staffPhotos.get('/mine/done', async (req, res) => {
+  const { cursor } = parseQuery(z.object({ cursor: z.string().max(400).optional() }), req);
+  res.json(await photoWorkService.done({ staffId: staffOf(req).staffId, cursor, limit: 30 }));
+});
+
 staffPhotos.get('/by-barcode/:code', async (req, res) => {
   const { code } = parseParams(z.object({ code: z.string().trim().regex(/^[0-9A-Za-z-]{3,40}$/) }), req);
   const product = await adminProductsService.findByBarcode(code);

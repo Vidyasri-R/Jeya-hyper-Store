@@ -56,6 +56,36 @@ export const photoWorkService = {
     };
   },
 
+  /** Photos [staffId] added, newest first — to look back at and fix. */
+  async done(params: { staffId: string; cursor?: string | undefined; limit: number }) {
+    const where: SQL[] = [eq(products.photoById, params.staffId), isNotNull(products.imageUrl)];
+    if (params.cursor) {
+      const [at, id] = (() => {
+        try {
+          const v = JSON.parse(Buffer.from(params.cursor!, 'base64url').toString('utf8')) as [string, number];
+          if (typeof v[0] === 'string' && typeof v[1] === 'number') return v;
+        } catch {
+          // fall through
+        }
+        throw new AppError('BAD_REQUEST', 'Invalid pagination cursor', { reason: 'cursor_invalid' });
+      })();
+      where.push(sql`(${products.photoAt}, ${products.id}) < (${at}::timestamptz, ${id}::bigint)`);
+    }
+    const rows = await db
+      .select({ ...adminProductColumns, photoAt: products.photoAt })
+      .from(products)
+      .leftJoin(categories, eq(categories.id, products.categoryId))
+      .where(and(...where))
+      .orderBy(desc(products.photoAt), desc(products.id))
+      .limit(params.limit + 1);
+    const page = rows.slice(0, params.limit);
+    const last = page.at(-1);
+    return {
+      products: page,
+      nextCursor: rows.length > params.limit && last?.photoAt ? Buffer.from(JSON.stringify([last.photoAt.toISOString(), last.id])).toString('base64url') : null,
+    };
+  },
+
   /** Totals and each person's progress. */
   async summary() {
     const [totals] = await db
@@ -125,13 +155,13 @@ export const photoWorkService = {
     return { released: rows.length };
   },
 
-  /** May [staffId] (role) upload a photo for this product? Admins: any. Others: only their assignments. */
+  /** May [staffId] (role) change this product's photo? Admins: any. Others: their assignments and photos they added. */
   async canUpload(productId: number, staffId: string, role: string) {
     if (role === 'admin') return true;
     const [row] = await db
       .select({ id: products.id })
       .from(products)
-      .where(and(eq(products.id, productId), eq(products.photoAssigneeId, staffId)))
+      .where(and(eq(products.id, productId), or(eq(products.photoAssigneeId, staffId), eq(products.photoById, staffId))))
       .limit(1);
     return Boolean(row);
   },

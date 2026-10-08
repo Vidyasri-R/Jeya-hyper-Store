@@ -164,8 +164,12 @@ class FakeRepo extends StaffRepository {
     return count;
   }
 
-  @override
   List<AdminProduct> photoList = const [];
+
+  @override
+  Future<ResultPage<AdminProduct>> donePhotos({String? staffId, String? cursor}) async => ResultPage([
+    AdminProduct.fromJson({'id': 50, 'name': 'Aac Coriander Pow 100g', 'itemCode': 'C50', 'mrp': '35.00', 'sellingPrice': '35.00', 'available': '4', 'imageUrl': 'https://cdn.jeyahyperstore.in/x.webp', 'photoAt': '2026-10-08T06:00:00Z'}),
+  ], null);
 
   @override
   Future<(ResultPage<AdminProduct>, Map<String, int>)> myPhotos({String? cursor}) async => (
@@ -254,6 +258,16 @@ void main() {
     await tester.tap(find.text('Skip to next product →  (Enter)'));
     await tester.pumpAndSettle();
     expect(find.text('Malli 500g'), findsNWidgets(3));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('photo helper sees the photos they added under Done', (tester) async {
+    signedInAs = Staff.fromJson({'id': 'p1', 'username': 'priya', 'name': 'Priya', 'role': 'photos', 'mustChangePassword': false, 'isActive': true});
+    await pumpApp(tester, FakeRepo(orderAt('placed')), at: '/my-photos');
+    await tester.tap(find.text('Done (86)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Aac Coriander Pow 100g'), findsOneWidget);
+    expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

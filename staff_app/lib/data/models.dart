@@ -261,6 +261,7 @@ class AdminProduct {
       variantGroup = j['variantGroup'] as String?,
       variantLabel = j['variantLabel'] as String?,
       photoCheckReason = j['photoCheckReason'] as String?,
+      photoAt = DateTime.tryParse(j['photoAt']?.toString() ?? '')?.toLocal(),
       description = j['description'] as String?,
       sortRank = (j['sortRank'] as num?)?.toInt() ?? 0,
       isActive = j['isActive'] != false;
@@ -288,6 +289,8 @@ class AdminProduct {
   final String? variantLabel;
   /// 'new_barcode': same item code, new EAN in the stock file — the packaging (and photo) may have changed.
   final String? photoCheckReason;
+  /// When the current photo was added (done-photos lists).
+  final DateTime? photoAt;
   bool get needsRecheck => photoCheckReason != null;
   final String? description;
   final int sortRank;
