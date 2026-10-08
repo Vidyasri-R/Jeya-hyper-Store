@@ -1,6 +1,6 @@
-import 'dart:typed_data';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../core/theme.dart';
 import 'image_drop/image_drop_io.dart' if (dart.library.js_interop) 'image_drop/image_drop_web.dart' as impl;
@@ -68,4 +68,65 @@ class _ImageDropZoneState extends State<ImageDropZone> {
             ),
           ),
       ]);
+}
+
+/// Right-click (website) or long-press (phone) on [child] → "Paste photo": reads a picture copied
+/// elsewhere ("Copy image" in a browser, a screenshot, Gallery) and hands it to [onImage].
+class PastePhotoTarget extends StatefulWidget {
+  const PastePhotoTarget({super.key, required this.child, required this.onImage, this.onError, this.enabled = true});
+  final Widget child;
+  final void Function(DroppedImage image) onImage;
+  /// Shown to the user, e.g. when the clipboard holds no picture.
+  final void Function(String message)? onError;
+  final bool enabled;
+
+  @override
+  State<PastePhotoTarget> createState() => _PastePhotoTargetState();
+}
+
+class _PastePhotoTargetState extends State<PastePhotoTarget> {
+  @override
+  void initState() {
+    super.initState();
+    // Our menu instead of the browser's on right-click.
+    if (kIsWeb) BrowserContextMenu.disableContextMenu();
+  }
+
+  @override
+  void dispose() {
+    if (kIsWeb) BrowserContextMenu.enableContextMenu();
+    super.dispose();
+  }
+
+  Future<void> _menu(Offset at) async {
+    if (!widget.enabled) return;
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final picked = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(at & const Size(1, 1), Offset.zero & overlay.size),
+      items: const [
+        PopupMenuItem(value: 'paste', child: ListTile(dense: true, leading: Icon(Icons.content_paste_rounded), title: Text('Paste photo'))),
+      ],
+    );
+    if (picked != 'paste' || !mounted) return;
+    try {
+      final image = await impl.readClipboardImage();
+      if (!mounted) return;
+      if (image == null) {
+        widget.onError?.call('No photo copied yet — long-press a picture and choose "Copy image", then paste here');
+      } else {
+        widget.onImage(image);
+      }
+    } catch (_) {
+      if (mounted) widget.onError?.call('Couldn\'t read the copied photo. Allow clipboard access, or save it and use Gallery / Upload.');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onSecondaryTapDown: (d) => _menu(d.globalPosition),
+        onLongPressStart: (d) => _menu(d.globalPosition),
+        child: widget.child,
+      );
 }

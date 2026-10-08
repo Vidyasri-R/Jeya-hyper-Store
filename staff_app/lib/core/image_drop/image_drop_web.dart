@@ -72,3 +72,19 @@ void Function() listen({required void Function(DroppedImage) onImage, required v
     web.document.removeEventListener('paste', onPaste);
   };
 }
+
+/// The browser's clipboard (asks for permission the first time), or null when it holds no picture.
+Future<DroppedImage?> readClipboardImage() async {
+  final items = (await web.window.navigator.clipboard.read().toDart).toDart;
+  for (final item in items) {
+    for (final type in item.types.toDart.map((t) => t.toDart)) {
+      if (!type.startsWith('image/')) continue;
+      final blob = await item.getType(type).toDart;
+      final buffer = await blob.arrayBuffer().toDart;
+      return (bytes: buffer.toDart.asUint8List(), type: type);
+    }
+  }
+  return null;
+}
+
+const canPaste = true;

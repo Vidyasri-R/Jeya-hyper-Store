@@ -39,6 +39,13 @@ android {
         versionName = flutter.versionName
     }
 
+    // Phones only (64- and 32-bit ARM): plugins' x86 libraries are for emulators (~6 MB).
+    packaging {
+        jniLibs {
+            excludes += listOf("lib/x86/**", "lib/x86_64/**")
+        }
+    }
+
     signingConfigs {
         if (!releaseKey.isEmpty) {
             create("release") {

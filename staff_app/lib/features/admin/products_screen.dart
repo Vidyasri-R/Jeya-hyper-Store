@@ -305,7 +305,12 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
             style: text.bodySmall,
           ),
           const SizedBox(height: 12),
-          AspectRatio(
+          // Right-click (website) / long-press (phone) → Paste photo.
+          PastePhotoTarget(
+            enabled: !busy,
+            onImage: dropped,
+            onError: (message) => showSnack(context, message, error: true),
+            child: AspectRatio(
             aspectRatio: 1.4,
             child: Container(
               decoration: BoxDecoration(
@@ -317,9 +322,16 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
               child: busy
                   ? const Center(child: CircularProgressIndicator())
                   : imageUrl == null
-                  ? const Center(child: Icon(Icons.image_not_supported_outlined, size: 48, color: AppColors.inkFaint))
+                  ? Center(
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Icons.image_not_supported_outlined, size: 48, color: AppColors.inkFaint),
+                        const SizedBox(height: 6),
+                        Text(kIsWeb ? 'Right-click here → Paste photo' : 'Long-press here → Paste photo', style: text.bodySmall),
+                      ]),
+                    )
                   : CachedNetworkImage(imageUrl: imageUrl!, fit: BoxFit.contain),
             ),
+          ),
           ),
           const SizedBox(height: 10),
           Row(
@@ -367,8 +379,8 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
             ),
           Text(
             ImageDropZone.supported
-                ? 'Drag a photo onto this window or paste it (Ctrl+V / ⌘+V) — it uploads straight away. The app puts the product on a white background.'
-                : 'Tip: product in the light box or on plain white paper. The app removes the background and centres it on white.',
+                ? 'Drag a photo onto this window, paste it (Ctrl+V / ⌘+V) or right-click the photo box → Paste photo. It uploads straight away on a white background.'
+                : 'Copied a picture? Long-press the photo box → Paste photo. Or take one in the light box / on plain white paper — the app puts it on white.',
             style: text.bodySmall,
           ),
           if (photoOnly) ...[

@@ -13,7 +13,11 @@ VERSION_LINE=$(grep '^version:' pubspec.yaml | awk '{print $2}')
 NAME="${VERSION_LINE%%+*}"
 CODE="${VERSION_LINE##*+}"
 echo "Building Jeya Staff $NAME ($CODE)…"
-flutter build apk --release   # one APK for every Android phone (arm64, arm32, x86_64)
+# Every Android phone (64- and 32-bit ARM; emulator-only x86 left out). Debug symbols are kept on
+# this Mac (not in the APK) to read crash reports: ~/JeyaReleases/jeya-staff/<version>/debug-info.
+SYMBOLS="$HOME/JeyaReleases/jeya-staff/$NAME-$CODE/debug-info"
+mkdir -p "$SYMBOLS"
+flutter build apk --release --target-platform android-arm,android-arm64 --split-debug-info="$SYMBOLS"
 APK="build/app/outputs/flutter-apk/app-release.apk"
 export PATH="/opt/homebrew/opt/node@22/bin:$PATH"
 (cd ../backend && R2_PUBLIC_BASE_URL=https://cdn.jeyahyperstore.in npx tsx src/scripts/publish-staff-apk.ts "../staff_app/$APK" "$NAME" "$CODE" "${1:-}")
