@@ -1,6 +1,7 @@
 import { decodeCursor, encodeCursor } from '../../common/cursor';
 import { AppError } from '../../common/errors';
 import { displayQty, toPaise } from '../../common/money';
+import type { ProductOptions } from '../../db/schema';
 import { catalogCache } from './catalog.cache';
 import { catalogRepository, sortValue, type ListingSort, type ProductCardRow } from './catalog.repository';
 import type { ProductListQuery } from './catalog.schemas';
@@ -50,6 +51,12 @@ export type ProductCard = {
   imageUrl: string | null;
   /** Until the product has its own photo: a general photo of its category (or the parent's). */
   placeholderImageUrl: string | null;
+  /** This size's name in the size picker ("500 g", "₹10"); null when the product has one size. */
+  variantLabel: string | null;
+  /** Choices the customer must pick when adding it (one POS item, several flavours/colours). */
+  options: ProductOptions | null;
+  /** All sizes (this one included, cheapest first) when there is more than one. */
+  variants: Omit<ProductCard, 'variants'>[] | null;
 };
 
 function buildIndex(
@@ -141,7 +148,38 @@ export function toProductCard(row: ProductCardRow): ProductCard {
     stockStatus: limits.stockStatus,
     imageUrl: row.imageUrl,
     placeholderImageUrl: null,
+    variantLabel: row.variantGroup ? row.variantLabel : null,
+    options: row.options && row.options.values.length > 0 ? row.options : null,
+    variants: null,
   };
+}
+
+/** Keep the first row of each size group (search / home lists can match several sizes). */
+function firstPerGroup(rows: ProductCardRow[]): ProductCardRow[] {
+  const seen = new Set<string>();
+  return rows.filter((r) => !r.variantGroup || (!seen.has(r.variantGroup) && seen.add(r.variantGroup)));
+}
+
+/**
+ * Rows → cards for the apps: stand-in photos, and each card carries its other sizes. With
+ * [collapse], a product shows once even if several of its sizes matched (the first one is shown).
+ */
+export async function presentProducts(rows: ProductCardRow[], options: { collapse?: boolean } = {}): Promise<ProductCard[]> {
+  const kept = options.collapse ? firstPerGroup(rows) : rows;
+  const cards = await withPlaceholders(kept.map(toProductCard));
+  const groups = [...new Set(kept.flatMap((r) => (r.variantGroup ? [r.variantGroup] : [])))];
+  if (groups.length === 0) return cards;
+  const sizes = await catalogRepository.variantsOf(groups);
+  const sizeCards = await withPlaceholders(sizes.map(toProductCard));
+  const byGroup = new Map<string, Omit<ProductCard, 'variants'>[]>();
+  sizes.forEach((row, i) => {
+    const { variants: _drop, ...card } = sizeCards[i]!;
+    byGroup.set(row.variantGroup!, [...(byGroup.get(row.variantGroup!) ?? []), card]);
+  });
+  return cards.map((card, i) => {
+    const list = kept[i]!.variantGroup ? byGroup.get(kept[i]!.variantGroup!) : undefined;
+    return list && list.length > 1 ? { ...card, variants: list } : { ...card, variantLabel: null };
+  });
 }
 
 /** The category's photo, or the nearest parent's that has one. */
@@ -205,7 +243,7 @@ export const catalogService = {
       });
       const hasMore = rows.length > query.limit && offset + query.limit < MAX_SEARCH_OFFSET;
       return {
-        items: await withPlaceholders(rows.slice(0, query.limit).map(toProductCard)),
+        items: await presentProducts(rows.slice(0, query.limit), { collapse: true }),
         nextCursor: hasMore ? encodeCursor({ v: offset + query.limit, id: 0 }) : null,
         sort,
       };
@@ -222,7 +260,7 @@ export const catalogService = {
     const page = rows.slice(0, query.limit);
     const last = page.at(-1);
     return {
-      items: await withPlaceholders(page.map(toProductCard)),
+      items: await presentProducts(page),
       nextCursor: rows.length > query.limit && last ? encodeCursor({ v: sortValue(last, sort), id: last.id }) : null,
       sort,
     };
@@ -263,7 +301,7 @@ export const catalogService = {
       id = index.parentOf.get(id) ?? null;
     }
 
-    const [card] = await withPlaceholders([toProductCard(row)]);
+    const [card] = await presentProducts([row]);
     return {
       ...card!,
       description: row.description,

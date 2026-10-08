@@ -49,6 +49,9 @@ class Product {
     required this.stockStatus,
     this.imageUrl,
     this.placeholderImageUrl,
+    this.variantLabel,
+    this.variants = const [],
+    this.options,
     this.description,
     this.gstRate,
     this.breadcrumb = const [],
@@ -72,6 +75,12 @@ class Product {
   final String? imageUrl;
   /// No photo of its own yet: a general photo of its category (shown instead of initials).
   final String? placeholderImageUrl;
+  /// This size's name in the size picker ("500 g", "₹10"); null when there's one size.
+  final String? variantLabel;
+  /// Every size of this product (this one included, cheapest first); empty when there's one size.
+  final List<Product> variants;
+  /// Flavours/colours the customer must choose from (one store item); null for normal products.
+  final ProductOptions? options;
   final String? description;
   final String? gstRate;
   final List<CategoryRef> breadcrumb;
@@ -104,6 +113,9 @@ class Product {
         },
         imageUrl: _opt<String>(j['imageUrl']),
         placeholderImageUrl: _opt<String>(j['placeholderImageUrl']),
+        variantLabel: _opt<String>(j['variantLabel']),
+        variants: _list(j['variants']).map(Product.fromJson).toList(),
+        options: ProductOptions.fromJson(j['options']),
         description: _opt<String>(j['description']),
         gstRate: _opt<String>(j['gstRate']),
         breadcrumb: _list(j['breadcrumb']).map(CategoryRef.fromJson).toList(),
@@ -145,12 +157,41 @@ class ProductPage {
       ProductPage(items: _list(j['items']).map(Product.fromJson).toList(), nextCursor: _opt<String>(j['nextCursor']));
 }
 
-enum LineIssue { unavailable, outOfStock, exceedsStock, invalidQuantity }
+/// "Flavour": Vanilla, Chocolate… — set by the store for items sold in several flavours/colours.
+class ProductOptions {
+  const ProductOptions({required this.label, required this.values, this.images = const {}});
+  final String label;
+  final List<String> values;
+  /// Photo of each choice (pens or ice creams that differ only by look).
+  final Map<String, String> images;
+
+  static ProductOptions? fromJson(Object? j) {
+    if (j is! Map) return null;
+    final values = [for (final v in (j['values'] as List? ?? const [])) v.toString()];
+    final images = j['images'] is Map ? {for (final e in (j['images'] as Map).entries) e.key.toString(): e.value.toString()} : const <String, String>{};
+    return values.isEmpty ? null : ProductOptions(label: _str(j['label'], 'Choice'), values: values, images: images);
+  }
+}
+
+/// How many of each choice: {"Vanilla": 2000, "Chocolate": 1000} (milli-units, like quantities).
+typedef Choices = Map<String, int>;
+
+Choices? _choices(Object? j) {
+  if (j is! Map || j.isEmpty) return null;
+  return {for (final e in j.entries) e.key.toString(): toMilli(e.value.toString())};
+}
+
+/// "Vanilla × 2, Chocolate × 1"
+String describeChoices(Choices choices, String unit) => choices.entries.map((e) => '${e.key} × ${formatQty(e.value, unit)}').join(', ');
+
+enum LineIssue { unavailable, outOfStock, exceedsStock, invalidQuantity, chooseOption }
 
 class CartLine {
-  CartLine({required this.product, required this.qtyMilli, required this.lineTotal, required this.lineMrpTotal, this.issue, this.suggestedMilli});
+  CartLine({required this.product, required this.qtyMilli, required this.lineTotal, required this.lineMrpTotal, this.issue, this.suggestedMilli, this.choices});
   final Product product;
   final int qtyMilli;
+  /// Flavour split for products with options.
+  final Choices? choices;
   final String lineTotal;
   final String lineMrpTotal;
   final LineIssue? issue;
@@ -161,6 +202,7 @@ class CartLine {
         LineIssue.outOfStock => 'Out of stock',
         LineIssue.exceedsStock => 'Only ${formatQty(suggestedMilli ?? 0, product.unit)} available',
         LineIssue.invalidQuantity => 'Please update the quantity',
+        LineIssue.chooseOption => 'Choose the ${product.options?.label.toLowerCase() ?? 'option'}',
         null => null,
       };
 
@@ -174,8 +216,10 @@ class CartLine {
           'out_of_stock' => LineIssue.outOfStock,
           'exceeds_stock' => LineIssue.exceedsStock,
           'invalid_quantity' => LineIssue.invalidQuantity,
+          'choose_option' => LineIssue.chooseOption,
           _ => null,
         },
+        choices: _choices(j['choices']),
         suggestedMilli: j['suggestedQuantity'] is String ? toMilli(j['suggestedQuantity'] as String) : null,
       );
 }
@@ -192,6 +236,7 @@ class Cart {
   static final empty = Cart(lines: const [], itemCount: 0, subtotal: '0.00', mrpTotal: '0.00', savings: '0.00', hasIssues: false);
 
   int qtyFor(int productId) => lines.firstWhere((l) => l.product.id == productId, orElse: () => _none).qtyMilli;
+  Choices? choicesFor(int productId) => lines.firstWhere((l) => l.product.id == productId, orElse: () => _none).choices;
   static final _none = CartLine(product: Product.fromJson(const {'id': -1, 'minOrderQty': '1', 'qtyStep': '1', 'maxPurchasableQty': '0'}), qtyMilli: 0, lineTotal: '0', lineMrpTotal: '0');
 
   factory Cart.fromJson(Map<String, dynamic> j) {

@@ -114,6 +114,8 @@ class OrderItem {
       isLoose = j['isLoose'] == true,
       imageUrl = j['imageUrl'] as String?,
       placeholderImageUrl = j['placeholderImageUrl'] as String?,
+      choices = j['choices'] is Map ? {for (final e in (j['choices'] as Map).entries) e.key.toString(): e.value.toString()} : null,
+      choiceImages = j['choiceImages'] is Map ? {for (final e in (j['choiceImages'] as Map).entries) e.key.toString(): e.value.toString()} : const {},
       quantity = _str(j['quantity'], '0'),
       packedQuantity = j['packedQuantity'] as String?,
       unitPrice = _str(j['unitPrice'], '0.00'),
@@ -129,6 +131,10 @@ class OrderItem {
   final String? imageUrl;
   /// No photo of its own yet: its category's general photo (shown labelled "Category photo").
   final String? placeholderImageUrl;
+  /// Flavour/design split the customer chose: {"Vanilla": "2", "Chocolate": "1"}.
+  final Map<String, String>? choices;
+  /// Photo of each chosen flavour/design (when the store added one).
+  final Map<String, String> choiceImages;
   final String quantity;
   final String? packedQuantity;
   final String unitPrice;
@@ -243,6 +249,9 @@ class AdminProduct {
       available = _str(j['available'], '0'),
       imageUrl = j['imageUrl'] as String?,
       placeholderImageUrl = j['placeholderImageUrl'] as String?,
+      options = j['options'] is Map ? Map<String, dynamic>.from(j['options'] as Map) : null,
+      variantGroup = j['variantGroup'] as String?,
+      variantLabel = j['variantLabel'] as String?,
       description = j['description'] as String?,
       sortRank = (j['sortRank'] as num?)?.toInt() ?? 0,
       isActive = j['isActive'] != false;
@@ -261,6 +270,11 @@ class AdminProduct {
   final String? imageUrl;
   /// No photo yet: its category's general photo (from the server).
   final String? placeholderImageUrl;
+  /// Choices the customer picks from: {label, values, images?} (one POS item, several flavours/designs).
+  final Map<String, dynamic>? options;
+  /// Set when the product is one size of several (they share options with "all sizes").
+  final String? variantGroup;
+  final String? variantLabel;
   final String? description;
   final int sortRank;
   final bool isActive;

@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import type { Cursor } from '../../common/cursor';
 import { db, type DbExecutor } from '../../db/client';
-import { categories, products } from '../../db/schema';
+import { categories, products, type ProductOptions } from '../../db/schema';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import type { ParsedSearch } from './search-query';
 
@@ -37,6 +37,9 @@ export const productCardColumns = {
   imageUrl: products.imageUrl,
   available,
   sortRank: products.sortRank,
+  variantGroup: products.variantGroup,
+  variantLabel: products.variantLabel,
+  options: products.options,
 };
 
 export type ProductCardRow = {
@@ -57,6 +60,9 @@ export type ProductCardRow = {
   imageUrl: string | null;
   available: string;
   sortRank: number;
+  variantGroup: string | null;
+  variantLabel: string | null;
+  options: ProductOptions | null;
 };
 
 export type ListingSort = 'popular' | 'price_asc' | 'price_desc' | 'name_asc';
@@ -101,7 +107,7 @@ export const catalogRepository = {
     return executor
       .select({ categoryId: products.categoryId, count: sql<number>`count(*)::int` })
       .from(products)
-      .where(eq(products.isActive, true))
+      .where(and(eq(products.isActive, true), eq(products.isVariantLeader, true))) // one per product, all sizes together
       .groupBy(products.categoryId);
   },
 
@@ -114,7 +120,8 @@ export const catalogRepository = {
     limit: number;
   }): Promise<ProductCardRow[]> {
     const { column, dir, cast } = SORTS[params.sort];
-    const filters = baseFilters(params.categoryIds, params.inStockOnly);
+    // One card per product: other sizes come along as its variants.
+    const filters = [...baseFilters(params.categoryIds, params.inStockOnly), eq(products.isVariantLeader, true)];
 
     if (params.cursor) {
       const value = sql`${params.cursor.v}::${sql.raw(cast)}`;
@@ -184,6 +191,16 @@ export const catalogRepository = {
       .orderBy(...orderBy)
       .offset(params.offset)
       .limit(params.limit + 1) as Promise<ProductCardRow[]>;
+  },
+
+  /** Every size on sale in these groups (for the size picker). */
+  async variantsOf(groups: string[]): Promise<ProductCardRow[]> {
+    if (groups.length === 0) return [];
+    return db
+      .select(productCardColumns)
+      .from(products)
+      .where(and(eq(products.isActive, true), inArray(products.variantGroup, groups)))
+      .orderBy(asc(products.sellingPrice), asc(products.id)) as Promise<ProductCardRow[]>;
   },
 
   async findActiveProductBySlug(slug: string) {

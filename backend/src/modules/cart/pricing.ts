@@ -2,6 +2,7 @@ import { displayQty, fromPaise, includedGstPaise, lineTotalPaise, toPaise } from
 import { toProductCard, withPlaceholders, type ProductCard } from '../catalog/catalog.service';
 import { purchaseLimits, validateQty, type PurchaseLimits } from '../catalog/purchase-rules';
 import type { CartProduct } from './cart.repository';
+import { validChoices, type Choices } from './choices';
 
 export type LineIssue =
   /** Product was deactivated / removed in the POS. */
@@ -10,7 +11,9 @@ export type LineIssue =
   /** Wanted more than can be bought now — `limits.maxMilli` says how many can. */
   | 'exceeds_stock'
   /** Qty no longer fits min/step rules (rules changed after it was added). */
-  | 'invalid_quantity';
+  | 'invalid_quantity'
+  /** The store sells it in flavours/colours and the customer hasn't split the quantity across them. */
+  | 'choose_option';
 
 export type PricedLine = {
   product: CartProduct;
@@ -20,11 +23,13 @@ export type PricedLine = {
   mrpPaise: number;
   lineTotalPaise: number;
   lineMrpTotalPaise: number;
+  /** Flavour split (products with options). */
+  choices: Choices | null;
   issue: LineIssue | null;
 };
 
 /** One rule set for cart display and checkout, so what the customer sees is what they pay. */
-export function priceLine(product: CartProduct, qtyMilli: number): PricedLine {
+export function priceLine(product: CartProduct, qtyMilli: number, rawChoices: Choices | null = null): PricedLine {
   const limits = purchaseLimits(product);
   const unitPricePaise = toPaise(product.sellingPrice);
   const mrpPaise = toPaise(product.mrp);
@@ -37,6 +42,9 @@ export function priceLine(product: CartProduct, qtyMilli: number): PricedLine {
     if (problem === 'above_max') issue = 'exceeds_stock';
     else if (problem) issue = 'invalid_quantity';
   }
+  const options = product.options && product.options.values.length > 0 ? product.options : null;
+  const choices = options ? validChoices(rawChoices, options, qtyMilli) : null;
+  if (!issue && options && !choices) issue = 'choose_option';
 
   return {
     product,
@@ -46,6 +54,7 @@ export function priceLine(product: CartProduct, qtyMilli: number): PricedLine {
     mrpPaise,
     lineTotalPaise: lineTotalPaise(unitPricePaise, qtyMilli),
     lineMrpTotalPaise: lineTotalPaise(mrpPaise, qtyMilli),
+    choices,
     issue,
   };
 }
@@ -88,6 +97,8 @@ export type PublicCartLine = {
   lineTotal: string;
   lineMrpTotal: string;
   issue: LineIssue | null;
+  /** Flavour split, e.g. {"Vanilla": "2"} (products with options). */
+  choices: Choices | null;
   /** What "Fix cart" would set this line to ("0" = removed). Present only when there's an issue. */
   suggestedQuantity: string | null;
 };
@@ -107,6 +118,7 @@ export function toPublicLine(line: PricedLine): PublicCartLine {
     lineTotal: fromPaise(line.lineTotalPaise),
     lineMrpTotal: fromPaise(line.lineMrpTotalPaise),
     issue: line.issue,
+    choices: line.choices,
     suggestedQuantity: line.issue ? displayQty(fixedQtyMilli(line)) : null,
   };
 }

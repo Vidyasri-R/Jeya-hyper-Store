@@ -107,6 +107,9 @@ describe('POS item validation', () => {
 describe('toProductCard', () => {
   const base: ProductCardRow = {
     id: 1,
+    variantGroup: null,
+    variantLabel: null,
+    options: null,
     slug: 'x',
     name: 'X',
     nameTa: null,

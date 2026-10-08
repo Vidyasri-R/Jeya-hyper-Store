@@ -1,3 +1,4 @@
+import { regroupVariants } from '../catalog/variants';
 import { inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { AppError } from '../../common/errors';
@@ -167,8 +168,10 @@ export const catalogImportService = {
     for (let k = 0; k < prio.length; k += 1000) {
       await db.execute(sql`UPDATE ${products} AS p SET photo_priority = v.prio FROM (VALUES ${sql.join(prio.slice(k, k + 1000), sql`, `)}) AS v(id, prio) WHERE p.id = v.id AND p.photo_priority IS DISTINCT FROM v.prio`);
     }
-    logger.info({ items: result.items, barcodes: pairs.length }, 'stock file imported');
-    return { ...result, barcodes: pairs.length };
+    // Sizes of one product → one card with a size picker (new sizes, names and stock change daily).
+    const sizes = await regroupVariants();
+    logger.info({ items: result.items, barcodes: pairs.length, sizeGroups: sizes.groups }, 'stock file imported');
+    return { ...result, barcodes: pairs.length, sizeGroups: sizes.groups };
   },
 
   async lastImport() {

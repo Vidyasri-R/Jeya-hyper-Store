@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/money.dart';
@@ -6,9 +7,11 @@ import '../core/theme.dart';
 import '../data/models.dart';
 import 'add_to_cart.dart';
 import 'product_image.dart';
+import 'size_picker.dart';
 
 /// Grid / rail card from the approved design: badge, single image, name, size, price + MRP, Add.
-class ProductCard extends StatelessWidget {
+/// Products sold in several sizes show one card with a size picker.
+class ProductCard extends ConsumerStatefulWidget {
   const ProductCard({super.key, required this.product, this.width, this.compact = false});
 
   final Product product;
@@ -17,10 +20,25 @@ class ProductCard extends StatelessWidget {
   final bool compact;
 
   @override
+  ConsumerState<ProductCard> createState() => _ProductCardState();
+}
+
+class _ProductCardState extends ConsumerState<ProductCard> {
+  late Product _selected = initialSize(ref, widget.product);
+
+  @override
+  void didUpdateWidget(covariant ProductCard old) {
+    super.didUpdateWidget(old);
+    if (old.product.id != widget.product.id) _selected = initialSize(ref, widget.product);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final product = _selected;
+    final compact = widget.compact;
     return SizedBox(
-      width: width,
+      width: widget.width,
       child: Material(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -59,7 +77,10 @@ class ProductCard extends StatelessWidget {
                 Text(product.name, maxLines: 2, overflow: TextOverflow.ellipsis,
                     style: (compact ? text.labelMedium : text.labelLarge)?.copyWith(height: 1.2, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 2),
-                Text(product.sizeLabel, maxLines: 1, overflow: TextOverflow.ellipsis, style: text.labelSmall),
+                if (widget.product.variants.isNotEmpty)
+                  SizePill(product: widget.product, selected: product, compact: compact, onSelected: (v) => setState(() => _selected = v))
+                else
+                  Text(product.sizeLabel, maxLines: 1, overflow: TextOverflow.ellipsis, style: text.labelSmall),
                 const Spacer(),
                 PriceLine(price: product.sellingPrice, mrp: product.mrp, showMrp: product.hasDiscount, compact: compact),
                 SizedBox(height: compact ? 4 : 6),

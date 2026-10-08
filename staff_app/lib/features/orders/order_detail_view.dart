@@ -484,6 +484,35 @@ class ItemPhoto extends StatelessWidget {
   }
 }
 
+/// What to pick for items sold in flavours/designs: "Vanilla × 2" chips with the choice's photo.
+class ChoicePicks extends StatelessWidget {
+  const ChoicePicks({super.key, required this.item});
+  final OrderItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Wrap(spacing: 6, runSpacing: 6, children: [
+      for (final e in item.choices!.entries)
+        Container(
+          padding: const EdgeInsets.fromLTRB(4, 4, 10, 4),
+          decoration: BoxDecoration(color: AppColors.amberSoft, borderRadius: BorderRadius.circular(8)),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (item.choiceImages[e.key] != null) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: CachedNetworkImage(imageUrl: item.choiceImages[e.key]!, width: 36, height: 36, fit: BoxFit.contain),
+              ),
+              const SizedBox(width: 6),
+            ] else
+              const SizedBox(width: 6),
+            Text('${e.key} × ${e.value}', style: text.labelLarge?.copyWith(fontWeight: FontWeight.w800, color: const Color(0xFF7A4D00))),
+          ]),
+        ),
+    ]);
+  }
+}
+
 class _ItemRow extends StatelessWidget {
   const _ItemRow({required this.item});
   final OrderItem item;
@@ -509,6 +538,10 @@ class _ItemRow extends StatelessWidget {
                   [if (item.packSize != null) item.packSize!, 'Code ${item.itemCode}', if (item.barcode != null) item.barcode!].join(' · '),
                   style: text.bodySmall,
                 ),
+                if (item.choices != null) ...[
+                  const SizedBox(height: 6),
+                  ChoicePicks(item: item),
+                ],
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 8,
@@ -597,6 +630,7 @@ Future<List<Map<String, dynamic>>?> _askPacked(BuildContext context, OrderDetail
                       children: [
                         Text(item.name, style: text.titleSmall, maxLines: 2, overflow: TextOverflow.ellipsis),
                         Text('Ordered ${formatQty(item.quantityMilli, item.unit)}', style: text.bodySmall),
+                        if (item.choices != null) Padding(padding: const EdgeInsets.only(top: 4), child: ChoicePicks(item: item)),
                       ],
                     ),
                   ),

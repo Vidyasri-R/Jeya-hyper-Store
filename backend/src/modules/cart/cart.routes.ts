@@ -14,8 +14,8 @@ cartRouter.get('/', async (req, res) => {
 
 cartRouter.put('/items/:productId', async (req, res) => {
   const { productId } = parseParams(productIdParams, req);
-  const { quantity } = parseBody(setQuantitySchema, req);
-  res.json({ cart: await cartService.setQuantity(authOf(req).userId, productId, quantity) });
+  const { quantity, choices } = parseBody(setQuantitySchema, req);
+  res.json({ cart: await cartService.setQuantity(authOf(req).userId, productId, quantity, choices ?? null) });
 });
 
 cartRouter.delete('/items/:productId', async (req, res) => {

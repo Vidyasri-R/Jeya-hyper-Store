@@ -157,7 +157,8 @@ class _CartLineTile extends ConsumerWidget {
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(p.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: text.titleSmall),
-            Text(p.sizeLabel, style: text.labelSmall),
+            Text(p.variantLabel ?? p.sizeLabel, style: text.labelSmall),
+            if (line.choices != null) Text(describeChoices(line.choices!, p.unit), style: text.labelSmall?.copyWith(color: AppColors.brand800, fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
             Row(children: [
               Text(formatRupees(p.sellingPrice), style: text.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
@@ -488,7 +489,8 @@ class _WebCartRow extends ConsumerWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(p.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 2),
-              Text(p.sizeLabel, style: text.bodySmall),
+              Text(p.variantLabel ?? p.sizeLabel, style: text.bodySmall),
+              if (line.choices != null) Text(describeChoices(line.choices!, p.unit), style: text.bodySmall?.copyWith(color: AppColors.brand800, fontWeight: FontWeight.w600)),
               if (line.issueText != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),

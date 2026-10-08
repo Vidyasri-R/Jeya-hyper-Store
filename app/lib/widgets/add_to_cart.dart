@@ -7,6 +7,7 @@ import '../core/money.dart';
 import '../core/theme.dart';
 import '../data/models.dart';
 import '../state/providers.dart';
+import 'choices_sheet.dart';
 
 /// "Add" button that turns into a − qty + stepper. Handles login, stock limits and loose (kg) steps.
 class AddToCartControl extends ConsumerWidget {
@@ -17,13 +18,13 @@ class AddToCartControl extends ConsumerWidget {
   final bool expanded;
   final bool big;
 
-  Future<void> _change(BuildContext context, WidgetRef ref, int milli) async {
+  Future<void> _change(BuildContext context, WidgetRef ref, int milli, {Choices? choices}) async {
     if (!ref.read(isSignedInProvider)) {
       context.push('/login');
       return;
     }
     try {
-      await ref.read(cartProvider.notifier).setQty(product, milli);
+      await ref.read(cartProvider.notifier).setQty(product, milli, choices: choices);
     } on ApiException catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context)
@@ -32,11 +33,24 @@ class AddToCartControl extends ConsumerWidget {
     }
   }
 
+  /// Flavour/colour items: the customer splits the quantity across the store's choices.
+  Future<void> _choose(BuildContext context, WidgetRef ref) async {
+    if (!ref.read(isSignedInProvider)) {
+      context.push('/login');
+      return;
+    }
+    final picked = await showChoicesSheet(context, product, current: ref.read(cartProvider.notifier).choicesFor(product.id));
+    if (picked == null || !context.mounted) return;
+    final total = picked.values.fold(0, (a, b) => a + b);
+    await _change(context, ref, total, choices: total == 0 ? null : picked);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(cartProvider);
     final qty = ref.read(cartProvider.notifier).qtyFor(product.id);
     final text = Theme.of(context).textTheme;
+    final hasOptions = product.options != null;
 
     if (!product.canBuy && qty == 0) {
       return SizedBox(
@@ -61,7 +75,7 @@ class AddToCartControl extends ConsumerWidget {
         width: expanded ? double.infinity : null,
         child: FilledButton(
           clipBehavior: Clip.antiAlias,
-          onPressed: () => _change(context, ref, product.minMilli),
+          onPressed: () => hasOptions ? _choose(context, ref) : _change(context, ref, product.minMilli),
           style: FilledButton.styleFrom(
             minimumSize: Size(0, height),
             padding: EdgeInsets.symmetric(horizontal: big ? 22 : 12),
@@ -74,6 +88,30 @@ class AddToCartControl extends ConsumerWidget {
               if (big) ...[const Icon(Icons.shopping_cart_outlined, size: 20), const SizedBox(width: 8)],
               Text(big ? 'Add to Cart' : 'Add'),
             ],
+          ),
+        ),
+      );
+    }
+
+    if (hasOptions) {
+      // In the cart: the count, tap to change the flavours.
+      return SizedBox(
+        height: height,
+        width: expanded ? double.infinity : null,
+        child: FilledButton(
+          onPressed: () => _choose(context, ref),
+          style: FilledButton.styleFrom(
+            minimumSize: Size(0, height),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(big ? AppRadius.lg : AppRadius.sm)),
+          ),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Text(formatQty(qty, product.unit), style: (big ? text.titleMedium : text.labelLarge)?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+              const SizedBox(width: 6),
+              const Icon(Icons.edit_outlined, size: 16, color: Colors.white),
+            ]),
           ),
         ),
       );

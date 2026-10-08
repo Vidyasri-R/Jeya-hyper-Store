@@ -42,7 +42,7 @@ async function evaluate(executor: Transaction | typeof db, userId: string, targe
     cartRepository.lines(executor, userId),
     deliveryService.quote(target, executor),
   ]);
-  const lines = rows.map((row) => priceLine(row.product, toMilli(row.quantity)));
+  const lines = rows.map((row) => priceLine(row.product, toMilli(row.quantity), row.choices));
   const summary = summarize(lines);
 
   const blockers: Blocker[] = [];
@@ -150,6 +150,8 @@ function toPublicItem(item: OrderItem) {
     itemCode: item.itemCode,
     unit: item.unit,
     quantity: displayQty(toMilli(item.quantity)),
+    /** Flavour split, e.g. {"Vanilla": "2"}. */
+    choices: item.choices,
     packedQuantity: item.packedQuantity !== null ? displayQty(toMilli(item.packedQuantity)) : null,
     mrp: item.mrp,
     unitPrice: item.unitPrice,
@@ -312,6 +314,7 @@ export const ordersService = {
             gstRate: line.product.gstRate,
             hsnCode: line.product.hsnCode,
             quantity: fromMilli(line.qtyMilli),
+            choices: line.choices,
             totalPrice: fromPaise(line.lineTotalPaise),
           })),
         );

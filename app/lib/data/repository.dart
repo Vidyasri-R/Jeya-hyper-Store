@@ -80,8 +80,9 @@ class Repository {
 
   // ── Cart ──
   Future<Cart> cart() async => Cart.fromJson((await api.get('/cart'))['cart'] as Map<String, dynamic>);
-  Future<Cart> setQty(int productId, String qty) async =>
-      Cart.fromJson((await api.put('/cart/items/$productId', body: {'quantity': qty}))['cart'] as Map<String, dynamic>);
+  /// [choices]: the flavour split for products with options ({"Vanilla": "2"}).
+  Future<Cart> setQty(int productId, String qty, {Map<String, String>? choices}) async => Cart.fromJson(
+      (await api.put('/cart/items/$productId', body: {'quantity': qty, 'choices': ?choices}))['cart'] as Map<String, dynamic>);
   Future<Cart> fixCart() async => Cart.fromJson((await api.post('/cart/fix'))['cart'] as Map<String, dynamic>);
   Future<void> clearCart() async => api.delete('/cart');
 

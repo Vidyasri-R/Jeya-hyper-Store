@@ -121,6 +121,15 @@ class StaffRepository {
 
   Future<void> removePhoto(int id) => _api.delete('/admin/products/$id/image');
 
+  /// Photo of one choice (a flavour / pen design); returns its URL for the product's options.
+  Future<String> uploadChoicePhoto(int id, Uint8List bytes, String contentType) async =>
+      (await _api.putBytes('/admin/products/$id/choice-image', bytes, contentType))['imageUrl'] as String;
+
+  /// [options]: {label, values, images} or null to remove; [allSizes]: same choices for every size.
+  Future<int> saveChoices(int id, Map<String, dynamic>? options, {bool allSizes = false}) async =>
+      (((await _api.patch('/admin/products/$id', body: {'options': options, 'optionsForAllSizes': allSizes}))['product'] as Map?)?['sizesUpdated'] as num? ?? 1)
+          .toInt();
+
   // ── admin: daily stock file ──
   /// Last import, the import settings and the website categories.
   Future<Map<String, dynamic>> stockImportStatus() => _api.get('/admin/catalog/import');

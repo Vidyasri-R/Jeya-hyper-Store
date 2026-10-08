@@ -9,6 +9,7 @@ import 'package:jeya_staff/core/api/api_client.dart';
 import 'package:jeya_staff/core/api/token_store.dart';
 import 'package:jeya_staff/data/models.dart';
 import 'package:jeya_staff/data/repository.dart';
+import 'package:jeya_staff/features/admin/choices_editor.dart';
 import 'package:jeya_staff/features/admin/settings_screen.dart';
 import 'package:jeya_staff/router.dart';
 import 'package:jeya_staff/state/providers.dart';
@@ -106,6 +107,12 @@ class FakeRepo extends StaffRepository {
   @override
   Future<(ResultPage<AdminProduct>, Map<String, int>)> products({String? query, String filter = 'all', String? cursor}) async =>
       (ResultPage([product(1, 'Aashirvaad Atta 1kg'), product(3, 'Gold Winner Oil 1L')], null), {'active': 3, 'withImage': 0});
+
+  @override
+  Future<int> saveChoices(int id, Map<String, dynamic>? options, {bool allSizes = false}) async {
+    calls.add({'call': 'saveChoices', 'id': id, 'options': options, 'allSizes': allSizes});
+    return allSizes ? 4 : 1;
+  }
 
   @override
   Future<List<Map<String, dynamic>>> shopCategories() async => [
@@ -230,6 +237,30 @@ void main() {
     await tester.tap(find.text('Popular (0)'));
     await tester.pumpAndSettle();
     expect(find.text('Automatic'), findsOneWidget);
+  });
+
+  testWidgets('admin lists the designs of one POS item; every size gets them', (tester) async {
+    final repo = FakeRepo(orderAt('placed'));
+    final product = AdminProduct.fromJson({'id': 9, 'name': 'Pen', 'itemCode': 'P9', 'mrp': '10.00', 'sellingPrice': '10.00', 'available': '40', 'variantGroup': '1:pen', 'variantLabel': '₹10'});
+    tester.view.physicalSize = const Size(800, 1720);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [repositoryProvider.overrideWithValue(repo)],
+      child: MaterialApp(theme: ThemeData(useMaterial3: true), home: ChoicesEditorScreen(product: product)),
+    ));
+    await tester.tap(find.text('Design'));
+    await tester.pump();
+    await tester.enterText(find.byType(TextField).at(0), 'Blue gel');
+    await tester.enterText(find.byType(TextField).at(1), 'Black ball');
+    await tester.tap(find.text('Save choices'));
+    await tester.pumpAndSettle();
+    expect(repo.calls.last, {
+      'call': 'saveChoices',
+      'id': 9,
+      'options': {'label': 'Design', 'values': ['Blue gel', 'Black ball'], 'images': <String, String>{}},
+      'allSizes': true,
+    });
   });
 
   testWidgets('category photos lists each category with its product count', (tester) async {

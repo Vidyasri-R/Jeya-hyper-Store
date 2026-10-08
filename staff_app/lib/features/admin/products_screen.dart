@@ -1,3 +1,4 @@
+import 'choices_editor.dart';
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
@@ -352,6 +353,17 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
             maxLines: 3,
             maxLength: 2000,
             decoration: const InputDecoration(labelText: 'Description (optional)'),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.style_outlined),
+            title: Text(product.options == null ? 'Add choices (flavours / designs)' : 'Choices: ${(product.options!['values'] as List).join(', ')}', maxLines: 2, overflow: TextOverflow.ellipsis),
+            subtitle: const Text('One item, several flavours or designs — customers pick one'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () async {
+              final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => ChoicesEditorScreen(product: product)));
+              if (saved == true && context.mounted) Navigator.pop(context, true);
+            },
           ),
           SwitchListTile(
             value: featured,

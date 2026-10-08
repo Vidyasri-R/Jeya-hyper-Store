@@ -5,7 +5,7 @@ import { products } from '../../db/schema';
 import { appConfigService } from '../app-config/app-config.service';
 import { catalogCache } from './catalog.cache';
 import { available, productCardColumns, type ProductCardRow } from './catalog.repository';
-import { toProductCard, withPlaceholders } from './catalog.service';
+import { presentProducts } from './catalog.service';
 
 /** Admin → Home lists: products the store picks for the customer home screen, in order. */
 export const HOME_LISTS_KEY = 'home.lists';
@@ -56,14 +56,14 @@ async function load() {
     popular = (await db
       .select(productCardColumns)
       .from(products)
-      .where(and(eq(products.isActive, true), inStock))
+      .where(and(eq(products.isActive, true), inStock, eq(products.isVariantLeader, true)))
       // Featured first, then fast movers (photo priority = how often and how recently it was restocked).
       .orderBy(desc(products.sortRank), desc(products.photoPriority), products.id)
       .limit(AUTO_POPULAR)) as ProductCardRow[];
   }
   return {
-    offers: await withPlaceholders(offers.map(toProductCard)),
-    popular: await withPlaceholders(popular.map(toProductCard)),
+    offers: await presentProducts(offers, { collapse: true }),
+    popular: await presentProducts(popular, { collapse: true }),
     /** True when the admin chose the list (the app may label it differently). */
     curated: { offers: lists.offers.length > 0, popular: lists.popular.length > 0 },
   };

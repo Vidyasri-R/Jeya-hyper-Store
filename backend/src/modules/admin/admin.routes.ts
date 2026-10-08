@@ -86,6 +86,20 @@ adminRouter.patch('/products/:id', async (req, res) => {
         description: z.string().trim().max(2000).nullable().optional().transform((value) => (value === '' ? null : value)),
         sortRank: z.number().int().min(0).max(1000).optional(),
         safetyStock: z.union([z.string(), z.number()]).transform(String).refine((value) => /^\d{1,6}(\.\d{1,3})?$/.test(value), 'Invalid quantity').optional(),
+        /** Flavours / colours the customer picks from (one POS item); null removes them. */
+        options: z
+          .object({
+            label: z.string().trim().min(2).max(30),
+            values: z.array(z.string().trim().min(1).max(40)).min(2, 'Add at least two choices').max(30),
+            /** Photo per choice (uploaded with PUT /products/:id/choice-image). */
+            images: z.record(z.string().trim().min(1).max(40), z.url().max(500)).optional(),
+          })
+          .strict()
+          .refine((o) => new Set(o.values.map((v) => v.toLowerCase())).size === o.values.length, 'A choice is listed twice')
+          .refine((o) => Object.keys(o.images ?? {}).every((k) => o.values.includes(k)), 'A photo belongs to a choice that is not listed')
+          .nullable()
+          .optional(),
+        optionsForAllSizes: z.boolean().optional(),
       })
       .strict(),
     req,
@@ -115,6 +129,15 @@ adminRouter.put(
     res.json(await adminProductsService.setImage(id, req.body, staffOf(req).staffId));
   },
 );
+
+/** Body = a photo of one choice (a flavour / pen design) — same white-background clean-up as product photos. */
+adminRouter.put('/products/:id/choice-image', uploadLimiter, express.raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: '8mb' }), async (req, res) => {
+  const { id } = parseParams(productParams, req);
+  if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+    throw new AppError('BAD_REQUEST', 'Send the photo as the request body (JPG, PNG or WebP)', { reason: 'image_missing' });
+  }
+  res.json(await adminProductsService.uploadChoiceImage(id, req.body));
+});
 
 /** Body = the banner image bytes; cropped to 2:1 and stored on R2. Saved into a banner via PUT /settings/home.banners. */
 adminRouter.put('/banners/image', uploadLimiter, express.raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: '8mb' }), async (req, res) => {

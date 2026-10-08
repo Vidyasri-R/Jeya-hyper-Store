@@ -318,12 +318,18 @@ class CartController extends AsyncNotifier<Cart> {
   }
 
   int qtyFor(int productId) => _pending[productId] ?? state.valueOrNull?.qtyFor(productId) ?? 0;
+  Choices? choicesFor(int productId) => state.valueOrNull?.choicesFor(productId);
 
-  Future<void> setQty(Product product, int milli) async {
+  /// [choices]: required for products with options (flavours); they add up to [milli].
+  Future<void> setQty(Product product, int milli, {Choices? choices}) async {
     _pending[product.id] = milli;
     ref.notifyListeners();
     try {
-      final cart = await ref.read(repositoryProvider).setQty(product.id, milliToString(milli));
+      final cart = await ref.read(repositoryProvider).setQty(
+            product.id,
+            milliToString(milli),
+            choices: milli == 0 || choices == null ? null : {for (final e in choices.entries) if (e.value > 0) e.key: milliToString(e.value)},
+          );
       _pending.remove(product.id);
       state = AsyncData(cart);
     } on ApiException {

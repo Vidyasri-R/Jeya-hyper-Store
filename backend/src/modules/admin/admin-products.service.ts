@@ -3,7 +3,7 @@ import { and, asc, eq, ilike, isNotNull, isNull, or, sql, type SQL } from 'drizz
 import { AppError } from '../../common/errors';
 import { logger } from '../../config/logger';
 import { db } from '../../db/client';
-import { categories, productBarcodes, products } from '../../db/schema';
+import { categories, productBarcodes, products, type ProductOptions } from '../../db/schema';
 import { r2 } from '../../infra/r2';
 import { catalogCache } from '../catalog/catalog.cache';
 import { available } from '../catalog/catalog.repository';
@@ -33,6 +33,9 @@ const columns = {
   sortRank: products.sortRank,
   safetyStock: products.safetyStock,
   isActive: products.isActive,
+  options: products.options,
+  variantGroup: products.variantGroup,
+  variantLabel: products.variantLabel,
 };
 
 /** Product fields the admin app shows (also used by the photo work queue). */
@@ -202,8 +205,21 @@ export const adminProductsService = {
     };
   },
 
-  /** Fields the store owns (the POS sync never overwrites them). */
-  async update(productId: number, patch: { nameTa?: string | null | undefined; description?: string | null | undefined; sortRank?: number | undefined; safetyStock?: string | undefined }) {
+  /**
+   * Fields the store owns (the POS sync never overwrites them). [options] = flavours/colours the
+   * customer must choose (null removes them); with [optionsForAllSizes] every size of the product gets them.
+   */
+  async update(
+    productId: number,
+    patch: {
+      nameTa?: string | null | undefined;
+      description?: string | null | undefined;
+      sortRank?: number | undefined;
+      safetyStock?: string | undefined;
+      options?: ProductOptions | null | undefined;
+      optionsForAllSizes?: boolean | undefined;
+    },
+  ) {
     const [row] = await db
       .update(products)
       .set({
@@ -211,12 +227,22 @@ export const adminProductsService = {
         ...(patch.description !== undefined ? { description: patch.description } : {}),
         ...(patch.sortRank !== undefined ? { sortRank: patch.sortRank } : {}),
         ...(patch.safetyStock !== undefined ? { safetyStock: patch.safetyStock } : {}),
+        ...(patch.options !== undefined ? { options: patch.options } : {}),
       })
       .where(eq(products.id, productId))
-      .returning({ id: products.id });
+      .returning({ id: products.id, variantGroup: products.variantGroup });
     if (!row) throw AppError.notFound('Product');
+    let sizes = 1;
+    if (patch.options !== undefined && patch.optionsForAllSizes && row.variantGroup) {
+      const others = await db
+        .update(products)
+        .set({ options: patch.options })
+        .where(and(eq(products.variantGroup, row.variantGroup), sql`${products.id} <> ${productId}`))
+        .returning({ id: products.id });
+      sizes += others.length;
+    }
     catalogCache.invalidate();
-    return row;
+    return { id: row.id, sizesUpdated: sizes };
   },
 
   /** [by] = the staff member uploading (photo work tracking). */
@@ -246,6 +272,24 @@ export const adminProductsService = {
 
     logger.info({ productId, bytesIn: input.length, bytesOut: output.length }, 'product photo updated');
     return { imageUrl: stored.url, bytes: output.length };
+  },
+
+  /** A choice's photo (saved into the product's options by the admin app). Returns its URL. */
+  async uploadChoiceImage(productId: number, input: Buffer) {
+    if (!r2.isConfigured()) throw new AppError('UPSTREAM_UNAVAILABLE', 'Image storage is not configured');
+    const [product] = await db.select({ id: products.id, itemCode: products.itemCode }).from(products).where(eq(products.id, productId)).limit(1);
+    if (!product) throw AppError.notFound('Product');
+    let output: Buffer;
+    try {
+      output = await catalogPhoto(input);
+    } catch (error) {
+      logger.warn({ err: error, productId }, 'choice photo could not be processed');
+      throw new AppError('BAD_REQUEST', 'This file is not a supported photo (use JPG, PNG or WebP)', { reason: 'image_invalid' });
+    }
+    const hash = createHash('sha1').update(output).digest('hex').slice(0, 16);
+    const safeCode = product.itemCode.toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || String(product.id);
+    const stored = await r2.put(`products/${safeCode}/choice-${hash}.webp`, output, { contentType: 'image/webp', metadata: { product: String(product.id) } });
+    return { imageUrl: stored.url };
   },
 
   async removeImage(productId: number) {

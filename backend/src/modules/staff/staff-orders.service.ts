@@ -159,7 +159,7 @@ export const staffOrdersService = {
       customer: found.customer ? { name: found.customer.name, phone: found.customer.phone } : null,
       deliveryAddress: order.deliveryAddress,
       mapsUrl: mapsUrl(order.deliveryAddress.latitude, order.deliveryAddress.longitude),
-      items: found.items.map(({ item, barcode, packSize, isLoose, imageUrl }, i) => ({
+      items: found.items.map(({ item, barcode, packSize, isLoose, imageUrl, options }, i) => ({
         productId: item.productId,
         name: item.productName,
         itemCode: item.itemCode,
@@ -171,6 +171,12 @@ export const staffOrdersService = {
         /** No photo yet: its category's general photo (the app labels it, so packers don't rely on it). */
         placeholderImageUrl: placeholders[i] ?? null,
         quantity: displayQty(toMilli(item.quantity)),
+        /** Flavour split to pick, e.g. {"Vanilla": "2", "Chocolate": "1"}. */
+        choices: item.choices,
+        /** Photo of each chosen flavour/design (when the store added one). */
+        choiceImages: item.choices && options?.images
+          ? Object.fromEntries(Object.keys(item.choices).flatMap((name) => (options.images![name] ? [[name, options.images![name]]] : [])))
+          : null,
         packedQuantity: item.packedQuantity !== null ? displayQty(toMilli(item.packedQuantity)) : null,
         unitPrice: item.unitPrice,
         mrp: item.mrp,

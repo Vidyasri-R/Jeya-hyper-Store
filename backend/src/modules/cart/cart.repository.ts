@@ -21,13 +21,14 @@ export type CartProduct = ProductCardRow & {
   gofrugalItemId: string;
 };
 
-export type CartLineRow = { quantity: string; addedAt: Date; product: CartProduct };
+export type CartLineRow = { quantity: string; choices: Record<string, string> | null; addedAt: Date; product: CartProduct };
 
 export const cartRepository = {
   async lines(db: DbExecutor, userId: string): Promise<CartLineRow[]> {
     const rows = await db
       .select({
         quantity: cartItems.quantity,
+        choices: cartItems.choices,
         addedAt: cartItems.createdAt,
         product: cartProductColumns,
       })
@@ -54,13 +55,14 @@ export const cartRepository = {
       .where(inArray(products.id, ids)) as Promise<CartProduct[]>;
   },
 
-  async setQuantity(db: DbExecutor, userId: string, productId: number, quantity: string) {
+  /** [choices]: flavour split for products with options (null otherwise). */
+  async setQuantity(db: DbExecutor, userId: string, productId: number, quantity: string, choices: Record<string, string> | null = null) {
     await db
       .insert(cartItems)
-      .values({ userId, productId, quantity })
+      .values({ userId, productId, quantity, choices })
       .onConflictDoUpdate({
         target: [cartItems.userId, cartItems.productId],
-        set: { quantity, updatedAt: sql`now()` },
+        set: { quantity, choices, updatedAt: sql`now()` },
       });
   },
 

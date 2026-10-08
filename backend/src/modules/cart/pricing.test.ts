@@ -43,6 +43,9 @@ describe('money', () => {
 
 const product = (overrides: Partial<CartProduct> = {}): CartProduct => ({
   id: 1,
+  variantGroup: null,
+  variantLabel: null,
+  options: null,
   slug: 'p',
   name: 'Toor Dal 1 kg',
   nameTa: null,

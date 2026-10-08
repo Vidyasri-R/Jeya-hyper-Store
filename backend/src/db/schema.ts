@@ -321,6 +321,12 @@ export const categories = pgTable(
   ],
 );
 
+/**
+ * Admin-set choices for one POS item ("Flavour": Vanilla, Chocolate, … or "Design": pens that differ
+ * only by look). [images]: a photo per choice (name → URL), so customers and packers pick by picture.
+ */
+export type ProductOptions = { label: string; values: string[]; images?: Record<string, string> };
+
 export const products = pgTable(
   'products',
   {
@@ -360,6 +366,12 @@ export const products = pgTable(
     imageUrl: text(),
     /** Photo work: higher = photograph sooner (fast movers, from the stock file). */
     photoPriority: integer().notNull().default(0),
+    /** Sizes of one product share a group (see catalog/variants.ts); the leader stands for it in listings. */
+    variantGroup: varchar({ length: 160 }),
+    variantLabel: varchar({ length: 80 }),
+    isVariantLeader: boolean().notNull().default(true),
+    /** Choices the customer must pick, set by the store: one POS item sold in several flavours/colours. */
+    options: jsonb().$type<ProductOptions>(),
     /** Photo work assigned to this staff member (until the product has a photo). */
     photoAssigneeId: uuid().references(() => staffUsers.id, { onDelete: 'set null' }),
     photoAssignedAt: tstz(),
@@ -401,6 +413,7 @@ export const products = pgTable(
     index('products_name_trgm_idx').using('gin', sql`${t.name} gin_trgm_ops`),
     index('products_updated_at_idx').on(t.updatedAt),
     // Photo work queue: active products without a photo, best first.
+    index('products_variant_group_idx').on(t.variantGroup).where(sql`${t.variantGroup} IS NOT NULL`),
     index('products_photo_queue_idx').on(t.photoAssigneeId, t.photoPriority.desc(), t.id).where(sql`${t.isActive} = true AND ${t.imageUrl} IS NULL`),
     check('products_prices_ck', sql`${t.mrp} >= 0 AND ${t.sellingPrice} >= 0`),
     check('products_gst_rate_ck', sql`${t.gstRate} >= 0 AND ${t.gstRate} <= 40`), // 40% = GST 2.0 slab (aerated drinks)
@@ -433,6 +446,8 @@ export const cartItems = pgTable(
       .notNull()
       .references(() => products.id, { onDelete: 'cascade' }),
     quantity: quantity().notNull(),
+    /** For products with options: how many of each ({"Vanilla": "2", "Chocolate": "1"}); sums to quantity. */
+    choices: jsonb().$type<Record<string, string>>(),
     ...timestamps,
   },
   (t) => [
@@ -566,6 +581,8 @@ export const orderItems = pgTable(
     hsnCode: varchar({ length: 10 }),
 
     quantity: quantity().notNull(),
+    /** Flavour/colour split chosen by the customer (products with options), e.g. {"Vanilla": "2"}. */
+    choices: jsonb().$type<Record<string, string>>(),
     /** Actual packed qty for loose items / short-picks; NULL until packed. */
     packedQuantity: quantity(),
     totalPrice: money().notNull(),

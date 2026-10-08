@@ -433,6 +433,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(l.product.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: text.labelLarge?.copyWith(fontWeight: FontWeight.w600)),
                   Text('${formatQty(l.qtyMilli, l.product.unit)} × ${formatRupees(l.product.sellingPrice)}', style: text.labelSmall),
+                  if (l.choices != null) Text(describeChoices(l.choices!, l.product.unit), style: text.labelSmall?.copyWith(color: AppColors.brand800)),
                 ]),
               ),
               Text(formatRupees(l.lineTotal), style: text.labelLarge?.copyWith(fontWeight: FontWeight.w800)),
@@ -600,6 +601,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(l.product.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: text.labelLarge),
                       Text('Qty ${formatQty(l.qtyMilli, l.product.unit)} × ${formatRupees(l.product.sellingPrice)}', style: text.labelSmall),
+                      if (l.choices != null) Text(describeChoices(l.choices!, l.product.unit), style: text.labelSmall?.copyWith(color: AppColors.brand800)),
                     ]),
                   ),
                   Text(formatRupees(l.lineTotal), style: text.labelLarge?.copyWith(fontWeight: FontWeight.w700)),

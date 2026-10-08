@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/money.dart';
@@ -7,18 +8,33 @@ import '../data/models.dart';
 import 'add_to_cart.dart';
 import 'product_card.dart';
 import 'product_image.dart';
+import 'size_picker.dart';
 
 /// Web shop product card (laptops/tablets): discount badge, square photo, name, size,
 /// price with struck MRP, and the add / − qty + control.
-class WebProductCard extends StatelessWidget {
+class WebProductCard extends ConsumerStatefulWidget {
   const WebProductCard({super.key, required this.product, this.width});
   final Product product;
   final double? width;
 
   @override
+  ConsumerState<WebProductCard> createState() => _WebProductCardState();
+}
+
+class _WebProductCardState extends ConsumerState<WebProductCard> {
+  late Product _selected = initialSize(ref, widget.product);
+
+  @override
+  void didUpdateWidget(covariant WebProductCard old) {
+    super.didUpdateWidget(old);
+    if (old.product.id != widget.product.id) _selected = initialSize(ref, widget.product);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final p = product;
+    final p = _selected;
+    final width = widget.width;
     return SizedBox(
       width: width,
       child: Material(
@@ -43,7 +59,10 @@ class WebProductCard extends StatelessWidget {
                 height: 40,
                 child: Text(p.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: text.labelLarge?.copyWith(fontWeight: FontWeight.w600, height: 1.25)),
               ),
-              Text(p.sizeLabel, maxLines: 1, overflow: TextOverflow.ellipsis, style: text.labelSmall),
+              if (widget.product.variants.isNotEmpty)
+                SizePill(product: widget.product, selected: p, onSelected: (v) => setState(() => _selected = v))
+              else
+                Text(p.sizeLabel, maxLines: 1, overflow: TextOverflow.ellipsis, style: text.labelSmall),
               const SizedBox(height: 6),
               Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
                 Text(formatRupees(p.sellingPrice), style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800, color: p.hasDiscount ? AppColors.offerRed : AppColors.ink)),

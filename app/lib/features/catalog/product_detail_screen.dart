@@ -12,6 +12,7 @@ import '../../widgets/add_to_cart.dart';
 import '../../widgets/common.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/product_image.dart';
+import '../../widgets/size_picker.dart';
 import '../../core/layout.dart';
 import '../../core/navigation.dart';
 
@@ -59,7 +60,11 @@ class _Detail extends ConsumerWidget {
                     Text(p.brand!, style: text.bodyMedium?.copyWith(color: AppColors.brandBlue, fontWeight: FontWeight.w600)),
                   ],
                   const SizedBox(height: 4),
-                  Text(p.sizeLabel, style: text.bodySmall),
+                  if (p.variants.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    SizeChips(product: p, onPick: (v) => context.pushReplacement('/product/${v.slug}')),
+                  ] else
+                    Text(p.sizeLabel, style: text.bodySmall),
                   const SizedBox(height: 14),
                   Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
                     PriceLine(price: p.sellingPrice, mrp: p.mrp, showMrp: p.hasDiscount, large: true),
@@ -275,7 +280,7 @@ class _WideProductPage extends ConsumerWidget {
       ],
       const SizedBox(height: 14),
       if (p.brand != null) row('Brand', Text(p.brand!, style: text.bodyMedium)),
-      row('Pack size', Text(p.sizeLabel, style: text.bodyMedium)),
+      row('Pack size', p.variants.isNotEmpty ? SizeChips(product: p, onPick: (v) => context.pushReplacement('/product/${v.slug}')) : Text(p.sizeLabel, style: text.bodyMedium)),
       if (p.hasDiscount) row('MRP', Text('${formatRupees(p.mrp)} (inclusive of all taxes)', style: text.bodyMedium?.copyWith(decoration: TextDecoration.lineThrough, color: AppColors.inkMuted))),
       row(
         'Selling price',
