@@ -96,7 +96,10 @@ class _PhotoWorkScreenState extends ConsumerState<PhotoWorkScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Photo work'),
-        actions: [IconButton(onPressed: _load, tooltip: 'Refresh', icon: const Icon(Icons.refresh_rounded))],
+        actions: [
+          IconButton(onPressed: () => context.push('/race'), tooltip: 'Photo race', icon: const Icon(Icons.sports_score_rounded)),
+          IconButton(onPressed: _load, tooltip: 'Refresh', icon: const Icon(Icons.refresh_rounded)),
+        ],
       ),
       body: d == null
           ? (_error != null ? ErrorView(message: _error!, onRetry: _load) : const Center(child: CircularProgressIndicator()))

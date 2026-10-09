@@ -8,6 +8,9 @@ import 'models.dart';
 /// A home list for the admin: [pinned] extras (shown first), [automatic] products, [hidden] ones.
 typedef HomeList = ({List<AdminProduct> pinned, List<AdminProduct> automatic, List<AdminProduct> hidden});
 
+/// One person in the photo race.
+typedef Racer = ({int rank, String name, int photos, bool isMe});
+
 class StaffRepository {
   StaffRepository(this._api, this._tokens);
 
@@ -137,6 +140,12 @@ class StaffRepository {
   Future<int> saveChoices(int id, Map<String, dynamic>? options, {bool allSizes = false}) async =>
       (((await _api.patch('/admin/products/$id', body: {'options': options, 'optionsForAllSizes': allSizes}))['product'] as Map?)?['sizesUpdated'] as num? ?? 1)
           .toInt();
+
+  /// The photo race: photos each person added in [period] ('today' | 'week' | 'all'), best first.
+  Future<List<Racer>> photoRace(String period) async => [
+    for (final r in (await _api.get('/staff/photos/leaderboard', query: {'period': period}))['racers'] as List)
+      (rank: ((r as Map)['rank'] as num).toInt(), name: r['name'] as String, photos: (r['photos'] as num).toInt(), isMe: r['isMe'] == true),
+  ];
 
   // ── new-order alerts while the app is closed ──
   /// Browser / iPhone home-screen app: the server's Web Push key.

@@ -66,6 +66,11 @@ class MoreScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             const OrderAlertsCard(),
           ],
+          const SizedBox(height: 12),
+          SectionCard(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: tile(Icons.sports_score_rounded, 'Photo race', 'Who added the most product photos today and this week', () => context.push('/race')),
+          ),
           if (staff.isAdmin) ...[
             const SizedBox(height: 20),
             Text('Store admin', style: text.titleSmall?.copyWith(color: AppColors.inkMuted)),

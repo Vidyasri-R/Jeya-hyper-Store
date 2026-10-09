@@ -11,6 +11,7 @@ import 'features/admin/members_screen.dart';
 import 'features/admin/home_lists_screen.dart';
 import 'features/admin/my_photos_screen.dart';
 import 'features/admin/photo_mode_screen.dart';
+import 'features/admin/photo_race_screen.dart';
 import 'features/admin/photo_work_screen.dart';
 import 'features/admin/products_screen.dart';
 import 'features/admin/settings_screen.dart';
@@ -30,7 +31,7 @@ final _rootKey = GlobalKey<NavigatorState>();
 const _adminOnly = ['/sales', '/products', '/more/staff', '/more/settings', '/more/usage', '/more/banners', '/more/stock', '/more/photo-work', '/more/categories', '/more/home-lists', '/more/finance', '/more/members'];
 
 /// Photo helpers only add product photos: their list, the scanner and their account.
-bool _photoHelperMayOpen(String at) => at == '/my-photos' || at == '/scan' || at == '/more' || at == '/password';
+bool _photoHelperMayOpen(String at) => at == '/my-photos' || at == '/scan' || at == '/race' || at == '/more' || at == '/password';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier(0);
@@ -67,6 +68,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/password', parentNavigatorKey: _rootKey, builder: (_, _) => const ChangePasswordScreen()),
       GoRoute(path: '/scan', parentNavigatorKey: _rootKey, builder: (_, _) => const PhotoModeScreen()),
+      // The photo race: every staff member can see it.
+      GoRoute(path: '/race', parentNavigatorKey: _rootKey, builder: (_, _) => const PhotoRaceScreen()),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(shell: shell),
         branches: [

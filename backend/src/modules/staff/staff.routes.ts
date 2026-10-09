@@ -6,7 +6,7 @@ import { requireStaff, requireStaffAllowingPasswordChange, requireStaffRole, sta
 import { parseBody, parseParams, parseQuery, wantsCleanUp } from '../../common/validate';
 import { orderStatus } from '../../db/schema';
 import { adminProductsService } from '../admin/admin-products.service';
-import { photoWorkService, selfAssignSetting } from '../admin/photo-work.service';
+import { LEADERBOARD_PERIODS, photoWorkService, selfAssignSetting } from '../admin/photo-work.service';
 import { usageService } from '../usage/usage.service';
 import { changePasswordSchema, staffLoginSchema, staffRefreshSchema } from './staff.schemas';
 import { staffAuthService } from './staff-auth.service';
@@ -226,6 +226,12 @@ staffPhotos.post('/mine/more', async (req, res) => {
   const mine = summary.people.find((p) => p.staffId === me);
   if ((mine?.open ?? 0) > 0) throw new AppError('CONFLICT', 'Finish the products in your list first', { reason: 'list_not_done', open: mine?.open });
   res.json(await photoWorkService.assign({ staffId: me, count: self.batch }));
+});
+
+/** The photo race: who added the most photos (today / this week / all time). Every staff member sees it. */
+staffPhotos.get('/leaderboard', async (req, res) => {
+  const { period } = parseQuery(z.object({ period: z.enum(LEADERBOARD_PERIODS).default('week') }), req);
+  res.json(await photoWorkService.leaderboard(period, staffOf(req).staffId));
 });
 
 /** Photos I added, newest first (to check and replace). */

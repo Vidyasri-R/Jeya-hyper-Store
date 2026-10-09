@@ -10,6 +10,7 @@ import '../../data/models.dart';
 import '../../state/providers.dart';
 import '../../widgets/common.dart';
 import 'done_photos.dart';
+import 'photo_race_screen.dart';
 import 'products_screen.dart';
 
 /// My photo work: the products the admin assigned to me, most important first. Tap one (or scan
@@ -120,6 +121,8 @@ class _MyPhotosScreenState extends ConsumerState<MyPhotosScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
             children: [
+              const PhotoRaceCard(),
+              const SizedBox(height: 12),
               SectionCard(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Row(children: [

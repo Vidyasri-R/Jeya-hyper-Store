@@ -147,6 +147,11 @@ class FakeRepo extends StaffRepository {
   }
 
   @override
+  Future<List<Racer>> photoRace(String period) async => period == 'today'
+      ? const [(rank: 1, name: 'Sanjai K', photos: 170, isMe: false), (rank: 2, name: 'Dharshan', photos: 129, isMe: true), (rank: 3, name: 'Karupu', photos: 111, isMe: false)]
+      : const [(rank: 1, name: 'Sanjai K', photos: 421, isMe: false), (rank: 2, name: 'Karupu', photos: 311, isMe: false), (rank: 3, name: 'Dharshan', photos: 250, isMe: true)];
+
+  @override
   Future<int> clearOtherSizesChoices(int id) async {
     calls.add({'call': 'clearOtherSizesChoices', 'id': id});
     return 25;
@@ -568,6 +573,19 @@ void main() {
     await pumpApp(tester, FakeRepo(orderAt('placed')), at: '/sales');
     expect(find.text('Sales'), findsWidgets);
     expect(find.text('Average order'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('photo race: everyone sees the leaderboard; switching to Today re-ranks', (tester) async {
+    await pumpApp(tester, FakeRepo(orderAt('placed')), at: '/race');
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.text('Sanjai is leading this week with 421 photos'), findsOneWidget);
+    expect(find.text('Dharshan (you)'), findsOneWidget);
+    expect(find.text('62 more to pass Karupu and take #2!'), findsOneWidget);
+    await tester.tap(find.text('Today'));
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.text('Sanjai is leading today with 170 photos'), findsOneWidget);
+    expect(find.text('42 more to pass Sanjai and take #1!'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

@@ -7,6 +7,9 @@ import { categories, products, staffUsers } from '../../db/schema';
 import { withPlaceholders } from '../catalog/catalog.service';
 import { adminProductColumns } from './admin-products.service';
 
+export const LEADERBOARD_PERIODS = ['today', 'week', 'all'] as const;
+export type LeaderboardPeriod = (typeof LEADERBOARD_PERIODS)[number];
+
 /** Active products still missing a photo. */
 /** Admin → Photo work: helpers who finish their list may take the next batch themselves. */
 export const SELF_ASSIGN_KEY = 'photos.self_assign';
@@ -96,6 +99,43 @@ export const photoWorkService = {
     return {
       products: page,
       nextCursor: rows.length > params.limit && last?.photoAt ? Buffer.from(JSON.stringify([last.photoAt.toISOString(), last.id])).toString('base64url') : null,
+    };
+  },
+
+  /**
+   * The photo race (every staff member sees it): photos each person added in [period], best first.
+   * Counts photos still on the product (a photo replaced later counts for whoever replaced it).
+   */
+  async leaderboard(period: LeaderboardPeriod, me: string) {
+    const since =
+      period === 'today'
+        ? sql`date_trunc('day', now() at time zone 'Asia/Kolkata') at time zone 'Asia/Kolkata'`
+        : period === 'week'
+          ? sql`date_trunc('week', now() at time zone 'Asia/Kolkata') at time zone 'Asia/Kolkata'`
+          : null;
+    const rows = await db
+      .select({
+        staffId: staffUsers.id,
+        name: staffUsers.name,
+        photos: sql<number>`count(*)::int`,
+        lastPhotoAt: sql<Date | null>`max(${products.photoAt})`,
+      })
+      .from(products)
+      .innerJoin(staffUsers, eq(staffUsers.id, products.photoById))
+      .where(and(isNotNull(products.imageUrl), eq(staffUsers.isActive, true), ...(since ? [sql`${products.photoAt} >= ${since}`] : [])))
+      .groupBy(staffUsers.id, staffUsers.name)
+      // Same count: whoever got there first ranks higher.
+      .orderBy(desc(sql`count(*)`), sql`max(${products.photoAt}) asc`)
+      .limit(50);
+    let rank = 0;
+    let previous: number | null = null;
+    return {
+      period,
+      racers: rows.map((r, i) => {
+        if (r.photos !== previous) rank = i + 1;
+        previous = r.photos;
+        return { rank, name: r.name, photos: Number(r.photos), isMe: r.staffId === me };
+      }),
     };
   },
 
