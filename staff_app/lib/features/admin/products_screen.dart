@@ -404,11 +404,12 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
             [product.priceLabel, if (product.packSize != null) product.packSize!].join(' · '),
             style: text.titleSmall?.copyWith(color: AppColors.green800, fontWeight: FontWeight.w700),
           ),
+          if (product.barcode != null)
+            Align(alignment: Alignment.centerLeft, child: Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: CopyChip(label: 'EAN', value: product.barcode!))),
           Text(
             [
               if (product.brand != null) product.brand!,
               'Code ${product.itemCode}',
-              if (product.barcode != null) product.barcode!,
             ].join(' · '),
             style: text.bodySmall,
           ),

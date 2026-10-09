@@ -1,7 +1,6 @@
-import 'dart:typed_data';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../core/api/api_client.dart';
@@ -31,6 +30,27 @@ String formatBytes(num bytes) {
 }
 
 String formatCount(num n) => NumberFormat.decimalPattern('en_IN').format(n);
+
+/// "EAN 8906021121972 ⧉": tap to copy the code (to search for the product's picture by barcode).
+class CopyChip extends StatelessWidget {
+  const CopyChip({super.key, required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => ActionChip(
+        visualDensity: VisualDensity.compact,
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        avatar: const Icon(Icons.copy_rounded, size: 16),
+        label: Text('$label $value', style: Theme.of(context).textTheme.labelMedium?.copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
+        tooltip: 'Copy $label',
+        onPressed: () async {
+          await Clipboard.setData(ClipboardData(text: value));
+          if (context.mounted) showSnack(context, '$label copied: $value');
+        },
+      );
+}
 
 void showSnack(BuildContext context, String message, {bool error = false}) {
   ScaffoldMessenger.of(context)

@@ -14,6 +14,7 @@ import 'package:jeya_staff/features/admin/choices_editor.dart';
 import 'package:jeya_staff/features/admin/settings_screen.dart';
 import 'package:jeya_staff/router.dart';
 import 'package:jeya_staff/state/providers.dart';
+import 'package:jeya_staff/widgets/common.dart';
 
 /// Fixtures are real API responses (reviewer demo account only), see backend/docs/staff-api.md.
 Map<String, dynamic> fixture(String name) => jsonDecode(File('test/fixtures/$name').readAsStringSync()) as Map<String, dynamic>;
@@ -587,5 +588,19 @@ void main() {
     expect(find.text('Sanjai is leading today with 170 photos'), findsOneWidget);
     expect(find.text('42 more to pass Sanjai and take #1!'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('photo sheet: tapping the EAN chip copies the barcode', (tester) async {
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') copied = (call.arguments as Map)['text'] as String?;
+      return null;
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: Center(child: CopyChip(label: 'EAN', value: '8906021121972')))));
+    await tester.tap(find.text('EAN 8906021121972'));
+    await tester.pump();
+    expect(copied, '8906021121972');
+    expect(find.text('EAN copied: 8906021121972'), findsOneWidget);
   });
 }

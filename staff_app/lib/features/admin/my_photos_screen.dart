@@ -175,6 +175,7 @@ class _MyPhotosScreenState extends ConsumerState<MyPhotosScreen> {
                       if (p.needsRecheck)
                         Text('New packaging — check the photo', style: text.bodySmall?.copyWith(color: const Color(0xFF8A5A00), fontWeight: FontWeight.w700)),
                       Text([if (p.brand != null) p.brand!, if (p.category != null) p.category!, 'Code ${p.itemCode}'].join(' · '), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      if (p.barcode != null) Padding(padding: const EdgeInsets.only(top: 4), child: CopyChip(label: 'EAN', value: p.barcode!)),
                     ]),
                     trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                       IconButton(
