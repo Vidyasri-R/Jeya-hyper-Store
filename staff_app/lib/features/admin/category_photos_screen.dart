@@ -77,8 +77,8 @@ class _CategoryPhotosScreenState extends ConsumerState<CategoryPhotosScreen> {
     var busy = false;
     var changed = false;
     var nextWhenUploaded = false;
-    /// White-background clean-up for the next tile picture (switch off for pictures it spoils).
-    var clean = true;
+    /// White-background clean-up for the next tile picture: off unless the picker switches it on.
+    var clean = false;
 
     return showActionSheet<bool>(
       context,

@@ -141,7 +141,7 @@ class _PhotoModeScreenState extends ConsumerState<PhotoModeScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                _done == 0 ? 'Then take the photo inside the light box — the background is removed automatically.' : '$_done photo${_done == 1 ? '' : 's'} saved in this session.',
+                _done == 0 ? 'Then take the photo inside the light box. Switch on "Clean up background" in the photo sheet to make it pure white.' : '$_done photo${_done == 1 ? '' : 's'} saved in this session.',
                 style: text.bodySmall?.copyWith(color: _done == 0 ? null : AppColors.green700),
                 textAlign: TextAlign.center,
               ),

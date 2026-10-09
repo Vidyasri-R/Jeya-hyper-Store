@@ -295,8 +295,8 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
   var busy = false;
   var changed = false;
   var nextWhenUploaded = false;
-  /// White-background clean-up for the next upload (switch off for pictures it spoils).
-  var clean = true;
+  /// White-background clean-up for the next upload: off unless the picker switches it on.
+  var clean = false;
 
   return showActionSheet<bool>(
     context,
@@ -526,8 +526,8 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
             ),
           Text(
             ImageDropZone.supported
-                ? 'Drag a photo onto this window, paste it (Ctrl+V / ⌘+V) or right-click the photo box → Paste photo. It uploads straight away on a white background.'
-                : 'Copied a picture? Long-press the photo box → Paste photo. Or take one in the light box / on plain white paper — the app puts it on white.',
+                ? 'Drag a photo onto this window, paste it (Ctrl+V / ⌘+V) or right-click the photo box → Paste photo. It uploads straight away (switch on "Clean up background" first to make the background white).'
+                : 'Copied a picture? Long-press the photo box → Paste photo. Or take one in the light box / on plain white paper (switch on "Clean up background" to make it pure white).',
             style: text.bodySmall,
           ),
           if (photoOnly) ...[

@@ -14,7 +14,7 @@ import 'photo_race_screen.dart';
 import 'products_screen.dart';
 
 /// My photo work: the products the admin assigned to me, most important first. Tap one (or scan
-/// its barcode), add the photo — the app puts it on a white background — and it leaves the list.
+/// its barcode), add the photo — saved as it is, or on white with "Clean up background" — and it leaves the list.
 class MyPhotosScreen extends ConsumerStatefulWidget {
   const MyPhotosScreen({super.key});
 
@@ -136,7 +136,7 @@ class _MyPhotosScreenState extends ConsumerState<MyPhotosScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '$done done${total > 0 ? ' of $total' : ''}. Any clear photo works — the app removes the background and puts the product on white.'
+                    '$done done${total > 0 ? ' of $total' : ''}. Any clear photo works. Switch on "Clean up background" in a product to make its background white.'
                     '${ImageDropZone.supported ? ' Tap ⧉ to copy a name; in a product you can drag a photo in or paste it (Ctrl+V).' : ''}',
                     style: text.bodySmall,
                   ),
