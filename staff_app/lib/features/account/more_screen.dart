@@ -88,6 +88,12 @@ class MoreScreen extends ConsumerWidget {
                     () => context.go('/more/stock'),
                   ),
                   tile(
+                    Icons.link_rounded,
+                    'Same product, new code?',
+                    'New JHS codes for an old product: move the photo and details over',
+                    () => context.go('/more/new-codes'),
+                  ),
+                  tile(
                     Icons.add_a_photo_outlined,
                     'Photo work',
                     'Products without photos — hand them out and track progress',

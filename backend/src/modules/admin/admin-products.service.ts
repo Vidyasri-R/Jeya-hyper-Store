@@ -196,6 +196,15 @@ async function cleanPhoto(input: Buffer): Promise<Buffer> {
     .toBuffer();
 }
 
+/** Photos can be shared (copied to a product's new code): delete the file only when no product uses it. */
+async function removePhotoIfUnused(url: string | null): Promise<void> {
+  const key = url ? r2.keyFromUrl(url) : null;
+  if (!key) return;
+  const [still] = await db.select({ id: products.id }).from(products).where(eq(products.imageUrl, url!)).limit(1);
+  if (still) return;
+  await r2.remove(key).catch((error: unknown) => logger.warn({ err: error, key }, 'product photo not deleted'));
+}
+
 export const adminProductsService = {
   /** Photo mode: the product behind a scanned barcode — POS label (any batch) or the maker's EAN. */
   async findByBarcode(code: string) {
@@ -365,8 +374,7 @@ export const adminProductsService = {
     catalogCache.invalidate();
 
     // The old photo is no longer referenced; free its storage (DeleteObject is free on R2).
-    const oldKey = product.imageUrl ? r2.keyFromUrl(product.imageUrl) : null;
-    if (oldKey && oldKey !== key) await r2.remove(oldKey).catch((error: unknown) => logger.warn({ err: error, oldKey }, 'old product photo not deleted'));
+    if (product.imageUrl && r2.keyFromUrl(product.imageUrl) !== key) await removePhotoIfUnused(product.imageUrl);
 
     logger.info({ productId, bytesIn: input.length, bytesOut: output.length }, 'product photo updated');
     return { imageUrl: stored.url, bytes: output.length };
@@ -402,7 +410,6 @@ export const adminProductsService = {
     if (!product) throw AppError.notFound('Product');
     await db.update(products).set({ imageUrl: null, photoById: null, photoAt: null }).where(eq(products.id, productId));
     catalogCache.invalidate();
-    const key = product.imageUrl ? r2.keyFromUrl(product.imageUrl) : null;
-    if (key) await r2.remove(key).catch((error: unknown) => logger.warn({ err: error, key }, 'product photo not deleted'));
+    await removePhotoIfUnused(product.imageUrl);
   },
 };

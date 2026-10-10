@@ -153,6 +153,28 @@ class FakeRepo extends StaffRepository {
       : const [(rank: 1, name: 'Sanjai K', photos: 421, isMe: false), (rank: 2, name: 'Karupu', photos: 311, isMe: false), (rank: 3, name: 'Dharshan', photos: 250, isMe: true)];
 
   @override
+  Future<({int total, List<({AdminProduct old, AdminProduct neu})> pairs})> newCodes({int limit = 40}) async {
+    AdminProduct p(int id, String code, String name, String mrp, {String? image, bool active = true}) => AdminProduct.fromJson(
+      {'id': id, 'name': name, 'itemCode': code, 'mrp': mrp, 'sellingPrice': mrp, 'available': '4', 'isActive': active, 'imageUrl': image, 'packSize': '2 kg', 'lastPurchaseAt': '2026-09-16T00:00:00Z'},
+    );
+    final all = [
+      (old: p(1, '34215', 'Aashirvaad Atta 2KG', '110.00', image: 'https://cdn.example/atta.webp', active: false), neu: p(2, '40017', 'Aashirvaad Atta 2KG MRP116', '116.00')),
+      (old: p(3, '19173', 'A2B Madras Mixture MRP 10', '10.00'), neu: p(4, '41968', 'A2B MADRAS MIXTURE MRP10', '10.00')),
+    ];
+    final left = [for (final x in all) if (!decided.contains(x.neu.id)) x];
+    return (total: left.length, pairs: left);
+  }
+
+  final decided = <int>{};
+
+  @override
+  Future<bool> decideNewCode(int oldId, int newId, {required bool same}) async {
+    calls.add({'call': 'decideNewCode', 'oldId': oldId, 'newId': newId, 'same': same});
+    decided.add(newId);
+    return same && oldId == 1;
+  }
+
+  @override
   Future<int> clearOtherSizesChoices(int id) async {
     calls.add({'call': 'clearOtherSizesChoices', 'id': id});
     return 25;
@@ -602,5 +624,22 @@ void main() {
     await tester.pump();
     expect(copied, '8906021121972');
     expect(find.text('EAN copied: 8906021121972'), findsOneWidget);
+  });
+
+  testWidgets('same product, new code: admin links the atta codes and keeps the mixtures apart', (tester) async {
+    final repo = FakeRepo(orderAt('placed'));
+    await pumpApp(tester, repo, at: '/more/new-codes', size: const Size(400, 1400));
+    expect(find.text('2 to check'), findsOneWidget);
+    expect(find.text('Aashirvaad Atta 2KG MRP116'), findsOneWidget);
+    await tester.tap(find.text('Same product').first);
+    await tester.pumpAndSettle();
+    expect(repo.calls.last, {'call': 'decideNewCode', 'oldId': 1, 'newId': 2, 'same': true});
+    expect(find.textContaining('photo copied to 40017'), findsOneWidget);
+    expect(find.text('Aashirvaad Atta 2KG MRP116'), findsNothing);
+    await tester.tap(find.text('Different products'));
+    await tester.pumpAndSettle();
+    expect(repo.calls.last, {'call': 'decideNewCode', 'oldId': 3, 'newId': 4, 'same': false});
+    expect(find.text('Nothing to check'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

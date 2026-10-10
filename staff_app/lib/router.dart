@@ -8,6 +8,7 @@ import 'features/admin/category_photos_screen.dart';
 import 'features/admin/dashboard_screen.dart';
 import 'features/admin/finance_screen.dart';
 import 'features/admin/members_screen.dart';
+import 'features/admin/new_codes_screen.dart';
 import 'features/admin/home_lists_screen.dart';
 import 'features/admin/my_photos_screen.dart';
 import 'features/admin/photo_mode_screen.dart';
@@ -28,7 +29,7 @@ import 'state/providers.dart';
 final _rootKey = GlobalKey<NavigatorState>();
 
 /// Admin-only locations; staff are sent back to the board.
-const _adminOnly = ['/sales', '/products', '/more/staff', '/more/settings', '/more/usage', '/more/banners', '/more/stock', '/more/photo-work', '/more/categories', '/more/home-lists', '/more/finance', '/more/members'];
+const _adminOnly = ['/sales', '/products', '/more/staff', '/more/settings', '/more/usage', '/more/banners', '/more/stock', '/more/photo-work', '/more/categories', '/more/home-lists', '/more/finance', '/more/members', '/more/new-codes'];
 
 /// Photo helpers only add product photos: their list, the scanner and their account.
 bool _photoHelperMayOpen(String at) => at == '/my-photos' || at == '/scan' || at == '/race' || at == '/more' || at == '/password';
@@ -98,6 +99,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(path: 'home-lists', builder: (_, _) => const HomeListsScreen()),
                   GoRoute(path: 'finance', builder: (_, _) => const FinanceScreen()),
                   GoRoute(path: 'members', builder: (_, _) => const MembersScreen()),
+                  GoRoute(path: 'new-codes', builder: (_, _) => const NewCodesScreen()),
                 ],
               ),
             ],

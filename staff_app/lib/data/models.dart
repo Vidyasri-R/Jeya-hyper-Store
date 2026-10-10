@@ -263,6 +263,7 @@ class AdminProduct {
       variantLabel = j['variantLabel'] as String?,
       photoCheckReason = j['photoCheckReason'] as String?,
       photoAt = DateTime.tryParse(j['photoAt']?.toString() ?? '')?.toLocal(),
+      lastPurchaseAt = DateTime.tryParse(j['lastPurchaseAt']?.toString() ?? '')?.toLocal(),
       description = j['description'] as String?,
       sortRank = (j['sortRank'] as num?)?.toInt() ?? 0,
       isActive = j['isActive'] != false,
@@ -292,9 +293,12 @@ class AdminProduct {
   final String? variantGroup;
   final String? variantLabel;
   /// 'new_barcode': same item code, new EAN in the stock file — the packaging (and photo) may have changed.
+  /// 'new_code': the photo was copied from the product's old JHS code — check it matches the new pack.
   final String? photoCheckReason;
   /// When the current photo was added (done-photos lists).
   final DateTime? photoAt;
+  /// Latest purchase in the stock file ("same product, new code?" review).
+  final DateTime? lastPurchaseAt;
   bool get needsRecheck => photoCheckReason != null;
   final String? description;
   final int sortRank;

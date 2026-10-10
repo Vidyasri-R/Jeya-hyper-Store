@@ -420,7 +420,12 @@ Future<bool?> showProductSheet(BuildContext context, WidgetRef ref, AdminProduct
               margin: const EdgeInsets.only(bottom: 10),
               decoration: BoxDecoration(color: AppColors.amberSoft, borderRadius: BorderRadius.circular(AppRadius.md)),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('New barcode in the stock file — the packaging may have changed.', style: text.titleSmall?.copyWith(color: const Color(0xFF7A4D00))),
+                Text(
+                  product.photoCheckReason == 'new_code'
+                      ? 'Photo copied from this product\'s old code — check it matches the new pack.'
+                      : 'New barcode in the stock file — the packaging may have changed.',
+                  style: text.titleSmall?.copyWith(color: const Color(0xFF7A4D00)),
+                ),
                 const SizedBox(height: 2),
                 Text('Compare with the pack on the shelf: take a new photo, or keep this one.', style: text.bodySmall),
                 const SizedBox(height: 6),

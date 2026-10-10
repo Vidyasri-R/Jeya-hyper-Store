@@ -477,6 +477,28 @@ export const productBarcodes = pgTable(
   (t) => [index('product_barcodes_product_idx').on(t.productId)],
 );
 
+/**
+ * The store gives a product a new JHS code when its EAN changes (new packaging). The admin's answer
+ * to "same product, new code?": 'same' = the new code got the old one's photo and details, and the
+ * old code leaves the shop when its stock runs out; 'different' = never asked again.
+ */
+export const productLinks = pgTable(
+  'product_links',
+  {
+    oldProductId: bigint({ mode: 'number' })
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+    newProductId: bigint({ mode: 'number' })
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+    /** 'same' | 'different' */
+    decision: varchar({ length: 12 }).notNull(),
+    decidedBy: uuid().references(() => staffUsers.id, { onDelete: 'set null' }),
+    decidedAt: tstz().notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.oldProductId, t.newProductId] }), index('product_links_new_idx').on(t.newProductId)],
+);
+
 /* ───────────────────────────── Cart ───────────────────────────── */
 
 export const cartItems = pgTable(

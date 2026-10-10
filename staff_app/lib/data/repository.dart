@@ -165,6 +165,23 @@ class StaffRepository {
 
   Future<void> removeAlertPhone(String deviceKey) => _api.post('/staff/alerts/android/remove', body: {'deviceKey': deviceKey}, auth: false);
 
+  /// "Same product, new code?": pairs (old code → new code) waiting for an answer, and how many in all.
+  Future<({int total, List<({AdminProduct old, AdminProduct neu})> pairs})> newCodes({int limit = 40}) async {
+    final body = await _api.get('/admin/catalog/new-codes', query: {'limit': limit});
+    return (
+      total: (body['total'] as num).toInt(),
+      pairs: [
+        for (final p in body['pairs'] as List)
+          (old: AdminProduct.fromJson(Map<String, dynamic>.from((p as Map)['old'] as Map)), neu: AdminProduct.fromJson(Map<String, dynamic>.from(p['new'] as Map))),
+      ],
+    );
+  }
+
+  /// [same]: the new code gets the old one's photo and details; the old code leaves the shop when sold out.
+  /// Returns whether the photo was copied.
+  Future<bool> decideNewCode(int oldId, int newId, {required bool same}) async =>
+      (await _api.post('/admin/catalog/new-codes/decide', body: {'oldId': oldId, 'newId': newId, 'same': same}))['copiedPhoto'] == true;
+
   /// Takes the choices off every other size of the product; returns how many.
   Future<int> clearOtherSizesChoices(int id) async =>
       (((await _api.patch('/admin/products/$id', body: {'clearOtherSizesOptions': true}))['product'] as Map?)?['otherSizesCleared'] as num? ?? 0).toInt();

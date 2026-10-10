@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/api/api_client.dart';
@@ -163,6 +164,24 @@ class _StockImportScreenState extends ConsumerState<StockImportScreen> {
                       style: text.titleSmall?.copyWith(color: AppColors.green800),
                     ),
                   ),
+                if (_result != null && (_result!['possibleNewCodes'] as num? ?? 0) > 0) ...[
+                  const SizedBox(height: 12),
+                  SectionCard(
+                    color: AppColors.amberSoft,
+                    child: Row(children: [
+                      const Icon(Icons.link_rounded, color: Color(0xFF8A5A00)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          '${_result!['possibleNewCodes']} new codes look like products you already have (new packaging?). Check them so photos carry over.',
+                          style: text.bodyMedium,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton(onPressed: () => context.push('/more/new-codes'), child: const Text('Review')),
+                    ]),
+                  ),
+                ],
                 if (_result != null) const SizedBox(height: 12),
                 _PreviewSummary(preview: p),
                 const SizedBox(height: 12),

@@ -15,6 +15,7 @@ import { adminCategoriesService } from './admin-categories.service';
 import { photoWorkService } from './photo-work.service';
 import { adminDashboardService } from './admin-dashboard.service';
 import { ADMIN_PRODUCT_FILTERS, adminProductsService } from './admin-products.service';
+import { newCodesService } from './new-codes.service';
 import { adminSettingsService } from './admin-settings.service';
 import { adminStaffService } from './admin-staff.service';
 import { EXPENSE_CATEGORIES, financeService } from './finance.service';
@@ -248,8 +249,23 @@ adminRouter.post('/catalog/import', uploadLimiter, stockFile, async (req, res) =
   const { apply } = parseQuery(z.object({ apply: z.enum(['true', 'false']).default('false') }), req);
   const text = stockFileBody(req);
   const preview = await catalogImportService.preview(text); // before applying, so it describes this import
-  if (apply === 'true') res.json({ applied: true, result: await catalogImportService.apply(text), preview });
-  else res.json({ applied: false, preview });
+  if (apply === 'true') {
+    const result = await catalogImportService.apply(text);
+    // Merged codes whose old stock is now gone leave the shop; new pairs wait for the admin.
+    const retired = await newCodesService.retireSoldOut();
+    res.json({ applied: true, result: { ...result, retiredOldCodes: retired, possibleNewCodes: await newCodesService.count() }, preview });
+  } else res.json({ applied: false, preview });
+});
+
+/** "Same product, new code?": pairs of codes that look like one product, waiting for an answer. */
+adminRouter.get('/catalog/new-codes', async (req, res) => {
+  const { limit } = parseQuery(z.object({ limit: z.coerce.number().int().min(1).max(100).default(40) }), req);
+  res.json(await newCodesService.list(limit));
+});
+
+adminRouter.post('/catalog/new-codes/decide', async (req, res) => {
+  const body = parseBody(z.object({ oldId: z.number().int().positive(), newId: z.number().int().positive(), same: z.boolean() }).strict(), req);
+  res.json(await newCodesService.decide({ ...body, staffId: staffOf(req).staffId }));
 });
 
 /** "Move to": a POS group or single items to a website category (now and on every import). */
