@@ -4,7 +4,7 @@ import { AppError } from '../../common/errors';
 import { env } from '../../config/env';
 import { logger } from '../../config/logger';
 import { r2 } from '../../infra/r2';
-import { loadSharp } from './admin-products.service';
+import { loadSharp, oneImageAtATime } from './admin-products.service';
 
 /**
  * Home-screen banners the store manages from the admin app (public config `home.banners`).
@@ -74,12 +74,14 @@ export const adminBannersService = {
     const sharp = await loadSharp();
     let output: Buffer;
     try {
-      output = await sharp(input, { limitInputPixels: MAX_INPUT_PIXELS, failOn: 'error' })
-        .rotate()
-        .resize(BANNER_W, BANNER_H, { fit: 'cover', position: 'attention' })
-        .flatten({ background: '#ffffff' })
-        .webp({ quality: 82, effort: 4 })
-        .toBuffer();
+      output = await oneImageAtATime(() =>
+        sharp(input, { limitInputPixels: MAX_INPUT_PIXELS, failOn: 'error' })
+          .rotate()
+          .resize(BANNER_W, BANNER_H, { fit: 'cover', position: 'attention' })
+          .flatten({ background: '#ffffff' })
+          .webp({ quality: 82, effort: 4 })
+          .toBuffer(),
+      );
     } catch (error) {
       logger.warn({ err: error }, 'banner image could not be processed');
       throw new AppError('BAD_REQUEST', 'This file is not a supported image (use JPG, PNG or WebP)', { reason: 'image_invalid' });

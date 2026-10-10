@@ -1,6 +1,6 @@
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
-import { catalogPhoto } from './admin-products.service';
+import { catalogPhoto, oneImageAtATime } from './admin-products.service';
 
 describe('catalogue photo cleanup', () => {
   it('light-box photo → white square with the product centred and filling it', async () => {
@@ -34,6 +34,24 @@ describe('catalogue photo cleanup', () => {
     expect(Math.abs(r - 0xe8)).toBeLessThan(8);
     expect(Math.abs(g - 0xe2)).toBeLessThan(8);
     expect(Math.abs(b - 0xd8)).toBeLessThan(8);
+  });
+
+  it('processes one picture at a time; a bad picture does not block the next', async () => {
+    let running = 0;
+    let most = 0;
+    const work = (fail: boolean) => () =>
+      new Promise<string>((resolve, reject) => {
+        running++;
+        most = Math.max(most, running);
+        setTimeout(() => {
+          running--;
+          if (fail) reject(new Error('bad picture'));
+          else resolve('ok');
+        }, 5);
+      });
+    const results = await Promise.allSettled([oneImageAtATime(work(false)), oneImageAtATime(work(true)), oneImageAtATime(work(false))]);
+    expect(most).toBe(1);
+    expect(results.map((r) => r.status)).toEqual(['fulfilled', 'rejected', 'fulfilled']);
   });
 
   it('rejects files that are not images', async () => {

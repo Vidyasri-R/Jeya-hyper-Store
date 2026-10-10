@@ -9,19 +9,21 @@ import { appConfigService } from '../app-config/app-config.service';
 import { catalogCache } from '../catalog/catalog.cache';
 import { withPlaceholders } from '../catalog/catalog.service';
 import { automaticOffers, automaticPopular, DEFAULT_HOME_LISTS, HOME_LISTS_KEY, homeListsSchema } from '../catalog/home-lists';
-import { adminProductColumns, catalogPhoto, loadSharp } from './admin-products.service';
+import { adminProductColumns, catalogPhoto, loadSharp, oneImageAtATime } from './admin-products.service';
 
 /** Category pictures are real photos (not pack shots): square, cover-cropped, 480 px WebP. */
 const SIDE = 480;
 
-export async function categoryPhoto(input: Buffer): Promise<Buffer> {
-  const sharp = await loadSharp();
-  return sharp(input, { limitInputPixels: 40_000_000, failOn: 'error' })
-    .rotate()
-    .resize(SIDE, SIDE, { fit: 'cover', position: 'attention' })
-    .flatten({ background: '#ffffff' })
-    .webp({ quality: 80, effort: 4 })
-    .toBuffer();
+export function categoryPhoto(input: Buffer): Promise<Buffer> {
+  return oneImageAtATime(async () => {
+    const sharp = await loadSharp();
+    return sharp(input, { limitInputPixels: 40_000_000, failOn: 'error' })
+      .rotate()
+      .resize(SIDE, SIDE, { fit: 'cover', position: 'attention' })
+      .flatten({ background: '#ffffff' })
+      .webp({ quality: 80, effort: 4 })
+      .toBuffer();
+  });
 }
 
 export const adminCategoriesService = {

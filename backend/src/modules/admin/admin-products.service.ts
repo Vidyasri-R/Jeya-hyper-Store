@@ -14,6 +14,8 @@ import type { AdminLockable } from '../sync/catalog-sync.service';
 /** Product photos: 800 px on the long side, WebP — ~30–60 KB each, so 30k fit well inside R2's free 10 GB. */
 const MAX_SIDE = 800;
 const MAX_INPUT_PIXELS = 40_000_000;
+/** Background clean-up works on this size (the result is 800 px): 1200² needs about half the memory of 1600². */
+const WORK_SIDE = 1200;
 
 export const ADMIN_PRODUCT_FILTERS = ['all', 'no_image', 'with_image', 'inactive', 'recheck', 'choices', 'edited'] as const;
 export type AdminProductFilter = (typeof ADMIN_PRODUCT_FILTERS)[number];
@@ -62,6 +64,18 @@ function parseCursor(raw: string): { name: string; id: number } {
     // fall through
   }
   throw new AppError('BAD_REQUEST', 'Invalid pagination cursor', { reason: 'cursor_invalid' });
+}
+
+/**
+ * One picture at a time. Each one needs tens of MB while it is processed, and photo helpers upload
+ * in parallel: side by side they pushed the 512 MB server to ~460 MB (and glibc keeps freed memory
+ * reserved). Queued, an upload waits a second at most and memory stays flat.
+ */
+let imageQueue: Promise<unknown> = Promise.resolve();
+export function oneImageAtATime<T>(work: () => Promise<T>): Promise<T> {
+  const run = imageQueue.then(work, work);
+  imageQueue = run.catch(() => undefined);
+  return run;
 }
 
 /** sharp is loaded on first use, so its native library doesn't sit in the 512 MB server's memory otherwise. */
@@ -151,12 +165,15 @@ export async function asIsPhoto(input: Buffer): Promise<Buffer> {
  * pure white, empty borders trimmed, product centred on an 800 × 800 white square, WebP.
  * Phone photos taken in a light box (or cut out on the phone) come out like brand pack shots.
  */
-export async function catalogPhoto(input: Buffer, options: { clean?: boolean } = {}): Promise<Buffer> {
-  if (options.clean === false) return asIsPhoto(input);
+export function catalogPhoto(input: Buffer, options: { clean?: boolean } = {}): Promise<Buffer> {
+  return oneImageAtATime(() => (options.clean === false ? asIsPhoto(input) : cleanPhoto(input)));
+}
+
+async function cleanPhoto(input: Buffer): Promise<Buffer> {
   const sharp = await loadSharp();
   const base = await sharp(input, { limitInputPixels: MAX_INPUT_PIXELS, failOn: 'error' })
     .rotate() // honour the phone camera's EXIF orientation
-    .resize(1600, 1600, { fit: 'inside', withoutEnlargement: true })
+    .resize(WORK_SIDE, WORK_SIDE, { fit: 'inside', withoutEnlargement: true })
     .flatten({ background: '#ffffff' })
     .removeAlpha()
     .raw()
