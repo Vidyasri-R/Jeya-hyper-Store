@@ -183,11 +183,14 @@ export function readStockFile(text: string, departments: Set<string> | null): Pa
     let anyActive = false;
     for (const b of batches) {
       const at = parseDate(get(b, 'Transaction Date'));
-      if (at.getTime() >= latestAt.getTime()) {
+      const qty = num(get(b, 'Current Stock'));
+      // LIFO: prices come from the newest purchase. Same day (one invoice, two prices — the file
+      // has no time or usable batch number): the batch with more units on the shelf.
+      const sameDay = at.getTime() === latestAt.getTime();
+      if (at.getTime() > latestAt.getTime() || (sameDay && b !== latest && (Number.isFinite(qty) ? qty : 0) > (num(get(latest, 'Current Stock')) || 0))) {
         latest = b;
         latestAt = at;
       }
-      const qty = num(get(b, 'Current Stock'));
       if (Number.isFinite(qty)) stock += qty;
       const bc = get(b, 'Barcode Value');
       if (/^\d{4,20}$/.test(bc)) barcodes.add(bc);

@@ -45,6 +45,24 @@ describe('stock file reader', () => {
     expect(f.items.find((i) => i.itemCode === '503')?.costPrice).toBeNull(); // no cost in the file
   });
 
+  it('LIFO: newest purchase sets the price wherever it is in the file; same day → the batch with more on the shelf', () => {
+    const t = (rows: string[]) => readStockFile([HEADER, ...rows].join('\r\n'), null).items[0]!;
+    const base = { DEPT: 'SUPER MARKET', TYPE: 'BISCUITS', 'Item Code': '701', 'Item Name': 'OREO 120G', 'Sales Tax %': '5', Status: 'Regular' };
+    // newest first in the file
+    expect(t([
+      row({ ...base, Selling: '35', MRP: '35', 'Current Stock': '2', 'Transaction Date': '09/20/26' }),
+      row({ ...base, Selling: '30', MRP: '30', 'Current Stock': '40', 'Transaction Date': '06/01/26' }),
+    ])).toMatchObject({ sellingPrice: '35.00', mrp: '35.00', stock: '42.000' });
+    // one invoice, two prices: the batch with more units wins, whichever row comes last
+    for (const order of [0, 1]) {
+      const rows = [
+        row({ ...base, Selling: '27', MRP: '27', 'Current Stock': '1', 'Transaction Date': '09/20/26' }),
+        row({ ...base, Selling: '30', MRP: '30', 'Current Stock': '6', 'Transaction Date': '09/20/26' }),
+      ];
+      expect(t(order ? rows.reverse() : rows)).toMatchObject({ sellingPrice: '30.00', mrp: '30.00' });
+    }
+  });
+
   it('keeps only the chosen departments (SUPER MARKET = SUPERMARKET)', () => {
     const f = readStockFile(file, new Set(['SUPERMARKET']));
     expect(f.items.map((i) => i.itemCode).sort()).toEqual(['501', '502', '503', '506']);
