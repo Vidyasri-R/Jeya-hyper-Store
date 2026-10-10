@@ -199,7 +199,8 @@ export const usageService = {
       }),
       buildMetric(limits, {
         id: 'render.memory', label: 'Memory (peak today)', unit: 'bytes', used: peakRss, limit: limits.render.memoryBytes, cumulative: false, ...span,
-        note: 'The server restarts if it runs out of memory (orders in progress are safe; the app retries).',
+        // "Peak today" keeps the day's highest reading (even from before a restart): show now too.
+        note: `Now ${formatBytes(process.memoryUsage().rss)}. The highest reading since midnight is kept until the next day. The server restarts if it runs out of memory (orders in progress are safe; the app retries).`,
       }),
     ];
     const overGb = (used: number | null, limit: number) => Math.max(0, ((used ?? 0) - limit) / GB);
