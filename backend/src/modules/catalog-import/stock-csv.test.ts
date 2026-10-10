@@ -116,4 +116,19 @@ describe('names, pack sizes and categories', () => {
     expect(classify('FACE CREAM', 'DAIRYDAY CONE', {}, 'Dairyday')).toBe('ice_cream');
     expect(classify('FACE CREAM', 'PONDS 50G', {}, 'Ponds')).toBe('skin');
   });
+
+  it('strong name words beat a misleading TYPE (masala mixes, flours) without breaking pet food or mixes', () => {
+    expect(classify('POWDER', 'AACHI LEMON RICE POWDER 50G')).toBe('masalas');
+    expect(classify('WHITE AVAL THICK', 'TATA ASAFOETIDA')).toBe('masalas');
+    expect(classify('RICE', 'AAKAA PUTTU FLOUR 500 GM')).toBe('atta');
+    expect(classify('RICE', 'DELTA FOODS RAGI MAAVU 400 GM')).toBe('atta');
+    expect(classify('FOOD PRODUCT', 'DOUBLE H RICE PALADA 300GM')).toBe('ready_mix');
+    expect(classify('GROCERY', 'VATHAL RICE 50 GM')).toBe('papad');
+    expect(classify('RICE', 'DAAWAT DELIGHT BASMATI RICE 1KG')).toBe('rice'); // real rice stays
+    expect(classify('PET FOODS', 'DROOLS CREAMY STAWBERRY FLOUR MRP90')).toBe('pet');
+    expect(classify('READY MIX', 'ANIL ADAI DOSA FLOUR 250G')).toBe('ready_mix');
+    expect(classify('HEALTH MIX', 'AASHIRVAAD SATHU MAAVU MIX 250G')).toBe('breakfast');
+    expect(classify('READY MIX', 'DEETYAS VATHAL KUZHAMBU 100G')).toBe('ready_mix');
+    expect(classify('HERBAL POWDER', 'NALANGU MAAVU 50G')).not.toBe('atta');
+  });
 });

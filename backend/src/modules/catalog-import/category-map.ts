@@ -145,6 +145,22 @@ const NAME_RULES: [string, RegExp][] = [
   ['home_needs', /BUCKET|\bMUG\b|BROOM|\bMOP\b|BATTERY|MATCH|FOIL|BOTTLE|CONTAINER|\bTIN\b|BOX\b/],
 ];
 
+/**
+ * Words in a name that are surer than GoFrugal's TYPE (checked first): "Aachi Lemon Rice Powder" is a
+ * masala mix even under TYPE POWDER, "Aakaa Puttu Flour" a flour even under TYPE RICE.
+ */
+const STRONG_NAME_RULES: [string, RegExp][] = [
+  ['masalas', /\bRICE (POWDER|MIX|PASTE)\b|PULIYO[DT]H?A?RAI|ASAFOETIDA|PERUNGAYAM/],
+  ['ready_mix', /\bPALADA\b|\bPAYASAM\b/],
+  // "Vathal Kuzhambu" is a curry mix, not vadam.
+  ['papad', /\bVATHAL\b(?!\s*KUZH)|\bVADAM\b/],
+  // Flours, not ready mixes (dosa / adai / idli batters and "… Mix" stay Ready mixes; Nalangu Maavu is a bath powder).
+  ['atta', /^(?!.*\b(DOSA|ADAI|IDLI|IDLY|MIX|NALANGU|INSTANT)\b).*(\bFLOUR\b|\bPUTTU\b|\bMAA?VU\b)/],
+];
+
+/** A TYPE that is surer than any name word (pet food "Strawberry Flour" stays pet food). */
+const TYPE_FIRST = new Set(['pet', 'baby', 'pooja']);
+
 /** Name rules match from a word start ("METHI" must not match inside "SOMETHING"). */
 const NAME_WORD_RULES: [string, RegExp][] = NAME_RULES.map(([key, re]) => [key, new RegExp(`\\b(?:${re.source})`)]);
 
@@ -164,6 +180,10 @@ export function classify(type: string, name: string, overrides: Record<string, s
 }
 
 function classifyByRules(t: string, n: string): CategoryKey {
+  const typeKey = VAGUE_TYPES.has(t) ? undefined : TYPE_RULES.find(([, re]) => re.test(t))?.[0];
+  if (!typeKey || !TYPE_FIRST.has(typeKey)) {
+    for (const [key, re] of STRONG_NAME_RULES) if (re.test(n)) return key;
+  }
   if (!VAGUE_TYPES.has(t)) {
     for (const [key, re] of TYPE_RULES) if (re.test(t)) return key === 'dryfish' ? 'other' : key;
   }
