@@ -40,6 +40,34 @@ class FakeRepo extends StaffRepository {
 
   Map<String, dynamic> detail;
   final calls = <Map<String, Object?>>[];
+  bool whatsappOn = false;
+
+  @override
+  Future<Map<String, dynamic>> whatsappStatus() async => {
+    'configured': true,
+    'loginOn': whatsappOn,
+    'template': 'login_code',
+    'phoneNumberId': '1320653831138892',
+    'problem': null,
+    'account': {
+      'number': {'displayPhoneNumber': '+1 555-359-2892', 'verifiedName': 'Jeya Hyper Store', 'nameStatus': 'APPROVED', 'qualityRating': 'GREEN', 'messagingLimit': null},
+      'templates': [
+        {'name': 'login_code', 'language': 'en', 'status': 'APPROVED', 'category': 'AUTHENTICATION'},
+      ],
+    },
+  };
+
+  @override
+  Future<Map<String, dynamic>> whatsappTest(String phone) async {
+    calls.add({'call': 'whatsappTest', 'phone': phone});
+    return {'sent': true, 'code': '482913', 'messageId': 'wamid.1'};
+  }
+
+  @override
+  Future<bool> setWhatsappLogin(bool on) async {
+    calls.add({'call': 'setWhatsappLogin', 'on': on});
+    return whatsappOn = on;
+  }
 
   @override
   Future<BoardSummary> summary() async => BoardSummary.fromJson({
@@ -640,6 +668,23 @@ void main() {
     await tester.pumpAndSettle();
     expect(repo.calls.last, {'call': 'decideNewCode', 'oldId': 3, 'newId': 4, 'same': false});
     expect(find.text('Nothing to check'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('WhatsApp login: admin sends a test code, then switches login codes on', (tester) async {
+    final repo = FakeRepo(orderAt('placed'));
+    await pumpApp(tester, repo, at: '/more/whatsapp', size: const Size(400, 1000));
+    expect(find.text('+1 555-359-2892'), findsOneWidget);
+    expect(find.text('login_code (en): approved'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), '98765 43210');
+    await tester.tap(find.text('Send'));
+    await tester.pumpAndSettle();
+    expect(repo.calls.last, {'call': 'whatsappTest', 'phone': '98765 43210'});
+    expect(find.textContaining('Sent code 482913'), findsOneWidget);
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+    expect(repo.calls.last, {'call': 'setWhatsappLogin', 'on': true});
+    expect(find.textContaining('On — customers get their 6-digit code'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

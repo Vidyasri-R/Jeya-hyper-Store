@@ -108,6 +108,7 @@ class MoreScreen extends ConsumerWidget {
                         ? Badge(label: Text('${alerts!.alertsOpen}'), backgroundColor: levelColors(alerts.alertsWorst).$1)
                         : null,
                   ),
+                  tile(Icons.chat_outlined, 'WhatsApp login', 'Customer login codes on WhatsApp: test and switch on', () => context.go('/more/whatsapp')),
                   tile(Icons.badge_outlined, 'Staff accounts', 'Add people, reset passwords, disable', () => context.go('/more/staff')),
                   tile(Icons.storefront_outlined, 'Store settings', 'Festival theme, delivery fees, payments, contact', () => context.go('/more/settings')),
                   tile(Icons.star_outline_rounded, 'Home: offers & popular', 'Pick the products for "Today\'s offers" and "Popular in your store"', () => context.go('/more/home-lists')),

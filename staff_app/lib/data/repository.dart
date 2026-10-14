@@ -188,6 +188,13 @@ class StaffRepository {
 
   // ── admin: daily stock file ──
   /// Last import, the import settings and the website categories.
+  Future<Map<String, dynamic>> whatsappStatus() => _api.get('/admin/whatsapp');
+
+  /// Sends the login_code template with a throwaway code; returns {sent, code, messageId}.
+  Future<Map<String, dynamic>> whatsappTest(String phone) => _api.post('/admin/whatsapp/test', body: {'phone': phone});
+
+  Future<bool> setWhatsappLogin(bool on) async => (await _api.put('/admin/whatsapp/login', body: {'on': on}))['loginOn'] == true;
+
   Future<Map<String, dynamic>> stockImportStatus() => _api.get('/admin/catalog/import');
 
   /// Move a POS group ([type]) or single items to a website category — now and on every import.

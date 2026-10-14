@@ -8,7 +8,7 @@ import type { User } from '../../db/schema';
 import { appConfigService, CONFIG_KEYS } from '../app-config/app-config.service';
 import { authRepository } from './auth.repository';
 import type { VerifyOtpInput } from './auth.schemas';
-import { otpSender } from './otp-senders';
+import { currentOtpSender } from './otp-senders';
 import { signAccessToken } from './tokens';
 
 const OTP_LENGTH = 6;
@@ -83,6 +83,7 @@ async function issueSession(
 
 export const authService = {
   async requestOtp(phone: string, ctx: RequestContext) {
+    const otpSender = await currentOtpSender();
     const response = {
       phone: maskPhone(phone),
       expiresInSec: env.OTP_TTL_SEC,

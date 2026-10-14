@@ -55,8 +55,12 @@ const envSchema = z.object({
   // ─── OTP ───
   /** Server-side secret mixed into OTP hashes so a DB leak doesn't expose codes. */
   OTP_PEPPER: z.string().min(32, 'must be at least 32 characters'),
-  /** `console` logs codes (dev only — refused for real numbers in production). WhatsApp comes next. */
-  OTP_PROVIDER: z.enum(['console']).default('console'),
+  /**
+   * `console` logs codes (dev only — refused for real numbers in production); `whatsapp` sends the
+   * login_code template. Fallback only — the live switch is the `auth.whatsapp_login` row in
+   * app_config (store app → More → WhatsApp login), so it can be flipped without a redeploy.
+   */
+  OTP_PROVIDER: z.enum(['console', 'whatsapp']).default('console'),
   OTP_TTL_SEC: z.coerce.number().int().min(60).max(900).default(300),
   OTP_RESEND_COOLDOWN_SEC: z.coerce.number().int().min(10).max(300).default(30),
   OTP_MAX_PER_PHONE_PER_HOUR: z.coerce.number().int().min(1).max(20).default(5),
@@ -80,6 +84,17 @@ const envSchema = z.object({
     .string()
     .regex(/^[0-9]{6}$/, 'must be 6 digits')
     .default('123456'),
+
+  // ─── WhatsApp Cloud API (login codes; off while the token or number id is missing) ───
+  /** Permanent system-user token (Meta Business Settings → System users → jhs-api). */
+  WHATSAPP_TOKEN: z.string().min(50).optional(),
+  /** WhatsApp Manager → Phone numbers → Phone number ID (not the phone number itself). */
+  WHATSAPP_PHONE_NUMBER_ID: z.string().regex(/^[0-9]{6,20}$/, 'must be the numeric Phone number ID').optional(),
+  /** WhatsApp Business Account ID — only used to show the template status in the store app. */
+  WHATSAPP_BUSINESS_ACCOUNT_ID: z.string().regex(/^[0-9]{6,20}$/, 'must be the numeric WhatsApp account ID').optional(),
+  WHATSAPP_OTP_TEMPLATE: z.string().regex(/^[a-z0-9_]{1,512}$/).default('login_code'),
+  WHATSAPP_OTP_LANGUAGE: z.string().min(2).max(10).default('en'),
+  WHATSAPP_GRAPH_VERSION: z.string().regex(/^v[0-9]+\.[0-9]+$/).default('v25.0'),
 
   // ─── POS / catalogue sync ───
   /** `mock` = built-in sample catalogue; `csv` = the store uploads GoFrugal's stock file in the admin app (no scheduled pull). */

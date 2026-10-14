@@ -5,6 +5,7 @@ import { appConfigRepository } from './app-config.repository';
 /** Known config keys — keep in sync with src/scripts/seed.ts. */
 export const CONFIG_KEYS = {
   DEMO_LOGIN_ENABLED: 'auth.demo_login_enabled',
+  WHATSAPP_LOGIN: 'auth.whatsapp_login',
   MIN_APP_VERSION: 'app.min_supported_version',
   STORE_INFO: 'store.info',
   MAINTENANCE: 'app.maintenance',

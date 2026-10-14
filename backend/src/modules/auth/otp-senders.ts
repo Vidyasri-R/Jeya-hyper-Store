@@ -2,14 +2,12 @@ import { randomUUID } from 'node:crypto';
 import { maskPhone } from '../../common/phone';
 import { env } from '../../config/env';
 import { logger } from '../../config/logger';
+import { appConfigService, CONFIG_KEYS } from '../app-config/app-config.service';
+import { sendLoginCode, whatsappConfig, type WhatsAppConfig } from '../whatsapp/whatsapp.client';
 
 export type OtpDelivery = { providerMessageId: string | null };
 
-/**
- * Pluggable OTP delivery. To add WhatsApp: implement this interface in a
- * WhatsAppOtpSender (Meta Cloud API authentication template), add 'whatsapp'
- * to OTP_PROVIDER in env.ts, and return it from createOtpSender().
- */
+/** Pluggable OTP delivery: WhatsApp (Meta Cloud API `login_code` template) or the dev console. */
 export interface OtpSender {
   readonly provider: string;
   readonly channel: 'whatsapp' | 'sms';
@@ -30,11 +28,32 @@ class ConsoleOtpSender implements OtpSender {
   }
 }
 
-function createOtpSender(): OtpSender {
-  switch (env.OTP_PROVIDER) {
-    case 'console':
-      return new ConsoleOtpSender();
+/** The `login_code` authentication template from the shop's WhatsApp Business number. */
+class WhatsAppOtpSender implements OtpSender {
+  readonly provider = 'whatsapp';
+  readonly channel = 'whatsapp' as const;
+  readonly deliversToPhone = true;
+
+  constructor(private readonly config: WhatsAppConfig) {}
+
+  async send(phone: string, code: string): Promise<OtpDelivery> {
+    return { providerMessageId: await sendLoginCode(this.config, phone, code) };
   }
 }
 
-export const otpSender: OtpSender = createOtpSender();
+const consoleSender = new ConsoleOtpSender();
+const whatsapp = whatsappConfig();
+const whatsappSender = whatsapp ? new WhatsAppOtpSender(whatsapp) : null;
+
+/** Admin switch (store app → More → WhatsApp login); OTP_PROVIDER is only the fallback. */
+export async function whatsappLoginOn(): Promise<boolean> {
+  return appConfigService.getBoolean(CONFIG_KEYS.WHATSAPP_LOGIN, env.OTP_PROVIDER === 'whatsapp');
+}
+
+/** WhatsApp when it's switched on and configured; otherwise the console sender. */
+export async function currentOtpSender(): Promise<OtpSender> {
+  if (!(await whatsappLoginOn())) return consoleSender;
+  if (whatsappSender) return whatsappSender;
+  logger.error('WhatsApp login is on but WHATSAPP_TOKEN / WHATSAPP_PHONE_NUMBER_ID are missing');
+  return consoleSender;
+}
