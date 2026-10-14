@@ -82,14 +82,21 @@ async function main() {
   const refreshed = await call('POST', '/v1/auth/refresh', { refreshToken });
   check('refresh rotates tokens', refreshed.status === 200 && refreshed.json.refreshToken !== refreshToken, refreshed.json);
 
-  const replay = await call('POST', '/v1/auth/refresh', { refreshToken });
-  check('old refresh token rejected after rotation (401)', replay.status === 401, replay.json);
+  // The token just replaced still works for 2 minutes (the app was closed before it saved the new one)…
+  const grace = await call('POST', '/v1/auth/refresh', { refreshToken });
+  check('replaced token honoured within the 2-minute grace', grace.status === 200 && Boolean(grace.json.refreshToken), grace.json);
+  // …which supersedes the token handed out in between.
+  const superseded = await call('POST', '/v1/auth/refresh', { refreshToken: refreshed.json.refreshToken as string });
+  check('superseded refresh token rejected (401)', superseded.status === 401, superseded.json);
+  const current = grace.json.refreshToken as string;
 
-  const logout = await call('POST', '/v1/auth/logout', { refreshToken: refreshed.json.refreshToken as string });
+  const logout = await call('POST', '/v1/auth/logout', { refreshToken: current });
   check('logout (204)', logout.status === 204, logout.json);
 
-  const afterLogout = await call('POST', '/v1/auth/refresh', { refreshToken: refreshed.json.refreshToken as string });
+  const afterLogout = await call('POST', '/v1/auth/refresh', { refreshToken: current });
   check('refresh after logout rejected (401)', afterLogout.status === 401, afterLogout.json);
+  const graceAfterLogout = await call('POST', '/v1/auth/refresh', { refreshToken });
+  check('grace token dead after logout (401)', graceAfterLogout.status === 401, graceAfterLogout.json);
 
   console.log(failures === 0 ? '\n🎉 Demo login flow is healthy.' : `\n❌ ${failures} check(s) failed.`);
   process.exitCode = failures === 0 ? 0 : 1;

@@ -62,7 +62,12 @@ async function placeCodOrder(customer: string, addressId: string, lines: { produ
     token: customer,
     body: { addressId, paymentMethod: 'cod', idempotencyKey: `smoke-${tag}-${createdOrders.length}`, expectedTotal: quote.json.quote?.totals?.total },
   });
-  if (placed.json.order?.id) createdOrders.push(placed.json.order.id);
+  if (placed.json.order?.id) {
+    createdOrders.push(placed.json.order.id);
+    // Silent: mark it announced (an hour ago) before the live server's alert check claims it, so the
+    // shop's phones don't ring for a test order. The check runs once a minute; this is milliseconds.
+    await db.update(orders).set({ alertedAt: new Date(Date.now() - 3600_000) }).where(eq(orders.id, placed.json.order.id));
+  }
   return { quote, placed };
 }
 
@@ -101,8 +106,10 @@ async function main() {
     const staffToken = changed.json.accessToken as string;
     const refreshed = await call('POST', '/v1/staff/auth/refresh', { body: { refreshToken: changed.json.refreshToken } });
     check('refresh rotates tokens', refreshed.status === 200 && refreshed.json.refreshToken !== changed.json.refreshToken, refreshed.json);
-    const replay = await call('POST', '/v1/staff/auth/refresh', { body: { refreshToken: changed.json.refreshToken } });
-    check('refresh token replay rejected', replay.status === 401, replay.json);
+    const grace = await call('POST', '/v1/staff/auth/refresh', { body: { refreshToken: changed.json.refreshToken } });
+    check('replaced refresh token honoured within the 2-minute grace', grace.status === 200, grace.json);
+    const superseded = await call('POST', '/v1/staff/auth/refresh', { body: { refreshToken: refreshed.json.refreshToken } });
+    check('superseded refresh token rejected', superseded.status === 401, superseded.json);
 
     const adminLogin = await call('POST', '/v1/staff/auth/login', { body: { username: `smoke-admin-${tag}`, password: adminPass } });
     check('admin login', adminLogin.status === 200 && adminLogin.json.staff?.role === 'admin', adminLogin.json);
@@ -127,7 +134,7 @@ async function main() {
     const listing = await call('GET', '/v1/products?inStock=true&limit=40');
     const items = (listing.json.items as Json[]) ?? [];
     const loose = items.find((item) => item.isLoose);
-    const packed = items.find((item) => !item.isLoose && Number(item.available) >= 3);
+    const packed = items.find((item) => !item.isLoose && item.stockStatus === 'in_stock' && Number(item.maxPurchasableQty) >= 3);
     const picks = [packed, loose].filter(Boolean) as Json[];
     check('found in-stock products to order', picks.length >= 1, listing.json);
     const lines = picks.map((item) => ({ productId: item.id as number, quantity: item.isLoose ? '1' : '2' }));

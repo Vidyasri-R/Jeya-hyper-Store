@@ -140,11 +140,6 @@ export const authRepository = {
   },
 
   /**
-   * Refresh-token rotation in one statement: swaps the hash only if the presented
-   * token is current, unrevoked and unexpired, and the user is still active.
-   * A replayed (already-rotated) token matches nothing.
-   */
-  /**
    * Refresh-token rotation in one statement. The token just replaced stays usable for a short
    * grace window, so an app closed before it saved the new token isn't signed out.
    */

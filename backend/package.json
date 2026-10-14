@@ -22,6 +22,7 @@
     "staff:create-admin": "tsx src/scripts/create-admin.ts",
     "staff:create-admin:prod": "node dist/scripts/create-admin.js",
     "smoke:staff": "tsx src/scripts/smoke-staff.ts",
+    "smoke:shop": "tsx src/scripts/smoke-shop.ts",
     "backup:run": "tsx src/scripts/backup-run.ts",
     "backup:verify": "tsx src/scripts/backup-verify.ts"
   },
