@@ -95,7 +95,8 @@ async function main(): Promise<void> {
     .orderBy(sql`${appConfig.key}`);
 
   console.log(`✔ seeded ${inserted.length} new key(s): ${inserted.map((row) => row.key).join(', ') || '(none)'}`);
-  for (const row of rows) console.log(`  ${row.isPublic ? 'public ' : 'private'}  ${row.key} = ${JSON.stringify(row.value)}`);
+  // Private rows can hold secrets (push.vapid's private key), and this runs in Render's build log: names only.
+  for (const row of rows) console.log(row.isPublic ? `  public   ${row.key} = ${JSON.stringify(row.value)}` : `  private  ${row.key}`);
 }
 
 // Deploy step (end of the Render build): always finish, so a stuck connection can't hold up a deploy.
