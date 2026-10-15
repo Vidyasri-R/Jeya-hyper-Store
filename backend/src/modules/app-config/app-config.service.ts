@@ -6,6 +6,7 @@ import { appConfigRepository } from './app-config.repository';
 export const CONFIG_KEYS = {
   DEMO_LOGIN_ENABLED: 'auth.demo_login_enabled',
   WHATSAPP_LOGIN: 'auth.whatsapp_login',
+  WHATSAPP_ORDER_UPDATES: 'whatsapp.order_updates',
   MIN_APP_VERSION: 'app.min_supported_version',
   STORE_INFO: 'store.info',
   MAINTENANCE: 'app.maintenance',

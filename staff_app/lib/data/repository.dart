@@ -191,7 +191,10 @@ class StaffRepository {
   Future<Map<String, dynamic>> whatsappStatus() => _api.get('/admin/whatsapp');
 
   /// Sends the login_code template with a throwaway code; returns {sent, code, messageId}.
-  Future<Map<String, dynamic>> whatsappTest(String phone) => _api.post('/admin/whatsapp/test', body: {'phone': phone});
+  Future<Map<String, dynamic>> whatsappTest(String phone, {String template = 'login_code'}) =>
+      _api.post('/admin/whatsapp/test', body: {'phone': phone, 'template': template});
+
+  Future<bool> setWhatsappOrderUpdates(bool on) async => (await _api.put('/admin/whatsapp/order-updates', body: {'on': on}))['orderUpdatesOn'] == true;
 
   Future<bool> setWhatsappLogin(bool on) async => (await _api.put('/admin/whatsapp/login', body: {'on': on}))['loginOn'] == true;
 

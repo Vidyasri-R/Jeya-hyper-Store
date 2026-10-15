@@ -1,6 +1,7 @@
 import { logger } from '../../config/logger';
 import { paymentsService } from '../payments/payments.service';
 import { orderAlerts } from '../staff/order-alerts.service';
+import { orderUpdates } from '../whatsapp/order-updates.service';
 import { ordersService } from './orders.service';
 
 const SWEEP_EVERY_MS = 60_000;
@@ -22,6 +23,8 @@ async function tick(): Promise<void> {
       }
       // Safety net for new-order alerts (normally sent right after the order change).
       await orderAlerts.check();
+      // Same for WhatsApp order updates (refunds and changes made by other instances / scripts).
+      await orderUpdates.check();
     } catch (error) {
       logger.error({ err: error }, 'reservation sweep failed');
     }

@@ -41,11 +41,26 @@ class FakeRepo extends StaffRepository {
   Map<String, dynamic> detail;
   final calls = <Map<String, Object?>>[];
   bool whatsappOn = false;
+  bool whatsappOrdersOn = false;
+
+  @override
+  Future<bool> setWhatsappOrderUpdates(bool on) async {
+    calls.add({'call': 'setWhatsappOrderUpdates', 'on': on});
+    return whatsappOrdersOn = on;
+  }
 
   @override
   Future<Map<String, dynamic>> whatsappStatus() async => {
     'configured': true,
     'loginOn': whatsappOn,
+    'orderUpdatesOn': whatsappOrdersOn,
+    'orderTemplates': [
+      for (final n in ['order_confirmed', 'order_out_for_delivery', 'order_delivered', 'order_cancelled', 'refund_processed'])
+        {'name': n, 'status': n == 'refund_processed' ? 'PENDING' : 'APPROVED', 'language': 'en'},
+    ],
+    'recent': [
+      {'kind': 'order_confirmed', 'status': 'sent', 'error': null, 'phone': '98765•••10', 'orderNumber': 'JHS-261016-1001'},
+    ],
     'template': 'login_code',
     'phoneNumberId': '1320653831138892',
     'problem': null,
@@ -58,8 +73,8 @@ class FakeRepo extends StaffRepository {
   };
 
   @override
-  Future<Map<String, dynamic>> whatsappTest(String phone) async {
-    calls.add({'call': 'whatsappTest', 'phone': phone});
+  Future<Map<String, dynamic>> whatsappTest(String phone, {String template = 'login_code'}) async {
+    calls.add({'call': 'whatsappTest', 'phone': phone, 'template': template});
     return {'sent': true, 'code': '482913', 'messageId': 'wamid.1'};
   }
 
@@ -679,12 +694,32 @@ void main() {
     await tester.enterText(find.byType(TextField), '98765 43210');
     await tester.tap(find.text('Send'));
     await tester.pumpAndSettle();
-    expect(repo.calls.last, {'call': 'whatsappTest', 'phone': '98765 43210'});
+    expect(repo.calls.last, {'call': 'whatsappTest', 'phone': '98765 43210', 'template': 'login_code'});
     expect(find.textContaining('Sent code 482913'), findsOneWidget);
-    await tester.tap(find.byType(Switch));
+    await tester.tap(find.byType(Switch).first);
     await tester.pumpAndSettle();
     expect(repo.calls.last, {'call': 'setWhatsappLogin', 'on': true});
     expect(find.textContaining('On — customers get their 6-digit code'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('WhatsApp order updates: templates listed, a sample sent, then switched on', (tester) async {
+    final repo = FakeRepo(orderAt('placed'));
+    await pumpApp(tester, repo, at: '/more/whatsapp', size: const Size(400, 1800));
+    expect(find.text('order_confirmed: approved'), findsOneWidget);
+    expect(find.text('refund_processed: pending'), findsOneWidget);
+    expect(find.textContaining('JHS-261016-1001'), findsOneWidget);
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Out for delivery').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '9876543210');
+    await tester.tap(find.text('Send'));
+    await tester.pumpAndSettle();
+    expect(repo.calls.last, {'call': 'whatsappTest', 'phone': '9876543210', 'template': 'order_out_for_delivery'});
+    await tester.tap(find.byType(Switch).last);
+    await tester.pumpAndSettle();
+    expect(repo.calls.last, {'call': 'setWhatsappOrderUpdates', 'on': true});
     expect(tester.takeException(), isNull);
   });
 }

@@ -20,7 +20,7 @@ import { adminSettingsService } from './admin-settings.service';
 import { adminStaffService } from './admin-staff.service';
 import { EXPENSE_CATEGORIES, financeService } from './finance.service';
 import { perksService } from '../perks/perks.service';
-import { whatsappAdminService } from '../whatsapp/whatsapp-admin.service';
+import { TEST_TEMPLATES, whatsappAdminService } from '../whatsapp/whatsapp-admin.service';
 import { normalizeIndianMobile } from '../../common/phone';
 
 /** Back office for the Jeya Staff app — staff/admin accounts only (customer tokens are rejected). */
@@ -75,6 +75,7 @@ const testPhone = z.object({
     .trim()
     .max(20)
     .transform((value, ctx) => normalizeIndianMobile(value) ?? (ctx.addIssue({ code: 'custom', message: 'Enter a valid 10-digit Indian mobile number' }), z.NEVER)),
+  template: z.enum(TEST_TEMPLATES).default('login_code'),
 }).strict();
 
 adminRouter.get('/whatsapp', async (_req, res) => {
@@ -83,8 +84,13 @@ adminRouter.get('/whatsapp', async (_req, res) => {
 
 /** Sends the login_code template with a throwaway code, to check the set-up end to end. */
 adminRouter.post('/whatsapp/test', async (req, res) => {
-  const { phone } = parseBody(testPhone, req);
-  res.json(await whatsappAdminService.sendTest(phone));
+  const { phone, template } = parseBody(testPhone, req);
+  res.json(await whatsappAdminService.sendTest(phone, template));
+});
+
+adminRouter.put('/whatsapp/order-updates', async (req, res) => {
+  const { on } = parseBody(z.object({ on: z.boolean() }).strict(), req);
+  res.json(await whatsappAdminService.setOrderUpdates(on));
 });
 
 adminRouter.put('/whatsapp/login', async (req, res) => {

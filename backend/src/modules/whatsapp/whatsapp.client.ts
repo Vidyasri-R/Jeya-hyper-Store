@@ -149,3 +149,80 @@ export async function accountStatus(config: WhatsAppConfig): Promise<{ number: W
       .map((t) => ({ name: t.name, language: t.language, status: t.status, category: t.category ?? null })),
   };
 }
+
+/* ── any approved template (order updates, later offers) ── */
+
+export type TemplateShape = {
+  name: string;
+  language: string;
+  status: string;
+  category: string | null;
+  /** How many {{n}} the body has. */
+  bodyVars: number;
+  /** Index of a "Visit website" button whose URL ends in {{1}}, if any. */
+  urlButtonIndex: number | null;
+};
+
+type GraphTemplate = {
+  name: string;
+  language: string;
+  status: string;
+  category?: string;
+  components?: { type: string; text?: string; buttons?: { type: string; url?: string }[] }[];
+};
+
+/** Reads a template's layout from Meta so the message always matches what was approved. */
+export function shapeOf(t: GraphTemplate): TemplateShape {
+  const body = t.components?.find((c) => c.type === 'BODY')?.text ?? '';
+  const vars = new Set([...body.matchAll(/\{\{\s*(\d+)\s*\}\}/g)].map((m) => m[1]));
+  const buttons = t.components?.find((c) => c.type === 'BUTTONS')?.buttons ?? [];
+  const url = buttons.findIndex((b) => b.type === 'URL' && /\{\{\s*1\s*\}\}/.test(b.url ?? ''));
+  return { name: t.name, language: t.language, status: t.status, category: t.category ?? null, bodyVars: vars.size, urlButtonIndex: url >= 0 ? url : null };
+}
+
+const SHAPES_TTL_MS = 10 * 60_000;
+let shapes: { at: number; list: TemplateShape[] } | null = null;
+
+/** Every template on the WhatsApp account (cached 10 minutes). */
+export async function templateShapes(config: WhatsAppConfig, fresh = false): Promise<TemplateShape[]> {
+  if (!config.businessAccountId) return [];
+  if (!fresh && shapes && Date.now() - shapes.at < SHAPES_TTL_MS) return shapes.list;
+  const result = await graph<{ data?: GraphTemplate[] }>(
+    config,
+    `${config.businessAccountId}/message_templates?fields=name,language,status,category,components&limit=100`,
+  );
+  shapes = { at: Date.now(), list: (result.data ?? []).map(shapeOf) };
+  return shapes.list;
+}
+
+/** The request body for a template: the body values in order, and the button's URL ending. */
+export function templateMessage(shape: TemplateShape, phone: string, body: string[], urlSuffix?: string) {
+  if (body.length < shape.bodyVars) {
+    throw new WhatsAppError(`${shape.name} needs ${shape.bodyVars} values, got ${body.length}`, 132000, `The ${shape.name} template has more {{ }} values than the app fills in.`);
+  }
+  const components: unknown[] = [];
+  if (shape.bodyVars > 0) components.push({ type: 'body', parameters: body.slice(0, shape.bodyVars).map((text) => ({ type: 'text', text })) });
+  if (shape.urlButtonIndex !== null && urlSuffix) {
+    components.push({ type: 'button', sub_type: 'url', index: String(shape.urlButtonIndex), parameters: [{ type: 'text', text: urlSuffix }] });
+  }
+  return {
+    messaging_product: 'whatsapp',
+    recipient_type: 'individual',
+    to: phone,
+    type: 'template',
+    template: { name: shape.name, language: { code: shape.language }, ...(components.length ? { components } : {}) },
+  };
+}
+
+/** Sends an approved template by name; returns Meta's message id. */
+export async function sendTemplate(config: WhatsAppConfig, name: string, phone: string, body: string[], urlSuffix?: string): Promise<string | null> {
+  const list = await templateShapes(config);
+  const candidates = list.filter((t) => t.name === name && t.status === 'APPROVED');
+  const shape = candidates.find((t) => t.language === 'en') ?? candidates.find((t) => t.language.startsWith('en')) ?? candidates[0];
+  if (!shape) throw new WhatsAppError(`template ${name} not approved`, 132001, `The ${name} template isn’t approved yet — check WhatsApp Manager → Message templates.`);
+  const result = await graph<{ messages?: { id?: string }[] }>(config, `${config.phoneNumberId}/messages`, {
+    method: 'POST',
+    body: templateMessage(shape, phone, body, urlSuffix),
+  });
+  return result.messages?.[0]?.id ?? null;
+}

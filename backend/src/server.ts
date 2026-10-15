@@ -6,6 +6,7 @@ import { closeDb } from './db/client';
 import { traffic } from './infra/traffic';
 import { reservationSweeper } from './modules/orders/reservation.sweeper';
 import { orderAlerts } from './modules/staff/order-alerts.service';
+import { orderUpdates } from './modules/whatsapp/order-updates.service';
 import { syncScheduler } from './modules/sync/sync.scheduler';
 import { usageScheduler } from './modules/usage/usage.scheduler';
 
@@ -20,6 +21,7 @@ const server = createApp().listen(env.PORT, () => {
   syncScheduler.start();
   reservationSweeper.start();
   orderAlerts.start();
+  orderUpdates.start();
   // Only the deployed server meters Render/Supabase usage — a laptop running `npm run dev`
   // against the same database must not add its traffic to the production bill estimate.
   if (isProduction) usageScheduler.start();

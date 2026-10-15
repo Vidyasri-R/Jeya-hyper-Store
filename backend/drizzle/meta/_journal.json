@@ -141,6 +141,13 @@
       "when": 1791608060828,
       "tag": "0019_product_links",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792092209099,
+      "tag": "0020_whatsapp_messages",
+      "breakpoints": true
     }
   ]
 }

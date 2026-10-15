@@ -876,6 +876,28 @@ export const usageDaily = pgTable('usage_daily', {
     .$onUpdate(() => new Date()),
 });
 
+/**
+ * Every WhatsApp message the shop sends (order updates now, offers later). [refKey] is unique per
+ * event ("hist:<order history id>", "refund:<id>"), so an event is sent at most once.
+ */
+export const whatsappMessages = pgTable(
+  'whatsapp_messages',
+  {
+    id: bigint({ mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+    refKey: varchar({ length: 80 }).notNull(),
+    kind: varchar({ length: 40 }).notNull(),
+    orderId: uuid().references(() => orders.id, { onDelete: 'cascade' }),
+    phone: varchar({ length: 15 }).notNull(),
+    template: varchar({ length: 64 }).notNull(),
+    /** sending → sent | failed | skipped */
+    status: varchar({ length: 16 }).notNull().default('sending'),
+    providerMessageId: varchar({ length: 128 }),
+    error: text(),
+    createdAt: tstz().notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('whatsapp_messages_ref_uq').on(t.refKey), index('whatsapp_messages_created_idx').on(t.createdAt)],
+);
+
 /** Budget / health alerts for admins. At most one open (unresolved) alert per metric. */
 export const adminAlerts = pgTable(
   'admin_alerts',
