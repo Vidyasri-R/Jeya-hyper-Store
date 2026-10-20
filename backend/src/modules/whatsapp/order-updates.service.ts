@@ -17,8 +17,11 @@ import { sendTemplate, whatsappConfig, WhatsAppError } from './whatsapp.client';
 
 export const ORDER_TEMPLATES = ['order_confirmed', 'order_out_for_delivery', 'order_delivered', 'order_cancelled', 'refund_processed'] as const;
 
-/** Events older than this (or from before the switch went on) are never sent. */
-const LOOKBACK = '2 hours';
+/**
+ * Events older than this (or from before the switch went on) are never sent: an "out for delivery"
+ * an hour late only confuses. The sweep runs every minute, so this only drops events after downtime.
+ */
+const LOOKBACK = '20 minutes';
 
 type Setting = { on: boolean; since: string | null };
 
@@ -33,8 +36,11 @@ const rupees = (amount: string | number) => {
 };
 
 /** "today, 16 Oct" / "tomorrow, 17 Oct" / "Sat, 18 Oct" (India time). */
-export function deliverBy(at: Date | null, now = new Date()): string {
-  if (!at) return 'soon';
+export function deliverBy(value: Date | string | null, now = new Date()): string {
+  if (!value) return 'soon';
+  // Raw SQL rows bring timestamps back as text.
+  const at = new Date(value);
+  if (Number.isNaN(at.getTime())) return 'soon';
   const ist = (d: Date) => new Date(d.getTime() + 5.5 * 3600_000);
   const day = (d: Date) => ist(d).toISOString().slice(0, 10);
   const label = ist(at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' });
@@ -58,7 +64,7 @@ type HistoryEvent = {
   final_amount: string | null;
   payment_method: string;
   payment_status: string;
-  promised_by: Date | null;
+  promised_by: Date | string | null;
   cancelled_reason: string | null;
   phone: string;
   name: string | null;
@@ -145,8 +151,13 @@ async function sweep(): Promise<void> {
      order by h.id
      limit 100`)) as unknown as { rows?: HistoryEvent[] } & HistoryEvent[];
   for (const e of events.rows ?? events) {
-    const m = messageFor(e);
-    if (m) await deliver(m);
+    // One odd order must never hold up the others.
+    try {
+      const m = messageFor(e);
+      if (m) await deliver(m);
+    } catch (error) {
+      logger.error({ err: error, historyId: e.history_id }, 'WhatsApp order update skipped');
+    }
   }
 
   const done = (await db.execute(sql`

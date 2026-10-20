@@ -208,6 +208,31 @@ export async function placeholderFor(categoryId: number | null): Promise<string 
   return categoryImage(await categoryIndex(), categoryId);
 }
 
+/** The main (top-level) category of a category id. */
+function rootOf(index: CategoryIndex, categoryId: number | null): CategoryNode | null {
+  let id = categoryId;
+  for (let depth = 0; id !== null && depth < 10; depth++) {
+    const parent = index.parentOf.get(id) ?? null;
+    if (parent === null || !index.byId.has(parent)) return index.byId.get(id) ?? null;
+    id = parent;
+  }
+  return null;
+}
+
+/** Search results per main category, most first: [{slug, name, count}]. */
+async function searchFacets(search: ReturnType<typeof parseSearch>, inStockOnly: boolean) {
+  const [counts, index] = await Promise.all([catalogRepository.searchCategoryCounts({ search, inStockOnly }), categoryIndex()]);
+  const byRoot = new Map<number, { slug: string; name: string; count: number }>();
+  for (const row of counts) {
+    const root = rootOf(index, row.categoryId);
+    if (!root) continue;
+    const entry = byRoot.get(root.id) ?? { slug: root.slug, name: root.name, count: 0 };
+    entry.count += row.count;
+    byRoot.set(root.id, entry);
+  }
+  return [...byRoot.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+}
+
 async function resolveCategoryIds(slug: string | undefined): Promise<number[] | null> {
   if (!slug) return null;
   const node = (await categoryIndex()).bySlug.get(slug);
@@ -249,6 +274,8 @@ export const catalogService = {
         items: await presentProducts(rows.slice(0, query.limit), { collapse: true }),
         nextCursor: hasMore ? encodeCursor({ v: offset + query.limit, id: 0 }) : null,
         sort,
+        // First page only: which main categories this search has results in (the filter chips).
+        ...(offset === 0 ? { categories: await searchFacets(search, query.inStock) } : {}),
       };
     }
 

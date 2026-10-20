@@ -8,6 +8,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../core/phone_input.dart';
 import '../../core/api/api_client.dart';
 import '../../core/money.dart';
 import '../../core/theme.dart';
@@ -367,10 +368,7 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
                     _phone,
                     'Mobile number',
                     keyboard: TextInputType.phone,
-                    formatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(10),
-                    ],
+                    formatters: const [IndianMobileFormatter()],
                     validator: (v) => RegExp(r'^[6-9]\d{9}$').hasMatch(v ?? '')
                         ? null
                         : 'Enter a valid 10-digit mobile',

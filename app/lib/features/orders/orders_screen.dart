@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,11 +14,39 @@ import '../../widgets/common.dart';
 
 final ordersListProvider = FutureProvider.autoDispose<List<Order>>((ref) async => (await ref.watch(repositoryProvider).orders()).orders);
 
-class OrdersScreen extends ConsumerWidget {
+class OrdersScreen extends ConsumerStatefulWidget {
   const OrdersScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<OrdersScreen> createState() => _OrdersScreenState();
+}
+
+class _OrdersScreenState extends ConsumerState<OrdersScreen> {
+  Timer? _timer;
+  late final AppLifecycleListener _lifecycle;
+
+  @override
+  void initState() {
+    super.initState();
+    // Open orders change in the store (packing, out for delivery): keep the list current.
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) => _refreshIfOpen());
+    _lifecycle = AppLifecycleListener(onResume: _refreshIfOpen);
+  }
+
+  void _refreshIfOpen() {
+    final list = ref.read(ordersListProvider).valueOrNull;
+    if (list == null || list.any((o) => !o.isClosed)) ref.invalidate(ordersListProvider);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _lifecycle.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final orders = ref.watch(ordersListProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('My Orders')),
@@ -90,7 +120,9 @@ class OrderCard extends StatelessWidget {
               ]),
             ),
             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Text(formatRupees(order.totalAmount), style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+              if (order.totalChanged)
+                Text(formatRupees(order.totalAmount), style: text.labelSmall?.copyWith(decoration: TextDecoration.lineThrough, color: AppColors.inkFaint)),
+              Text(formatRupees(order.payableAmount), style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
               const Icon(Icons.chevron_right_rounded, color: AppColors.inkFaint),
             ]),
           ]),

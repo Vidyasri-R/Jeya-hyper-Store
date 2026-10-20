@@ -200,6 +200,26 @@ export const catalogRepository = {
       .limit(params.limit + 1) as Promise<ProductCardRow[]>;
   },
 
+  /** How many products (sizes counted once) each category has for this search — the result filters. */
+  async searchCategoryCounts(params: { search: ParsedSearch; inStockOnly: boolean }): Promise<{ categoryId: number | null; count: number }[]> {
+    const { search } = params;
+    const tsq = search.tsquery ? sql`to_tsquery('simple', ${search.tsquery})` : null;
+    const fuzzy = search.text.length >= MIN_FUZZY_LENGTH;
+    const shortFuzzy = search.text.length <= SHORT_FUZZY_LENGTH;
+    const matchers: SQL[] = fuzzy
+      ? [shortFuzzy ? sql`(${search.text} <% ${products.name} AND word_similarity(${search.text}, ${products.name}) >= ${SHORT_FUZZY_MIN})` : sql`${search.text} <% ${products.name}`]
+      : [];
+    if (tsq) matchers.push(sql`${products.searchVector} @@ ${tsq}`);
+    if (search.code) matchers.push(sql`${products.barcode} = ${search.code}`, sql`upper(${products.itemCode}) = ${search.code}`);
+    if (matchers.length === 0) return [];
+    const rows = await db
+      .select({ categoryId: products.categoryId, count: sql<number>`count(distinct coalesce(${products.variantGroup}, ${products.id}::text))::int` })
+      .from(products)
+      .where(and(...(fuzzy ? [FUZZY_THRESHOLD_GATE] : []), ...baseFilters(null, params.inStockOnly), sql`(${sql.join(matchers, sql` OR `)})`))
+      .groupBy(products.categoryId);
+    return rows.map((r) => ({ categoryId: r.categoryId, count: Number(r.count) }));
+  },
+
   /** Every size on sale in these groups (for the size picker). */
   async variantsOf(groups: string[]): Promise<ProductCardRow[]> {
     if (groups.length === 0) return [];

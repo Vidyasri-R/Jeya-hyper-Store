@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/phone_input.dart';
 import '../../core/api/api_client.dart';
 import '../../core/theme.dart';
 import '../../state/providers.dart';
@@ -70,7 +70,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               controller: _phone,
               autofocus: true,
               keyboardType: TextInputType.phone,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)],
+              autofillHints: const [AutofillHints.telephoneNumberNational],
+              inputFormatters: const [IndianMobileFormatter()],
               style: text.titleMedium?.copyWith(letterSpacing: 1.2),
               onChanged: (_) => setState(() => _error = null),
               onSubmitted: (_) => _continue(),

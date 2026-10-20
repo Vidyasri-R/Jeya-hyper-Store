@@ -184,11 +184,26 @@ class Category {
 }
 
 class ProductPage {
-  ProductPage({required this.items, this.nextCursor});
+  ProductPage({required this.items, this.nextCursor, this.categories});
   final List<Product> items;
   final String? nextCursor;
-  factory ProductPage.fromJson(Map<String, dynamic> j) =>
-      ProductPage(items: _list(j['items']).map(Product.fromJson).toList(), nextCursor: _opt<String>(j['nextCursor']));
+
+  /// Searches only (first page): the main categories with results, most first — the filter chips.
+  final List<SearchFacet>? categories;
+  factory ProductPage.fromJson(Map<String, dynamic> j) => ProductPage(
+        items: _list(j['items']).map(Product.fromJson).toList(),
+        nextCursor: _opt<String>(j['nextCursor']),
+        categories: j['categories'] is List ? _list(j['categories']).map(SearchFacet.fromJson).toList() : null,
+      );
+}
+
+/// "Staples (12)" under search results.
+class SearchFacet {
+  const SearchFacet({required this.slug, required this.name, required this.count});
+  final String slug;
+  final String name;
+  final int count;
+  factory SearchFacet.fromJson(Map<String, dynamic> j) => SearchFacet(slug: _str(j['slug']), name: _str(j['name']), count: _opt<int>(j['count']) ?? 0);
 }
 
 /// "Flavour": Vanilla, Chocolate… — set by the store for items sold in several flavours/colours.
@@ -431,7 +446,17 @@ class Quote {
 }
 
 class OrderItem {
-  OrderItem({required this.productId, required this.name, required this.unit, required this.quantity, required this.unitPrice, required this.totalPrice, required this.mrp});
+  OrderItem({
+    required this.productId,
+    required this.name,
+    required this.unit,
+    required this.quantity,
+    required this.unitPrice,
+    required this.totalPrice,
+    required this.mrp,
+    this.packedQuantity,
+    this.choices,
+  });
   final int productId;
   final String name;
   final String unit;
@@ -439,6 +464,18 @@ class OrderItem {
   final String unitPrice;
   final String totalPrice;
   final String mrp;
+
+  /// What the store actually packed (null until packed). Less than [quantity] = item short.
+  final String? packedQuantity;
+  final Choices? choices;
+
+  int get orderedMilli => toMilli(quantity);
+  int? get packedMilli => packedQuantity == null ? null : toMilli(packedQuantity!);
+  bool get isShort => packedMilli != null && packedMilli! < orderedMilli;
+
+  /// Line total for what was packed (the ordered total until packing).
+  int get chargedPaise => packedMilli == null ? toPaise(totalPrice) : (toPaise(unitPrice) * packedMilli! / 1000).round();
+
   factory OrderItem.fromJson(Map<String, dynamic> j) => OrderItem(
         productId: j['productId'] as int,
         name: _str(j['name']),
@@ -447,6 +484,8 @@ class OrderItem {
         unitPrice: _str(j['unitPrice'], '0'),
         totalPrice: _str(j['totalPrice'], '0'),
         mrp: _str(j['mrp'], '0'),
+        packedQuantity: _opt<String>(j['packedQuantity']),
+        choices: _choices(j['choices']),
       );
 }
 
@@ -469,6 +508,7 @@ class Order {
     required this.subtotal,
     required this.deliveryFee,
     required this.totalAmount,
+    this.finalAmount,
     required this.address,
     required this.canCancel,
     required this.createdAt,
@@ -488,6 +528,9 @@ class Order {
   final String subtotal;
   final String deliveryFee;
   final String totalAmount;
+
+  /// After packing: the total for what was actually packed (items short → lower). Null before.
+  final String? finalAmount;
   final Map<String, dynamic> address;
   final bool canCancel;
   final DateTime createdAt;
@@ -501,11 +544,15 @@ class Order {
   final List<StatusEvent> history;
 
   bool get isCod => paymentMethod == 'cod';
+
+  /// What the customer pays / paid: the packed total once known.
+  String get payableAmount => finalAmount ?? totalAmount;
+  bool get totalChanged => finalAmount != null && toPaise(finalAmount!) != toPaise(totalAmount);
   bool get awaitingPayment => status == 'pending_payment';
   bool get isClosed => status == 'cancelled' || status == 'payment_failed' || status == 'delivered';
 
   String get statusLabel => switch (status) {
-        'pending_payment' => 'Awaiting payment',
+        'pending_payment' => 'Payment pending',
         'placed' => 'Ordered',
         'confirmed' => 'Confirmed',
         'packing' => 'Packing',
@@ -526,6 +573,7 @@ class Order {
         subtotal: _str(j['subtotal'], '0'),
         deliveryFee: _str(j['deliveryFee'], '0'),
         totalAmount: _str(j['totalAmount'], '0'),
+        finalAmount: _opt<String>(j['finalAmount']),
         address: (j['deliveryAddress'] as Map<String, dynamic>?) ?? const {},
         canCancel: j['canCancel'] == true,
         createdAt: DateTime.parse(_str(j['createdAt'])).toLocal(),

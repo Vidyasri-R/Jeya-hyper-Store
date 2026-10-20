@@ -1,5 +1,6 @@
 import '../core/api/api_client.dart';
 import '../core/api/token_store.dart';
+import '../core/money.dart';
 import 'models.dart';
 
 /// Typed access to the Jeya API (see backend/docs/*.md for contracts).
@@ -85,6 +86,13 @@ class Repository {
       (await api.put('/cart/items/$productId', body: {'quantity': qty, 'choices': ?choices}))['cart'] as Map<String, dynamic>);
   Future<Cart> fixCart() async => Cart.fromJson((await api.post('/cart/fix'))['cart'] as Map<String, dynamic>);
   Future<void> clearCart() async => api.delete('/cart');
+
+  /// Puts lines back into the cart (an unpaid order cancelled). The server keeps the larger quantity.
+  Future<Cart> mergeCart(List<OrderItem> items) async => Cart.fromJson((await api.post('/cart/merge', body: {
+        'items': [
+          for (final i in items) {'productId': i.productId, 'quantity': i.quantity, if (i.choices != null) 'choices': {for (final e in i.choices!.entries) e.key: milliToString(e.value)}},
+        ],
+      }))['cart'] as Map<String, dynamic>);
 
   // ── Addresses & delivery ──
   Future<List<Address>> addresses() async =>

@@ -96,8 +96,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       if (outcome is PaymentSucceeded) {
         final status = await repo.confirmPayment(order.id, razorpayOrderId: outcome.orderId, paymentId: outcome.paymentId, signature: outcome.signature);
         if (!mounted) return;
-        if (status == 'processing') await _waitForPayment(order.id);
-        if (mounted) context.go('/order-success/${order.id}');
+        final paid = status == 'processing' ? await _waitForPayment(order.id) : true;
+        if (!mounted) return;
+        // Never show "Order placed" for money that hasn't arrived: the order page says what's happening.
+        context.go(paid ? '/order-success/${order.id}' : '/order/${order.id}');
         return;
       }
       final failed = outcome as PaymentFailed;
@@ -112,29 +114,45 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               const SizedBox(height: 10),
               Text(failed.message, textAlign: TextAlign.center, style: Theme.of(c).textTheme.titleMedium),
               const SizedBox(height: 6),
-              Text('Your items are held for a few minutes. You can try paying again.', textAlign: TextAlign.center, style: Theme.of(c).textTheme.bodySmall),
+              Text('Your order is not confirmed until you pay. Your items are held for a few minutes.', textAlign: TextAlign.center, style: Theme.of(c).textTheme.bodySmall),
               const SizedBox(height: 18),
               FilledButton(clipBehavior: Clip.antiAlias, onPressed: () => Navigator.pop(c, true), child: const Text('Try again')),
               const SizedBox(height: 8),
-              OutlinedButton(onPressed: () => Navigator.pop(c, false), child: const Text('View order')),
+              OutlinedButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel order, keep my cart')),
             ]),
           ),
         ),
       );
       if (retry != true) {
-        if (mounted) context.go('/order/${order.id}');
+        // Not paying now: cancel the unpaid order and put the items back in the cart.
+        try {
+          await repo.cancelOrder(order.id, reason: 'Payment not completed');
+          await repo.mergeCart(order.items.isNotEmpty ? order.items : (await repo.order(order.id)).items);
+        } on ApiException {
+          // Already cancelled / expired, or the cart couldn't be refilled: the order page explains.
+          if (mounted) context.go('/order/${order.id}');
+          return;
+        } finally {
+          ref.invalidate(cartProvider);
+        }
+        if (!mounted) return;
+        _snack('Order cancelled — your items are back in the cart');
+        context.go('/cart');
         return;
       }
     }
   }
 
-  Future<void> _waitForPayment(String orderId) async {
+  /// Polls ~60 s for a payment Razorpay reported as processing. True once it's actually paid.
+  Future<bool> _waitForPayment(String orderId) async {
     final repo = ref.read(repositoryProvider);
     for (var i = 0; i < 20 && mounted; i++) {
       await Future<void>.delayed(const Duration(seconds: 3));
       final o = await repo.order(orderId);
-      if (o.paymentStatus == 'paid' || o.isClosed) return;
+      if (o.paymentStatus == 'paid') return true;
+      if (o.isClosed) return false;
     }
+    return false;
   }
 
   @override

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +13,7 @@ import '../../core/theme.dart';
 import '../../data/models.dart';
 import '../../state/providers.dart';
 import '../../widgets/common.dart';
+import '../checkout/razorpay_payment.dart';
 import 'orders_screen.dart';
 
 final orderDetailProvider = FutureProvider.autoDispose.family<Order, String>(
@@ -25,12 +28,45 @@ const _milestones = [
   ('Delivered', ['delivered']),
 ];
 
-class OrderDetailScreen extends ConsumerWidget {
+/// How often an open order page checks for the store's changes (status, packed quantities).
+const _liveRefresh = Duration(seconds: 20);
+
+class OrderDetailScreen extends ConsumerStatefulWidget {
   const OrderDetailScreen({super.key, required this.orderId});
   final String orderId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<OrderDetailScreen> createState() => _OrderDetailScreenState();
+}
+
+class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
+  Timer? _timer;
+  late final AppLifecycleListener _lifecycle;
+
+  String get orderId => widget.orderId;
+
+  @override
+  void initState() {
+    super.initState();
+    // Staff move the order along in the store app: follow it live while the page is open.
+    _timer = Timer.periodic(_liveRefresh, (_) => _refreshIfOpen());
+    _lifecycle = AppLifecycleListener(onResume: _refreshIfOpen);
+  }
+
+  void _refreshIfOpen() {
+    final current = ref.read(orderDetailProvider(orderId)).valueOrNull;
+    if (current == null || !current.isClosed) ref.invalidate(orderDetailProvider(orderId));
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _lifecycle.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final order = ref.watch(orderDetailProvider(orderId));
     // Reached via the success screen (context.go) there is nothing to pop: Android back
     // would close the app, so send the user to the orders list instead.
@@ -70,9 +106,54 @@ class OrderDetailScreen extends ConsumerWidget {
   }
 }
 
-class _Body extends ConsumerWidget {
+class _Body extends ConsumerStatefulWidget {
   const _Body({required this.order});
   final Order order;
+
+  @override
+  ConsumerState<_Body> createState() => _BodyState();
+}
+
+class _BodyState extends ConsumerState<_Body> {
+  final _payment = RazorpayPayment();
+  bool _paying = false;
+
+  Order get order => widget.order;
+
+  @override
+  void dispose() {
+    _payment.dispose();
+    super.dispose();
+  }
+
+  void _snack(String message) => ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(message)));
+
+  /// Pay for an order still waiting for payment (the customer left the payment page).
+  Future<void> _payNow() async {
+    setState(() => _paying = true);
+    final repo = ref.read(repositoryProvider);
+    try {
+      final init = await repo.startPayment(order.id);
+      final auth = ref.read(authProvider);
+      final outcome = await _payment.open(init, email: auth is SignedIn ? auth.user.email : null);
+      if (!mounted) return;
+      if (outcome is PaymentSucceeded) {
+        await repo.confirmPayment(order.id, razorpayOrderId: outcome.orderId, paymentId: outcome.paymentId, signature: outcome.signature);
+        if (!mounted) return;
+        _snack('Payment received — thank you!');
+      } else {
+        _snack((outcome as PaymentFailed).message);
+      }
+    } on ApiException catch (e) {
+      if (mounted) _snack(e.message);
+    } finally {
+      if (mounted) setState(() => _paying = false);
+      ref.invalidate(orderDetailProvider(order.id));
+      ref.invalidate(ordersListProvider);
+    }
+  }
 
   Future<void> _cancel(BuildContext context, WidgetRef ref) async {
     final ok = await showDialog<bool>(
@@ -82,6 +163,8 @@ class _Body extends ConsumerWidget {
         content: Text(
           order.paymentStatus == 'paid'
               ? 'Your payment will be refunded to the original payment method.'
+              : order.awaitingPayment
+              ? 'Nothing has been paid. Your items go back to your cart.'
               : 'Your order will be cancelled.',
         ),
         actions: [
@@ -100,9 +183,23 @@ class _Body extends ConsumerWidget {
     );
     if (ok != true) return;
     try {
-      await ref.read(repositoryProvider).cancelOrder(order.id);
+      final repo = ref.read(repositoryProvider);
+      await repo.cancelOrder(order.id);
       ref.invalidate(orderDetailProvider(order.id));
       ref.invalidate(ordersListProvider);
+      // Unpaid: the customer only stepped away from payment — give them their cart back.
+      if (order.awaitingPayment) {
+        try {
+          await repo.mergeCart(order.items);
+        } on ApiException {
+          // Cart restore is a convenience; the cancel itself worked.
+        }
+        ref.invalidate(cartProvider);
+        if (context.mounted) {
+          _snack('Order cancelled — your items are back in the cart');
+          context.go('/cart');
+        }
+      }
     } on ApiException catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(
@@ -113,7 +210,7 @@ class _Body extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final (bg, fg) = statusColors(order.status);
     final a = order.address;
@@ -187,7 +284,7 @@ class _Body extends ConsumerWidget {
                   order.status == 'payment_failed')
                 _ClosedBanner(order: order)
               else if (order.awaitingPayment)
-                const _PendingPaymentBanner()
+                _PendingPaymentBanner(order: order, paying: _paying, onPay: _payNow)
               else
                 _Timeline(order: order),
             ],
@@ -211,18 +308,31 @@ class _Body extends ConsumerWidget {
                           children: [
                             Text(i.name, style: text.labelLarge),
                             Text(
-                              '${formatQty(toMilli(i.quantity), i.unit)} × ${formatRupees(i.unitPrice)}',
+                              '${formatQty(i.orderedMilli, i.unit)} × ${formatRupees(i.unitPrice)}',
                               style: text.labelSmall,
                             ),
+                            if (i.choices != null) Text(describeChoices(i.choices!, i.unit), style: text.labelSmall),
+                            if (i.isShort)
+                              Text(
+                                i.packedMilli == 0
+                                    ? 'Not available — not charged'
+                                    : 'Packed ${formatQty(i.packedMilli!, i.unit)} of ${formatQty(i.orderedMilli, i.unit)} — you pay only for what\u2019s packed',
+                                style: text.labelSmall?.copyWith(color: AppColors.offerRed, fontWeight: FontWeight.w700),
+                              ),
                           ],
                         ),
                       ),
-                      Text(
-                        formatRupees(i.totalPrice),
-                        style: text.labelLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
+                      Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                        if (i.isShort)
+                          Text(
+                            formatRupees(i.totalPrice),
+                            style: text.labelSmall?.copyWith(decoration: TextDecoration.lineThrough, color: AppColors.inkFaint),
+                          ),
+                        Text(
+                          formatPaise(i.chargedPaise),
+                          style: text.labelLarge?.copyWith(fontWeight: FontWeight.w700),
                         ),
-                      ),
+                      ]),
                     ],
                   ),
                 ),
@@ -244,22 +354,34 @@ class _Body extends ConsumerWidget {
                     : formatRupees(order.deliveryFee),
               ),
               const Divider(height: 18),
+              if (order.totalChanged) ...[
+                _Row('Order total', formatRupees(order.totalAmount)),
+                _Row('Items not available', '\u2212${formatPaise(toPaise(order.totalAmount) - toPaise(order.finalAmount!))}'),
+              ],
               _Row(
                 order.paymentStatus == 'paid' || order.status == 'delivered'
                     ? (order.isCod ? 'Paid on delivery' : 'Total paid')
-                    : (order.isCod ? 'To pay on delivery' : 'Total'),
-                formatRupees(order.totalAmount),
+                    : (order.isCod ? (order.totalChanged ? 'Final amount to pay on delivery' : 'To pay on delivery') : 'Total'),
+                formatRupees(order.isCod ? order.payableAmount : order.totalAmount),
                 bold: true,
               ),
+              if (order.totalChanged && !order.isCod && order.paymentStatus != 'pending')
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    '${formatPaise(toPaise(order.totalAmount) - toPaise(order.finalAmount!))} for items not available is refunded to your payment method.',
+                    style: text.labelSmall?.copyWith(color: AppColors.brand800),
+                  ),
+                ),
               const SizedBox(height: 4),
               Text(
                 order.isCod
                     ? 'Cash on delivery'
-                    : 'Paid online · ${order.paymentStatus == 'refunded'
+                    : 'Online payment · ${order.paymentStatus == 'refunded'
                           ? 'Refunded'
                           : order.paymentStatus == 'paid'
                           ? 'Payment received'
-                          : 'Awaiting payment'}',
+                          : 'Not paid yet'}',
                 style: text.labelSmall,
               ),
             ],
@@ -419,26 +541,43 @@ class _ClosedBanner extends StatelessWidget {
 }
 
 class _PendingPaymentBanner extends StatelessWidget {
-  const _PendingPaymentBanner();
+  const _PendingPaymentBanner({required this.order, required this.paying, required this.onPay});
+  final Order order;
+  final bool paying;
+  final VoidCallback onPay;
+
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: AppColors.amberSoft,
-      borderRadius: BorderRadius.circular(AppRadius.md),
-    ),
-    child: const Row(
-      children: [
-        Icon(Icons.hourglass_top_rounded, color: Color(0xFF9A6100)),
-        SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            'Waiting for payment. If money was debited, this updates automatically within a few minutes.',
-          ),
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final left = order.reservationExpiresAt?.difference(DateTime.now());
+    final minutes = left == null ? null : (left.inSeconds / 60).ceil().clamp(0, 99);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: AppColors.amberSoft, borderRadius: BorderRadius.circular(AppRadius.md)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          const Icon(Icons.hourglass_top_rounded, color: Color(0xFF9A6100)),
+          const SizedBox(width: 10),
+          Expanded(child: Text('Payment not completed', style: text.titleSmall)),
+        ]),
+        const SizedBox(height: 6),
+        Text(
+          [
+            'This order is not confirmed until you pay.',
+            if (minutes != null && minutes > 0) 'Pay within $minutes min or it is cancelled automatically.',
+            'If money was already debited, this updates by itself within a few minutes.',
+          ].join(' '),
+          style: text.bodySmall,
         ),
-      ],
-    ),
-  );
+        const SizedBox(height: 10),
+        FilledButton.icon(
+          onPressed: paying ? null : onPay,
+          icon: paying ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.lock_rounded, size: 18),
+          label: Text('Pay ${formatRupees(order.totalAmount)} now'),
+        ),
+      ]),
+    );
+  }
 }
 
 class _Card extends StatelessWidget {

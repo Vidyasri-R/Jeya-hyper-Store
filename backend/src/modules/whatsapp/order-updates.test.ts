@@ -28,10 +28,13 @@ describe('WhatsApp order updates', () => {
     expect(deliverBy(new Date('2026-10-16T18:29:59Z'), now)).toBe('today, 16 Oct');
     expect(deliverBy(new Date('2026-10-17T18:29:59Z'), now)).toBe('tomorrow, 17 Oct');
     expect(deliverBy(new Date('2026-10-18T18:29:59Z'), now)).toBe('Sun, 18 Oct');
+    // Raw SQL rows bring the timestamp back as text.
+    expect(deliverBy('2026-10-17 18:29:59.999+00', now)).toBe('tomorrow, 17 Oct');
+    expect(deliverBy('not a date', now)).toBe('soon');
   });
 
   it('order confirmed: first name, number, amount without .00, and the track link', () => {
-    const m = messageFor(event({}))!;
+    const m = messageFor(event({ promised_by: '2026-10-17T18:29:59.999Z' }))!;
     expect(m.template).toBe('order_confirmed');
     expect(m.body.slice(0, 3)).toEqual(['Priya', 'JHS-261016-1001', '480']);
     expect(m.url).toBe('a5d3c2e1-0000-4000-8000-000000000001');

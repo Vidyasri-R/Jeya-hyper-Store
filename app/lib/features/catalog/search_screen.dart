@@ -27,6 +27,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   List<Suggestion> _suggestions = const [];
   String? _submitted;
 
+  /// Main category picked under the results (null = all).
+  String? _category;
+
   @override
   void initState() {
     super.initState();
@@ -57,6 +60,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     _focus.unfocus();
     setState(() {
       _submitted = query;
+      _category = null;
       _suggestions = const [];
     });
   }
@@ -108,8 +112,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       ),
       body: _submitted != null
           ? ProductGrid(
-              key: ValueKey(_submitted),
-              query: (category: null, q: _submitted, sort: null, inStock: false),
+              key: ValueKey('$_submitted|$_category'),
+              query: (category: _category, q: _submitted, sort: null, inStock: false),
               emptyTitle: 'No results for "$_submitted"',
               header: [
                 SliverToBoxAdapter(
@@ -118,6 +122,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     child: Text('Results for "$_submitted"', style: text.titleSmall),
                   ),
                 ),
+                SliverToBoxAdapter(child: _CategoryChips(query: _submitted!, selected: _category, onSelect: (slug) => setState(() => _category = slug))),
               ],
             )
           : ListView(
@@ -167,6 +172,42 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 ],
               ],
             ),
+    );
+  }
+}
+
+/// "All · Staples (12) · Snacks & Sweets (5) …" under the results: narrows the search to one
+/// main category. The counts come with the search (all categories, so the row stays the same).
+class _CategoryChips extends ConsumerWidget {
+  const _CategoryChips({required this.query, required this.selected, required this.onSelect});
+  final String query;
+  final String? selected;
+  final ValueChanged<String?> onSelect;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final facets = ref.watch(productListProvider((category: selected, q: query, sort: null, inStock: false))).categories ?? const <SearchFacet>[];
+    if (facets.length < 2 && selected == null) return const SizedBox.shrink();
+    final total = facets.fold<int>(0, (sum, f) => sum + f.count);
+    Widget chip(String label, String? slug) => Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: ChoiceChip(
+            label: Text(label),
+            selected: selected == slug,
+            showCheckmark: false,
+            onSelected: (_) => onSelect(slug),
+          ),
+        );
+    return SizedBox(
+      height: 48,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
+        children: [
+          chip('All ($total)', null),
+          for (final f in facets) chip('${f.name} (${f.count})', f.slug),
+        ],
+      ),
     );
   }
 }

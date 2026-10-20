@@ -18,6 +18,7 @@ class OrderSuccessScreen extends ConsumerWidget {
     final order = ref.watch(_orderProvider(orderId)).valueOrNull;
     final text = Theme.of(context).textTheme;
     final paidPending = order?.awaitingPayment == true;
+    final loading = order == null;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -34,16 +35,22 @@ class OrderSuccessScreen extends ConsumerWidget {
                 width: 112,
                 height: 112,
                 decoration: BoxDecoration(color: AppColors.brand50, shape: BoxShape.circle),
-                child: Icon(paidPending ? Icons.hourglass_top_rounded : Icons.check_circle_rounded, size: 72, color: AppColors.brand700),
+                child: loading
+                    ? Padding(padding: const EdgeInsets.all(34), child: CircularProgressIndicator(color: AppColors.brand700))
+                    : Icon(paidPending ? Icons.hourglass_top_rounded : Icons.check_circle_rounded, size: 72, color: AppColors.brand700),
               ),
               const SizedBox(height: 22),
-              Text(paidPending ? 'Confirming your payment…' : 'Order placed!', style: text.headlineMedium, textAlign: TextAlign.center),
+              if (!loading) Text(paidPending ? 'Confirming your payment…' : 'Order placed!', style: text.headlineMedium, textAlign: TextAlign.center),
               const SizedBox(height: 8),
               if (order != null) ...[
                 Text('Order ${order.orderNumber}', style: text.titleSmall?.copyWith(color: AppColors.inkMuted)),
                 const SizedBox(height: 4),
                 Text(
-                  order.isCod ? 'Pay ${formatRupees(order.totalAmount)} when it arrives' : 'Paid ${formatRupees(order.totalAmount)} online',
+                  order.isCod
+                      ? 'Pay ${formatRupees(order.totalAmount)} when it arrives'
+                      : paidPending
+                      ? 'We\u2019re checking your payment of ${formatRupees(order.totalAmount)} with the bank'
+                      : 'Paid ${formatRupees(order.totalAmount)} online',
                   style: text.bodyMedium,
                 ),
                 if (order.expectedDeliveryBy != null) ...[

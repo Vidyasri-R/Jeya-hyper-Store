@@ -255,8 +255,11 @@ final productProvider = FutureProvider.family<Product, String>((ref, slug) => re
 typedef ProductQuery = ({String? category, String? q, String? sort, bool inStock});
 
 class ProductListState {
-  const ProductListState({this.items = const [], this.cursor, this.loading = false, this.done = false, this.error});
+  const ProductListState({this.items = const [], this.cursor, this.loading = false, this.done = false, this.error, this.categories});
   final List<Product> items;
+
+  /// Searches: the main categories with results (from the first page), for the filter chips.
+  final List<SearchFacet>? categories;
   final String? cursor;
   final bool loading;
   final bool done;
@@ -269,6 +272,7 @@ class ProductListState {
         loading: loading ?? this.loading,
         done: done ?? this.done,
         error: clearError ? null : (error ?? this.error),
+        categories: categories,
       );
 }
 
@@ -295,6 +299,7 @@ class ProductListController extends FamilyNotifier<ProductListState, ProductQuer
         items: [...state.items, ...page.items],
         cursor: page.nextCursor,
         done: page.nextCursor == null,
+        categories: page.categories ?? state.categories,
       );
     } on ApiException catch (e) {
       state = state.copyWith(loading: false, error: e);
