@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -25,6 +27,32 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
   String? _childSlug;
   String _sort = 'popular';
   bool _inStock = false;
+
+  /// Search inside the open category (null = no search).
+  String? _q;
+  final _search = TextEditingController();
+  Timer? _debounce;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _onSearch(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 350), () {
+      final q = value.trim();
+      if (mounted) setState(() => _q = q.length >= 2 ? q : null);
+    });
+  }
+
+  void _clearSearch() {
+    _debounce?.cancel();
+    _search.clear();
+    setState(() => _q = null);
+  }
 
   @override
   void didUpdateWidget(covariant CategoriesScreen old) {
@@ -91,13 +119,29 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                 onSelect: (slug) => setState(() {
                   _rootSlug = slug;
                   _childSlug = null;
+                  // A new main category starts a new search.
+                  _search.clear();
+                  _q = null;
                 }),
               ),
               const VerticalDivider(width: 1),
               Expanded(
+                child: Column(children: [
+                  // Outside the grid, so typing doesn't rebuild (and close) the field.
+                  CategorySearchField(
+                    controller: _search,
+                    hint: 'Search in ${root.name}',
+                    onChanged: (v) {
+                      setState(() {}); // clear button
+                      _onSearch(v);
+                    },
+                    onClear: _clearSearch,
+                  ),
+                  Expanded(
                 child: ProductGrid(
-                  key: ValueKey('$activeSlug|$_sort|$_inStock'),
-                  query: (category: activeSlug, q: null, sort: _sort, inStock: _inStock),
+                  key: ValueKey('$activeSlug|$_sort|$_inStock|$_q'),
+                  query: (category: activeSlug, q: _q, sort: _sort, inStock: _inStock),
+                  emptyTitle: _q == null ? 'No products here yet' : 'No "$_q" in ${root.name}',
                   header: [
                     SliverToBoxAdapter(child: _Banner(category: root)),
                     SliverToBoxAdapter(
@@ -160,6 +204,8 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                     ),
                   ],
                 ),
+                  ),
+                ]),
               ),
             ],
           );
@@ -297,6 +343,33 @@ class _FilterButton extends StatelessWidget {
           side: BorderSide(color: active ? AppColors.brand700 : AppColors.line),
           backgroundColor: active ? AppColors.brand50 : null,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
+        ),
+      );
+}
+
+/// "Search in Staples" — searches only the open category (and its sub-category chip).
+class CategorySearchField extends StatelessWidget {
+  const CategorySearchField({super.key, required this.controller, required this.hint, required this.onChanged, required this.onClear});
+  final TextEditingController controller;
+  final String hint;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(10, 8, 10, 4),
+        child: TextField(
+          controller: controller,
+          onChanged: onChanged,
+          textInputAction: TextInputAction.search,
+          decoration: InputDecoration(
+            hintText: hint,
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            prefixIcon: const Icon(Icons.search_rounded, size: 20),
+            suffixIcon: controller.text.isEmpty ? null : IconButton(icon: const Icon(Icons.close_rounded, size: 18), tooltip: 'Clear', onPressed: onClear),
+            fillColor: AppColors.bg,
+          ),
         ),
       );
 }

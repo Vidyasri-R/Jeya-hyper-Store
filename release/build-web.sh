@@ -16,6 +16,8 @@ for page in privacy terms refunds delivery delete-account contact; do
   cp -R "site/$page" "$OUT/$page"
 done
 cp site/styles.css site/logo.png "$OUT/"
+# App links (WhatsApp "Track order" opens the app): Android + Apple verification files.
+cp -R site/.well-known "$OUT/.well-known"
 cat > "$OUT/_headers" <<'EOF'
 /*
   X-Content-Type-Options: nosniff
@@ -27,5 +29,9 @@ cat > "$OUT/_headers" <<'EOF'
   Cache-Control: no-cache
 /main.dart.*
   Cache-Control: no-cache
+/.well-known/assetlinks.json
+  Content-Type: application/json
+/.well-known/apple-app-site-association
+  Content-Type: application/json
 EOF
 echo "Built $OUT ($(du -sh "$OUT" | cut -f1))"

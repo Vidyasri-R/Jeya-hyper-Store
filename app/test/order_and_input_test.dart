@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jeya_hyper_store/core/phone_input.dart';
 import 'package:jeya_hyper_store/data/models.dart';
+import 'package:jeya_hyper_store/router.dart' show appPath;
 
 Map<String, dynamic> _order({String? finalAmount, List<Map<String, dynamic>> items = const []}) => {
       'id': 'o1',
@@ -86,5 +86,14 @@ void main() {
     });
     expect(page.categories!.map((c) => '${c.name} (${c.count})'), ['Staples (12)', 'Personal Care (5)']);
     expect(ProductPage.fromJson({'items': <dynamic>[]}).categories, isNull);
+  });
+
+  test('app links: a WhatsApp "Track order" address opens that order in the app', () {
+    expect(appPath('https://jeyahyperstore.in/order/478dcba6-795a-4032-9454-dfc9ad428398'), '/order/478dcba6-795a-4032-9454-dfc9ad428398');
+    expect(appPath('https://www.jeyahyperstore.in/product/atta-1?ref=wa'), '/product/atta-1?ref=wa');
+    expect(appPath('/order/1'), '/order/1');
+    expect(appPath('https://evil.example/order/1'), isNull);
+    expect(appPath('order/1'), isNull);
+    expect(appPath(null), isNull);
   });
 }

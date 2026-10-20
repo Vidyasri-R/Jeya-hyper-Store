@@ -26,6 +26,20 @@ import 'state/providers.dart';
 /// Screens that need a signed-in user. Browsing works without login (App Store guideline 5.1.1).
 const _protected = ['/cart', '/bag', '/checkout', '/orders', '/order/', '/addresses', '/address', '/profile/edit', '/order-success'];
 
+/// Where a link points inside the app: "https://jeyahyperstore.in/order/1?x" → "/order/1?x". A cold start
+/// from an app link (WhatsApp "Track order") hands the router the whole web address; paths stay as they are.
+/// Anything not on the shop's own site → null.
+String? appPath(String? link) {
+  if (link == null || link.isEmpty) return null;
+  final uri = Uri.tryParse(link);
+  if (uri == null) return null;
+  if (uri.hasScheme) {
+    if (uri.host != 'jeyahyperstore.in' && uri.host != 'www.jeyahyperstore.in') return null;
+    return Uri(path: uri.path.isEmpty ? '/' : uri.path, query: uri.query.isEmpty ? null : uri.query).toString();
+  }
+  return link.startsWith('/') ? link : null;
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
   final auth = ref.read(authProvider.notifier);
   return GoRouter(
@@ -35,11 +49,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       final s = ref.read(authProvider);
       final loc = state.matchedLocation;
       // Keep where the visitor was going (a shared product link, a refreshed web page) across the splash.
-      if (s is AuthUnknown || s is AuthOffline) return loc == '/splash' ? null : '/splash?to=${Uri.encodeComponent(state.uri.toString())}';
+      if (s is AuthUnknown || s is AuthOffline) {
+        return loc == '/splash' ? null : '/splash?to=${Uri.encodeComponent(appPath(state.uri.toString()) ?? '/home')}';
+      }
       if (loc == '/splash') {
         if (!splashIntroDone.value) return null; // let the logo intro finish
-        final to = state.uri.queryParameters['to'];
-        return to != null && to.startsWith('/') && !to.startsWith('/splash') ? to : '/home';
+        final to = appPath(state.uri.queryParameters['to']);
+        return to != null && !to.startsWith('/splash') ? to : '/home';
       }
       final signedIn = s is SignedIn;
       if (!signedIn && _protected.any(loc.startsWith)) return '/login?from=${Uri.encodeComponent(state.uri.toString())}';

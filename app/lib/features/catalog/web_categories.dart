@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +12,7 @@ import '../../state/providers.dart';
 import '../../widgets/common.dart';
 import '../../widgets/web_frame.dart';
 import '../../widgets/web_product_card.dart';
+import 'categories_screen.dart' show CategorySearchField;
 
 /// Web shop category page (laptops/tablets): category sidebar with the in-stock filter, a title
 /// banner, sort, and a grid of product cards that loads more as you scroll.
@@ -25,6 +28,33 @@ class _WebCategoryPageState extends ConsumerState<WebCategoryPage> {
   String? _childSlug;
   String _sort = 'popular';
   bool _inStock = false;
+
+  /// Search inside the open category (null = no search).
+  String? _q;
+  final _search = TextEditingController();
+  Timer? _debounce;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _onSearch(String value) {
+    setState(() {}); // clear button
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 350), () {
+      final q = value.trim();
+      if (mounted) setState(() => _q = q.length >= 2 ? q : null);
+    });
+  }
+
+  void _clearSearch() {
+    _debounce?.cancel();
+    _search.clear();
+    setState(() => _q = null);
+  }
 
   @override
   void didUpdateWidget(covariant WebCategoryPage old) {
@@ -67,7 +97,7 @@ class _WebCategoryPageState extends ConsumerState<WebCategoryPage> {
           final root = roots.firstWhere((r) => r.slug == _rootSlug, orElse: () => roots.first);
           final child = root.children.where((c) => c.slug == _childSlug).firstOrNull;
           final active = child ?? root;
-          final query = (category: active.slug, q: null, sort: _sort, inStock: _inStock);
+          final query = (category: active.slug, q: _q, sort: _sort, inStock: _inStock);
           final sidebar = _Sidebar(
             roots: roots,
             root: root,
@@ -76,6 +106,8 @@ class _WebCategoryPageState extends ConsumerState<WebCategoryPage> {
             onRoot: (slug) => setState(() {
               _rootSlug = slug;
               _childSlug = null;
+              _search.clear();
+              _q = null;
             }),
             onChild: (slug) => setState(() => _childSlug = slug),
             onInStock: (v) => setState(() => _inStock = v),
@@ -85,6 +117,12 @@ class _WebCategoryPageState extends ConsumerState<WebCategoryPage> {
             return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               if (showSidebar) SizedBox(width: 260, child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(20, 16, 0, 24), child: sidebar)),
               Expanded(
+                child: Column(children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+                    child: CategorySearchField(controller: _search, hint: 'Search in ${root.name}', onChanged: _onSearch, onClear: _clearSearch),
+                  ),
+                  Expanded(
                 child: _Results(
                   key: ValueKey(query),
                   query: query,
@@ -96,6 +134,8 @@ class _WebCategoryPageState extends ConsumerState<WebCategoryPage> {
                   childSlug: _childSlug,
                   onChild: (slug) => setState(() => _childSlug = slug),
                 ),
+                  ),
+                ]),
               ),
             ]);
           });

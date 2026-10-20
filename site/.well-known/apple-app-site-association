@@ -1,0 +1,21 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "4R4Y26JP23.com.jeyahyperstore.app"
+        ],
+        "components": [
+          {
+            "/": "/order/*",
+            "comment": "Track order"
+          },
+          {
+            "/": "/product/*",
+            "comment": "Product links"
+          }
+        ]
+      }
+    ]
+  }
+}
