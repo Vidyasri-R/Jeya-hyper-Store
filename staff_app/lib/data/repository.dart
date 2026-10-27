@@ -188,6 +188,28 @@ class StaffRepository {
 
   // ── admin: daily stock file ──
   /// Last import, the import settings and the website categories.
+  /* ── Shop TV ── */
+
+  Future<Map<String, dynamic>> shopTv() => _api.get('/admin/shoptv');
+
+  Future<Map<String, dynamic>> setShopTvSettings(Map<String, dynamic> value) async =>
+      Map<String, dynamic>.from((await _api.put('/admin/shoptv/settings', body: {'value': value}))['settings'] as Map);
+
+  Future<void> pairShopTv(String code, String name) => _api.post('/admin/shoptv/screens/pair', body: {'code': code, 'name': name});
+
+  Future<void> renameShopTv(String id, String name) => _api.patch('/admin/shoptv/screens/$id', body: {'name': name});
+
+  Future<void> removeShopTv(String id) => _api.delete('/admin/shoptv/screens/$id');
+
+  /// [kind]: 'ad' (video / poster) or 'announcement' (sound).
+  Future<Map<String, dynamic>> uploadShopMedia(Uint8List bytes, String contentType, {required String title, String kind = 'ad', void Function(double)? onProgress}) async =>
+      Map<String, dynamic>.from((await _api.putLarge('/admin/shoptv/media', bytes, contentType, query: {'title': title, 'kind': kind}, onProgress: onProgress))['media'] as Map);
+
+  Future<Map<String, dynamic>> updateShopMedia(String id, Map<String, dynamic> patch) async =>
+      Map<String, dynamic>.from((await _api.patch('/admin/shoptv/media/$id', body: patch))['media'] as Map);
+
+  Future<void> deleteShopMedia(String id) => _api.delete('/admin/shoptv/media/$id');
+
   Future<Map<String, dynamic>> whatsappStatus() => _api.get('/admin/whatsapp');
 
   /// Sends the login_code template with a throwaway code; returns {sent, code, messageId}.

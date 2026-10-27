@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'features/account/more_screen.dart';
+import 'features/account/shop_audio_screen.dart';
 import 'features/admin/banners_screen.dart';
 import 'features/admin/category_photos_screen.dart';
 import 'features/admin/dashboard_screen.dart';
@@ -18,6 +19,7 @@ import 'features/admin/products_screen.dart';
 import 'features/admin/settings_screen.dart';
 import 'features/admin/staff_accounts_screen.dart';
 import 'features/admin/stock_import_screen.dart';
+import 'features/admin/shop_tv_screen.dart';
 import 'features/admin/usage_screen.dart';
 import 'features/admin/whatsapp_screen.dart';
 import 'features/auth/change_password_screen.dart';
@@ -30,7 +32,7 @@ import 'state/providers.dart';
 final _rootKey = GlobalKey<NavigatorState>();
 
 /// Admin-only locations; staff are sent back to the board.
-const _adminOnly = ['/sales', '/products', '/more/staff', '/more/settings', '/more/usage', '/more/banners', '/more/stock', '/more/photo-work', '/more/categories', '/more/home-lists', '/more/finance', '/more/members', '/more/new-codes', '/more/whatsapp'];
+const _adminOnly = ['/sales', '/products', '/more/staff', '/more/settings', '/more/usage', '/more/banners', '/more/stock', '/more/photo-work', '/more/categories', '/more/home-lists', '/more/finance', '/more/members', '/more/new-codes', '/more/whatsapp', '/more/shop-tv'];
 
 /// Photo helpers only add product photos: their list, the scanner and their account.
 bool _photoHelperMayOpen(String at) => at == '/my-photos' || at == '/scan' || at == '/race' || at == '/more' || at == '/password';
@@ -102,6 +104,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(path: 'members', builder: (_, _) => const MembersScreen()),
                   GoRoute(path: 'new-codes', builder: (_, _) => const NewCodesScreen()),
                   GoRoute(path: 'whatsapp', builder: (_, _) => const WhatsAppScreen()),
+                  GoRoute(path: 'shop-tv', builder: (_, _) => const ShopTvScreen()),
+                  GoRoute(path: 'shop-audio', builder: (_, _) => const ShopAudioScreen()),
                 ],
               ),
             ],

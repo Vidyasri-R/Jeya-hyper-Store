@@ -222,6 +222,22 @@ class ApiClient {
     ),
   );
 
+  /// Large raw upload (shop TV videos, up to 200 MB) with progress (0–1).
+  Future<Map<String, dynamic>> putLarge(String path, Uint8List bytes, String contentType, {Map<String, dynamic>? query, void Function(double)? onProgress}) => _send(
+    () => _dio.put(
+      path,
+      queryParameters: query,
+      data: Stream.fromIterable([for (var i = 0; i < bytes.length; i += 256 * 1024) bytes.sublist(i, (i + 256 * 1024).clamp(0, bytes.length))]),
+      onSendProgress: onProgress == null ? null : (sent, total) => onProgress(total > 0 ? sent / total : 0),
+      options: Options(
+        contentType: contentType,
+        headers: {Headers.contentLengthHeader: bytes.length},
+        sendTimeout: const Duration(minutes: 15),
+        receiveTimeout: const Duration(minutes: 5),
+      ),
+    ),
+  );
+
   /// Raw upload (product photos): the body is the file itself.
   Future<Map<String, dynamic>> putBytes(String path, Uint8List bytes, String contentType, {Map<String, dynamic>? query}) => _send(
     () => _dio.put(

@@ -67,6 +67,13 @@ class MoreScreen extends ConsumerWidget {
             const OrderAlertsCard(),
           ],
           const SizedBox(height: 12),
+          if (!staff.isPhotoHelper) ...[
+            SectionCard(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: tile(Icons.speaker_rounded, 'Shop audio', 'On the music phone: pauses the songs for the shop TV ads', () => context.go('/more/shop-audio')),
+            ),
+            const SizedBox(height: 12),
+          ],
           SectionCard(
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: tile(Icons.sports_score_rounded, 'Photo race', 'Who added the most product photos today and this week', () => context.push('/race')),
@@ -108,6 +115,7 @@ class MoreScreen extends ConsumerWidget {
                         ? Badge(label: Text('${alerts!.alertsOpen}'), backgroundColor: levelColors(alerts.alertsWorst).$1)
                         : null,
                   ),
+                  tile(Icons.tv_rounded, 'Shop TV', 'Ads between the CCTV pictures on the shop TV', () => context.go('/more/shop-tv')),
                   tile(Icons.chat_outlined, 'WhatsApp', 'Login codes and order updates: test and switch on', () => context.go('/more/whatsapp')),
                   tile(Icons.badge_outlined, 'Staff accounts', 'Add people, reset passwords, disable', () => context.go('/more/staff')),
                   tile(Icons.storefront_outlined, 'Store settings', 'Festival theme, delivery fees, payments, contact', () => context.go('/more/settings')),

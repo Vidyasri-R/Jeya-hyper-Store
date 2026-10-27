@@ -8,11 +8,11 @@ import '../pick_file.dart';
 /// A plain <input type=file>. file_picker's web version treats the window getting focus back as
 /// "cancelled"; Safari fires that focus as the dialog opens, so the chosen file was ignored.
 /// Here only the input's own change / cancel events count.
-Future<PickedFile?> pickFile(String extension) {
+Future<PickedFile?> pickFile(List<String> extensions) {
   final done = Completer<PickedFile?>();
   final input = web.HTMLInputElement()
     ..type = 'file'
-    ..accept = '.$extension'
+    ..accept = extensions.map((e) => '.$e').join(',')
     ..style.display = 'none';
   web.document.body!.append(input);
 

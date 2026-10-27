@@ -41,6 +41,37 @@ class FakeRepo extends StaffRepository {
   Map<String, dynamic> detail;
   final calls = <Map<String, Object?>>[];
   bool whatsappOn = false;
+  Map<String, dynamic>? savedShopTv;
+
+  @override
+  Future<Map<String, dynamic>> shopTv() async => {
+    'settings': savedShopTv ?? {
+      'breakEveryMinutes': {'min': 3, 'max': 7},
+      'itemsPerBreak': {'min': 1, 'max': 2},
+      'openTime': '08:00',
+      'closeTime': '22:00',
+      'imageSeconds': 10,
+      'adSound': 'phone',
+      'tvVolume': 80,
+      'phoneVolume': 100,
+      'cctv': {'mode': 'pages', 'channelCount': 36, 'cameras': <int>[], 'pageSize': 9, 'pageSeconds': 15},
+      'panel': {'headline': 'Order on the Jeya Hyper Store app', 'offer': 'Free delivery above ₹999', 'qrUrl': 'https://jeyahyperstore.in'},
+    },
+    'media': [
+      {'id': 'm1', 'kind': 'ad', 'mediaType': 'video', 'title': 'Deepavali offer', 'bytes': 12 * 1024 * 1024, 'durationMs': 20000, 'aspect': 0.5625, 'isActive': true, 'startsOn': null, 'endsOn': null, 'sortOrder': 1},
+      {'id': 'm2', 'kind': 'announcement', 'mediaType': 'audio', 'title': 'Closing time', 'bytes': 300000, 'durationMs': 8000, 'aspect': null, 'isActive': false, 'startsOn': null, 'endsOn': null, 'sortOrder': 2},
+    ],
+    'screens': [
+      {'id': 's1', 'name': 'Billing TV', 'online': true, 'lastSeenAt': '2026-10-28T10:00:00Z', 'status': {'mode': 'cctv', 'cctvOk': true, 'cached': 2, 'total': 2}, 'appVersion': '1.0.0'},
+    ],
+    'nextBreak': {'at': DateTime(2026, 10, 28, 10, 41, 30).millisecondsSinceEpoch},
+  };
+
+  @override
+  Future<Map<String, dynamic>> setShopTvSettings(Map<String, dynamic> value) async {
+    calls.add({'call': 'setShopTvSettings'});
+    return savedShopTv = value;
+  }
   bool whatsappOrdersOn = false;
 
   @override
@@ -720,6 +751,34 @@ void main() {
     await tester.tap(find.byType(Switch).last);
     await tester.pumpAndSettle();
     expect(repo.calls.last, {'call': 'setWhatsappOrderUpdates', 'on': true});
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Shop TV: ads with their format, the TV online, rules saved', (tester) async {
+    final repo = FakeRepo(orderAt('placed'));
+    await pumpApp(tester, repo, at: '/more/shop-tv', size: const Size(400, 1400));
+    expect(find.text('Deepavali offer'), findsOneWidget);
+    expect(find.textContaining('Reel 9:16 · 20 s · 12.0 MB'), findsOneWidget);
+    expect(find.textContaining('Announcement (sound)'), findsOneWidget);
+    expect(find.textContaining('Next ad break at 10:41:30'), findsOneWidget);
+    await tester.tap(find.text('TVs'));
+    await tester.pumpAndSettle();
+    expect(find.text('Billing TV'), findsOneWidget);
+    expect(find.textContaining('Online · Showing CCTV · Ads saved 2/2'), findsOneWidget);
+    await tester.tap(find.text('Rules'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('TV'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Save rules'),
+      400,
+      scrollable: find.byWidgetPredicate((w) => w is Scrollable && w.axisDirection == AxisDirection.down).last,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save rules'));
+    await tester.pumpAndSettle();
+    expect(repo.calls.last, {'call': 'setShopTvSettings'});
+    expect(repo.savedShopTv?['adSound'], 'tv');
     expect(tester.takeException(), isNull);
   });
 }
