@@ -98,6 +98,8 @@ async function main() {
     check('TV gets settings, files and the next breaks', state.json.paired === true && (state.json.media as Json[]).some((m) => m.id === mediaIds[0]) && breaks.length > 0, { paired: state.json.paired, breaks: breaks.length });
     const phone = await call('GET', '/v1/staff/shop-audio', { token: admin });
     check('shop phone gets the same plan', phone.status === 200 && JSON.stringify(phone.json.breaks) === JSON.stringify(state.json.breaks), { phone: phone.json.breaks?.length, tv: breaks.length });
+    const strangerPhone = await call('GET', '/v1/staff/alerts/shop-audio', { device: 'x'.repeat(40) });
+    check('unknown phone refused on the background route', strangerPhone.status === 401, strangerPhone.json);
     const report = await call('POST', `/v1/shoptv/media/${mediaIds[0]}/report`, { device, body: { durationMs: 12000, aspect: 1.778 } });
     check('TV reports what it measured', report.status === 204, report.json);
     const hb = await call('POST', '/v1/shoptv/heartbeat', { device, body: { status: { mode: 'cctv', cctvOk: true }, appVersion: '1.0.0' } });

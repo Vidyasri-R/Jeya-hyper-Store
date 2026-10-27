@@ -167,6 +167,17 @@ export const orderAlerts = {
    * The Android background service's question: orders announced after [after]. Needs only the
    * device key, and answers only order numbers and totals.
    */
+  /** True when [key] is a registered Android phone of an active staff member (the background service's login). */
+  async isActivePhone(key: string): Promise<boolean> {
+    const [device] = await db
+      .select({ id: staffAlertDevices.id })
+      .from(staffAlertDevices)
+      .innerJoin(staffUsers, eq(staffUsers.id, staffAlertDevices.staffId))
+      .where(and(eq(staffAlertDevices.kind, 'android'), eq(staffAlertDevices.keyHash, hashDeviceKey(key)), eq(staffUsers.isActive, true), inArray(staffUsers.role, [...ALERT_ROLES])))
+      .limit(1);
+    return Boolean(device);
+  },
+
   async newOrdersFor(key: string, after: Date | undefined) {
     const [device] = await db
       .select({ id: staffAlertDevices.id, lastSeenAt: staffAlertDevices.lastSeenAt })

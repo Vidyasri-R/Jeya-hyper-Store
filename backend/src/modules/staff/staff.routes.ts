@@ -185,6 +185,16 @@ staffRouter.post('/alerts/android/remove', alertPollLimiter, async (req, res) =>
   res.status(204).end();
 });
 
+// The phone's background service (no session): the same device key as its order alerts.
+staffRouter.get('/alerts/shop-audio', alertPollLimiter, async (req, res) => {
+  const key = req.get('x-device-key')?.trim();
+  if (!key || key.length > 100 || !(await orderAlerts.isActivePhone(key))) {
+    throw new AppError('UNAUTHORIZED', 'This phone is not set up', { reason: 'alert_device_unknown' });
+  }
+  res.set('Cache-Control', 'no-store');
+  res.json(await shopTvService.audioState());
+});
+
 staffRouter.use('/alerts', staffAlerts);
 
 /* ── shop audio: the shop phone plays the ad sound at the TV's ad breaks ── */
@@ -193,6 +203,7 @@ staffRouter.get('/shop-audio', requireStaff, requireStaffRole('staff', 'admin'),
   res.set('Cache-Control', 'no-store');
   res.json(await shopTvService.audioState());
 });
+
 
 /* ── photo work (any staff role: their assigned products) ── */
 
