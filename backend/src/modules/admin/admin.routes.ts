@@ -21,6 +21,7 @@ import { adminStaffService } from './admin-staff.service';
 import { EXPENSE_CATEGORIES, financeService } from './finance.service';
 import { perksService } from '../perks/perks.service';
 import { TEST_TEMPLATES, whatsappAdminService } from '../whatsapp/whatsapp-admin.service';
+import { shopTvService } from '../shop-tv/shop-tv.service';
 import { normalizeIndianMobile } from '../../common/phone';
 
 /** Back office for the Jeya Staff app — staff/admin accounts only (customer tokens are rejected). */
@@ -65,6 +66,85 @@ adminRouter.put('/settings/:key', async (req, res) => {
   const { key } = parseParams(z.object({ key: z.string().min(3).max(64) }), req);
   const { value } = parseBody(z.object({ value: z.unknown() }).strict(), req);
   res.json({ key, value: await adminSettingsService.set(key, value) });
+});
+
+/* ── Shop TV (ads on the shop TV, ad sound on the shop phone) ── */
+
+adminRouter.get('/shoptv', async (_req, res) => {
+  res.json(await shopTvService.overview());
+});
+
+adminRouter.put('/shoptv/settings', async (req, res) => {
+  const { value } = parseBody(z.object({ value: z.unknown() }).strict(), req);
+  res.json({ settings: await shopTvService.setSettings(value) });
+});
+
+const screenName = z.string().trim().min(1).max(60);
+
+adminRouter.post('/shoptv/screens/pair', async (req, res) => {
+  const { code, name: tvName } = parseBody(z.object({ code: z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit code shown on the TV'), name: screenName }).strict(), req);
+  res.status(201).json({ screen: await shopTvService.pair(code, tvName) });
+});
+
+adminRouter.patch('/shoptv/screens/:id', async (req, res) => {
+  const { id } = parseParams(uuidParams, req);
+  const { name: tvName } = parseBody(z.object({ name: screenName }).strict(), req);
+  await shopTvService.renameScreen(id, tvName);
+  res.status(204).end();
+});
+
+adminRouter.delete('/shoptv/screens/:id', async (req, res) => {
+  const { id } = parseParams(uuidParams, req);
+  await shopTvService.removeScreen(id);
+  res.status(204).end();
+});
+
+const shopTvUploads = rateLimit({
+  windowMs: 60_000,
+  limit: 20,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  handler: (_req, _res, next) => next(new AppError('RATE_LIMITED', 'Too many uploads at once. Wait a moment.', { retryAfterSec: 30 })),
+});
+
+/** Body = the file itself (video/mp4, image/jpeg, audio/mpeg …), streamed to storage. */
+adminRouter.put('/shoptv/media', shopTvUploads, async (req, res) => {
+  const query = parseQuery(z.object({ kind: z.enum(['ad', 'announcement']).default('ad'), title: z.string().trim().min(1).max(120) }), req);
+  const length = Number(req.get('content-length'));
+  const media = await shopTvService.upload({
+    body: req,
+    contentType: (req.get('content-type') ?? '').split(';')[0]!.trim().toLowerCase(),
+    declaredBytes: Number.isFinite(length) && length > 0 ? length : null,
+    kind: query.kind,
+    title: query.title,
+    staffId: staffOf(req).staffId,
+  });
+  res.status(201).json({ media });
+});
+
+const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD').nullable();
+
+adminRouter.patch('/shoptv/media/:id', async (req, res) => {
+  const { id } = parseParams(uuidParams, req);
+  const patch = parseBody(
+    z
+      .object({
+        title: z.string().trim().min(1).max(120).optional(),
+        isActive: z.boolean().optional(),
+        startsOn: isoDay.optional(),
+        endsOn: isoDay.optional(),
+        sortOrder: z.number().int().min(0).max(100000).optional(),
+      })
+      .strict(),
+    req,
+  );
+  res.json({ media: await shopTvService.updateMedia(id, patch) });
+});
+
+adminRouter.delete('/shoptv/media/:id', async (req, res) => {
+  const { id } = parseParams(uuidParams, req);
+  await shopTvService.deleteMedia(id);
+  res.status(204).end();
 });
 
 /* ── WhatsApp login codes ── */

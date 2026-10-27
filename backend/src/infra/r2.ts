@@ -1,3 +1,5 @@
+import { Upload } from '@aws-sdk/lib-storage';
+import type { Readable } from 'node:stream';
 import {
   DeleteObjectCommand,
   GetObjectCommand,
@@ -128,6 +130,33 @@ export const r2 = {
     const result = await s3.send(new PutObjectCommand(input));
     traffic.countR2({ uploadBytes: body.length, classAOps: 1 });
     return { key, url: `${cfg.publicBaseUrl}/${key}`, etag: result.ETag };
+  },
+
+  /**
+   * Streams a large file (shop TV videos) in 8 MB parts, so a 100 MB upload never sits in the
+   * server's memory. Rejects when the stream ends up larger than [maxBytes].
+   */
+  async putStream(
+    key: string,
+    body: Readable,
+    options: { contentType: string; maxBytes: number; cacheControl?: string },
+  ): Promise<{ key: string; url: string; bytes: number }> {
+    assertKey(key);
+    const { client: s3, config: cfg } = requireClient();
+    let bytes = 0;
+    body.on('data', (chunk: Buffer) => {
+      bytes += chunk.length;
+      if (bytes > options.maxBytes) body.destroy(new Error('too_large'));
+    });
+    const upload = new Upload({
+      client: s3,
+      params: { Bucket: cfg.bucket, Key: key, Body: body, ContentType: options.contentType, CacheControl: options.cacheControl ?? 'public, max-age=31536000, immutable' },
+      partSize: 8 * 1024 * 1024,
+      queueSize: 2,
+    });
+    await upload.done();
+    traffic.countR2({ uploadBytes: bytes, classAOps: Math.max(1, Math.ceil(bytes / (8 * 1024 * 1024)) + 2) });
+    return { key, url: `${cfg.publicBaseUrl}/${key}`, bytes };
   },
 
   async exists(key: string): Promise<boolean> {

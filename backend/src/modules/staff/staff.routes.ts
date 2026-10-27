@@ -1,3 +1,4 @@
+import { shopTvService } from '../shop-tv/shop-tv.service';
 import express, { Router, type Request } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { z } from 'zod';
@@ -185,6 +186,13 @@ staffRouter.post('/alerts/android/remove', alertPollLimiter, async (req, res) =>
 });
 
 staffRouter.use('/alerts', staffAlerts);
+
+/* ── shop audio: the shop phone plays the ad sound at the TV's ad breaks ── */
+
+staffRouter.get('/shop-audio', requireStaff, requireStaffRole('staff', 'admin'), async (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json(await shopTvService.audioState());
+});
 
 /* ── photo work (any staff role: their assigned products) ── */
 

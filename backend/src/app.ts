@@ -42,7 +42,9 @@ export function createApp(): Express {
   app.use((req, res, next) => {
     // Uploads take longer: photos (resize + R2) and the daily stock file (~9,000 products, ~20-40 s).
     const slow = req.path.endsWith('image') || req.path.endsWith('/catalog/import');
-    res.setTimeout(slow ? 120_000 : 20_000, () => {
+    // Shop TV videos (up to 200 MB) stream through to storage.
+    const upload = req.method === 'PUT' && req.path === '/v1/admin/shoptv/media';
+    res.setTimeout(upload ? 15 * 60_000 : slow ? 120_000 : 20_000, () => {
       if (res.headersSent) return;
       req.log.error({ path: req.path }, 'request timed out');
       res.status(503).json({ error: { code: 'UPSTREAM_UNAVAILABLE', message: 'The server is busy right now. Please try again.', details: { reason: 'request_timeout' }, requestId: req.id } });

@@ -23,6 +23,7 @@
     "staff:create-admin:prod": "node dist/scripts/create-admin.js",
     "smoke:staff": "tsx src/scripts/smoke-staff.ts",
     "smoke:shop": "tsx src/scripts/smoke-shop.ts",
+    "smoke:shoptv": "tsx src/scripts/smoke-shoptv.ts",
     "backup:run": "tsx src/scripts/backup-run.ts",
     "backup:verify": "tsx src/scripts/backup-verify.ts"
   },
@@ -30,6 +31,7 @@
   "description": "Jeya Hyper Store backend API",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1144.0",
+    "@aws-sdk/lib-storage": "^3.1144.0",
     "compression": "^1.8.2",
     "cors": "^2.8.6",
     "dotenv": "^18.0.5",

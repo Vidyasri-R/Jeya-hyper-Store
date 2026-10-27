@@ -898,6 +898,55 @@ export const whatsappMessages = pgTable(
   (t) => [uniqueIndex('whatsapp_messages_ref_uq').on(t.refKey), index('whatsapp_messages_created_idx').on(t.createdAt)],
 );
 
+/* ───────────────────────────── Shop TV ───────────────────────────── */
+
+/** A TV in the shop running the Jeya TV app (live CCTV + ad breaks). Signs in with its device key. */
+export const shopScreens = pgTable(
+  'shop_screens',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    name: varchar({ length: 60 }).notNull().default('Shop TV'),
+    deviceKeyHash: varchar({ length: 64 }).notNull(),
+    /** Shown on the TV until an admin types it in the store app. */
+    pairCode: varchar({ length: 6 }),
+    pairCodeExpiresAt: tstz(),
+    pairedAt: tstz(),
+    lastSeenAt: tstz(),
+    /** What the TV last reported: {mode, playing, cctvOk, cached, total}. */
+    status: jsonb().$type<Record<string, unknown>>(),
+    appVersion: varchar({ length: 20 }),
+    createdAt: tstz().notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('shop_screens_device_uq').on(t.deviceKeyHash), uniqueIndex('shop_screens_code_uq').on(t.pairCode)],
+);
+
+/** An ad (video / poster) or announcement (audio) for the shop TV and the shop phone's speakers. */
+export const shopMedia = pgTable(
+  'shop_media',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    /** ad | announcement */
+    kind: varchar({ length: 16 }).notNull(),
+    /** video | image | audio */
+    mediaType: varchar({ length: 8 }).notNull(),
+    title: varchar({ length: 120 }).notNull(),
+    url: text().notNull(),
+    contentType: varchar({ length: 60 }).notNull(),
+    bytes: integer().notNull(),
+    /** Measured by the TV after its first download (the server can't read video files). */
+    durationMs: integer(),
+    /** width / height, also from the TV (9:16 Reels ≈ 0.56). */
+    aspect: numeric({ precision: 6, scale: 3 }),
+    isActive: boolean().notNull().default(true),
+    startsOn: date({ mode: 'string' }),
+    endsOn: date({ mode: 'string' }),
+    sortOrder: integer().notNull().default(0),
+    createdBy: uuid().references(() => staffUsers.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (t) => [index('shop_media_active_idx').on(t.isActive, t.sortOrder)],
+);
+
 /** Budget / health alerts for admins. At most one open (unresolved) alert per metric. */
 export const adminAlerts = pgTable(
   'admin_alerts',

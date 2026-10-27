@@ -1,3 +1,4 @@
+import { shopTvRouter } from './modules/shop-tv/shop-tv.routes';
 import { Router } from 'express';
 import { addressesRouter } from './modules/addresses/addresses.routes';
 import { adminRouter } from './modules/admin/admin.routes';
@@ -25,4 +26,5 @@ v1Router.use('/orders/:id/payment', orderPaymentRouter);
 v1Router.use('/orders', ordersRouter);
 v1Router.use('/staff', staffRouter);
 v1Router.use('/admin', adminRouter);
+v1Router.use('/shoptv', shopTvRouter);
 v1Router.use('/', catalogRouter);
